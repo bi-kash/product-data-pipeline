@@ -28,11 +28,6 @@ The Product Data Pipeline offers several command-line operations to manage the e
 | `review:export-pending` | Export merchants for review | Creates a CSV file with all pending merchants that need review. This file will be shared with expert reviewers. |
 | `review:import-results` | Import review results       | Reads the reviewed CSV file where experts have updated approval statuses and updates the database accordingly.  |
 
-### Database Utilities
-
-| Command         | Description                   | What It Does                                                                            |
-| --------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
-| `export:tables` | Export database tables to CSV | Creates CSV files for each database table (or specified tables) for backup or analysis. |
 
 ## 2. Complete Workflow
 
@@ -77,9 +72,6 @@ The complete merchant data pipeline consists of the following workflow:
      - Job history and performance
      - Current approval status counts
      - Product and category statistics
-
-7. **Data Export (As Needed)**
-   - Run `export:tables` to export data for backup or external analysis
 
 ## 3. Step-by-Step Testing
 
@@ -224,31 +216,6 @@ python main.py harvest:status
 # - Some WHITELIST and BLACKLIST sellers
 ```
 
-### 3.6 Export Tables Test
-
-```bash
-# Export all tables
-python main.py export:tables
-
-# Export specific tables
-python main.py export:tables --tables sellers products
-```
-
-**What Happens:**
-
-- Creates CSV files for each table in `data/exports/` directory
-- Files are named with table name and timestamp (e.g., `sellers_20250818_173510.csv`)
-- All database records for each table are exported
-
-**How to Verify Success:**
-
-```bash
-# Check that files were created
-ls -la data/exports/
-
-# Preview a file
-head data/exports/sellers_*.csv
-```
 
 ## 4. Troubleshooting
 

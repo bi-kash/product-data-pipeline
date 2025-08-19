@@ -41,6 +41,7 @@ cp .env.example .env
 ```
 
 5. **Subscribe to the AliExpress True API**:
+
    - Visit [AliExpress True API on RapidAPI](https://rapidapi.com/georgekhananaev/api/aliexpress-true-api)
    - Sign up for a RapidAPI account if you don't have one
    - Subscribe to the API (they offer a free tier with limited requests)
@@ -187,10 +188,12 @@ Options:
 ## Search Configuration
 
 The pipeline can search for products using two methods:
+
 1. **Category-based search**: Searches for products within specific AliExpress categories
 2. **Keyword-based search**: Searches for products matching specific keywords
 
 You can configure the pipeline to use:
+
 - Only category-based search (recommended for most cases)
 - Both category and keyword-based search together
 
@@ -205,12 +208,14 @@ CATEGORIES=200001680,1509,201239108,200370154
 ```
 
 Recommended categories for finished jewelry:
+
 - `200001680`: Fine Jewelry
 - `1509`: Fashion Jewelry
 - `201239108`: Customized Jewelry
 - `200370154`: Smart Jewelry
 
 Categories to avoid (primarily contain supplies):
+
 - `200001479`: Jewelry Packaging & Display
 - `200001478`: Jewelry Tools & Equipment
 - `201238105`: Jewelry Making
