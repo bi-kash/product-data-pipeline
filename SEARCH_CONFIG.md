@@ -21,6 +21,9 @@ The search behavior is controlled through the `.env` file with the following key
 USE_KEYWORDS=false
 KEYWORDS=necklace,ring,bracelet,earrings,pendant necklace,brooch,anklet
 
+# Blacklist terms in product titles
+BLACKLIST_TERMS_IN_TITLE=beads,findings,jump rings,clasps,wire,chain by the foot
+
 # Jewelry categories (AliExpress category IDs)
 CATEGORIES=200001680,1509,201239108,200370154
 ```
@@ -45,6 +48,30 @@ Best practices for keywords:
 - Avoid generic terms that might return supplies (like "beads", "chain")
 - Separate each keyword with a comma
 - Remove spaces after commas for consistency
+
+### BLACKLIST_TERMS_IN_TITLE Parameter
+
+A comma-separated list of terms that, when found in product titles, will cause those products and their sellers to be automatically blacklisted during harvesting. For example:
+```
+BLACKLIST_TERMS_IN_TITLE=beads,findings,jump rings,clasps,wire,chain by the foot,jewelry making,diy jewelry
+```
+
+This is a powerful way to filter out unwanted items, particularly jewelry supplies and components, without having to modify your category selection.
+
+When a product title contains any of these terms:
+- The product is marked with status="BLACKLIST" in the database
+- The seller is marked with approval_status="BLACKLIST" in the database
+- These items are counted in the "blacklisted" statistics during harvesting
+
+Best practices for blacklist terms:
+- Include common jewelry supply terms like "beads", "findings", "clasps"
+- Include jewelry-making phrases like "diy jewelry", "jewelry making"
+- Use lowercase (matching is case-insensitive)
+- Separate terms with commas (no spaces after commas)
+- Multi-word terms work as expected (e.g., "chain by the foot")
+- If left empty, no title-based filtering will occur
+
+The harvester will log how many products were blacklisted due to their titles in the harvest summary. The blacklisting happens during the harvesting process, not after review import.
 
 ### CATEGORIES Parameter
 
@@ -146,7 +173,24 @@ These columns are updated after each page of results is processed, ensuring that
 **Solutions:**
 - Set `USE_KEYWORDS=false` and use only the recommended finished jewelry categories
 - Remove any supply-heavy categories from the `CATEGORIES` list
+- Add supply-related terms to `BLACKLIST_TERMS_IN_TITLE` to automatically skip products containing those terms
 - If using keywords, make them more specific to finished jewelry items
+
+### Issue: Using the title blacklist effectively
+
+**Best practices:**
+- Add common supply terms like "beads", "findings", "wire", "jump rings"
+- Include multi-word phrases without quotes, e.g., chain by the foot, jewelry making supplies
+- Use lowercase terms (matching is case-insensitive)
+- Review harvester logs to see how many products are being blacklisted
+- Periodically review and refine your blacklist terms based on results
+
+**Understanding automatic blacklisting:**
+- Products with blacklisted terms in their titles are stored in the database with status="BLACKLIST"
+- Sellers of these products are stored with approval_status="BLACKLIST"
+- This happens automatically during the harvest process, not after review
+- The automatic blacklisting is permanent and takes effect immediately
+- You can see the blacklisting counts in the harvest status summary
 
 ### Issue: Missing certain types of jewelry
 

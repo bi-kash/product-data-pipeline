@@ -21,6 +21,7 @@ from src.common.database import (
     get_product_categories_stats,
     get_db_session,
     JobRun,
+    update_seller_approval,
 )
 from src.common.config import (
     get_search_keywords,
@@ -28,6 +29,7 @@ from src.common.config import (
     create_example_env_file,
     get_api_page_size,
     use_keywords,
+    get_blacklisted_title_terms,
 )
 from src.common.aliexpress_client import AliExpressClient
 from src.common.logging_config import setup_logging
@@ -60,39 +62,43 @@ def prepare_json_safe_dict(data):
     return result
 
 
-def _process_products(products, stats, unique_sellers, job_id, page, category_id, category_name, limit, dry_run, client, all_categories=None):
+def _process_products(
+    products,
+    client,
+    stats,
+    unique_sellers,
+    page=1,
+    category_id=None,
+    category_name=None,
+    dry_run=False,
+    limit=None,
+    all_categories=None,
+    job_id=None,
+):
     """
-    Process a batch of products from API search and update the database.
-    
-    This function handles both keyword-based and category-based search results,
-    updating the database with products and sellers found. It also tracks which
-    products were found via which search method for analytics purposes.
-    
-    When processing keyword-based search results:
-    - category_id and category_name parameters contain the keyword
-    - all_categories is None
-    
-    When processing category-based search results:
-    - category_id and category_name are None
-    - all_categories contains the list of category IDs used in the search
-    
-    The function ensures products are associated with the correct categories in
-    the database and avoids duplicate processing of sellers already seen in the
-    current harvest run.
+    Process a batch of products from the API response.
     
     Args:
-        products: List of products from API
-        stats: Statistics dictionary to update
-        unique_sellers: Set of unique seller IDs already processed
-        job_id: Job run ID
+        products: List of product dictionaries
+        client: API client instance
+        stats: Dictionary to track statistics
+        unique_sellers: Set to track unique sellers processed
         page: Current page number
-        category_id: Category ID for product association or keyword for keyword search
-        category_name: Category name for product association or keyword for keyword search
-        limit: Maximum products to process
+        category_id: ID of the category being searched
+        category_name: Name of the category being searched
         dry_run: If True, don't write to database
-        client: AliExpressClient instance
+        limit: Maximum number of products to process
         all_categories: List of all category IDs (for category search)
+        job_id: ID of the current job run
     """
+    # Initialize product counts in stats if not present
+    if "products_added" not in stats:
+        stats["products_added"] = 0
+    from src.common.config import get_blacklisted_title_terms
+    
+    # Get blacklisted terms for product titles
+    blacklisted_terms = get_blacklisted_title_terms()
+    
     # Log progress compared to total
     processed_so_far = stats["total_products_processed"]
     logger.info(f"Processing batch - found {len(products)} products (processed so far: {processed_so_far})")
@@ -100,6 +106,123 @@ def _process_products(products, stats, unique_sellers, job_id, page, category_id
     # Process each product
     for position, product in enumerate(tqdm(products, desc=f"Processing products (page {page})")):
         stats["total_products_processed"] += 1
+        
+        # Check for blacklisted terms in the product title
+        product_title = product.get("product_title", "").lower()
+        
+        # Check for blacklisted terms in the title
+        blacklisted_term_found = False
+        blacklisted_term = None
+        if blacklisted_terms and product_title:
+            for term in blacklisted_terms:
+                if term in product_title:
+                    blacklisted_term_found = True
+                    blacklisted_term = term
+                    break
+            
+        if blacklisted_term_found:
+            print(f"BLACKLISTED: {product.get('product_id', 'unknown')} - Term: {blacklisted_term} - Title: {product_title[:50]}...")
+            # Count as "blacklisted" in stats
+            stats["blacklisted"] = stats.get("blacklisted", 0) + 1
+            
+            # Get seller info even for blacklisted products
+            seller_info = client.get_seller_info_from_product(product)
+            if seller_info:
+                shop_id = seller_info["shop_id"]
+                shop_url = seller_info["shop_url"]
+                shop_name = seller_info.get("shop_name")
+                product_id = str(product.get("product_id", ""))
+                
+                # Automatically blacklist the seller if their product contains blacklisted terms
+                if not dry_run:
+                    # Always blacklist the seller and product, regardless of whether
+                    # the seller was processed before
+                    seller_already_processed = shop_id in unique_sellers
+                    if not seller_already_processed:
+                        unique_sellers.add(shop_id)
+                        
+                    note = f"Automatically blacklisted due to product title containing term: '{blacklisted_term}'"
+                    logger.info(f"Blacklisting seller {shop_id} due to blacklisted term in product title: {blacklisted_term}")
+                    
+                    # Add seller to database as BLACKLIST
+                    try:
+                        is_new = upsert_seller(
+                            shop_id=shop_id,
+                            shop_url=shop_url,
+                            shop_name=shop_name,
+                            raw_json=seller_info["raw_json"],
+                            note=note
+                        )
+                        
+                        # Then explicitly set status to BLACKLIST
+                        update_seller_approval(shop_id, "BLACKLIST", note)
+                        
+                        if is_new:
+                            stats["new_sellers_added"] += 1
+                        else:
+                            stats["sellers_updated"] += 1
+                        
+                    except Exception as e:
+                        logger.error(f"Error blacklisting seller {shop_id}: {e}")
+                        stats["errors"] += 1
+                        
+                    # Always add the product to the database with BLACKLIST status
+                    if product_id:
+                        try:
+                            # Now, upsert the product with BLACKLIST status
+                            product_title = product.get("product_title", "")
+                            product_detail_url = product.get("product_detail_url", "")
+                            product_main_image_url = product.get("product_main_image_url", "")
+                            
+                            # Handle prices
+                            original_price = None
+                            target_sale_price = None
+                            original_price_currency = None
+                            target_sale_price_currency = None
+                            
+                            if "original_price" in product and product["original_price"]:
+                                try:
+                                    original_price = float(product["original_price"])
+                                    original_price_currency = product.get("original_price_currency")
+                                except (ValueError, TypeError):
+                                    pass
+                                    
+                            if "target_sale_price" in product and product["target_sale_price"]:
+                                try:
+                                    target_sale_price = float(product["target_sale_price"])
+                                    target_sale_price_currency = product.get("target_sale_price_currency")
+                                except (ValueError, TypeError):
+                                    pass
+                            
+                            # Upsert with BLACKLIST status
+                            upsert_product(
+                                product_id=product_id,
+                                shop_id=shop_id,
+                                product_title=product_title,
+                                product_detail_url=product_detail_url,
+                                product_main_image_url=product_main_image_url,
+                                original_price=original_price,
+                                target_sale_price=target_sale_price,
+                                original_price_currency=original_price_currency,
+                                target_sale_price_currency=target_sale_price_currency,
+                                discount=product.get("discount"),
+                                evaluate_rate=product.get("evaluate_rate"),
+                                first_level_category_name=product.get("first_level_category_name"),
+                                second_level_category_name=product.get("second_level_category_name"),
+                                raw_json=product,
+                                status="BLACKLIST"
+                            )
+                            
+                            # Count products added to the database
+                            stats["products_added"] = stats.get("products_added", 0) + 1
+                            
+                            logger.info(f"Added product {product_id} to database with BLACKLIST status")
+                        except Exception as e:
+                            logger.error(f"Error adding blacklisted product {product_id}: {e}")
+                            stats["errors"] += 1
+                
+            logger.debug(f"Skipping further processing of product with blacklisted term '{blacklisted_term}' in title: {product_title[:50]}...")
+            continue
         
         seller_info = client.get_seller_info_from_product(product)
         if not seller_info:
@@ -113,53 +236,32 @@ def _process_products(products, stats, unique_sellers, job_id, page, category_id
             stats["errors"] += 1
             continue
             
-        # Skip if this seller has already been processed in this run
-        if shop_id in unique_sellers:
-            # Even if we skip this seller, we should still track that this
-            # product was found via this search
-            if not dry_run:
-                try:
-                    if all_categories:
-                        # Associate with each provided category
-                        for cat_id in all_categories:
-                            associate_product_category(
-                                product_id=product_id,
-                                category_id=cat_id,
-                                category_name=str(cat_id),
-                                search_page=page,
-                                position_in_results=position + 1,
-                            )
-                    elif category_id:
-                        associate_product_category(
-                            product_id=product_id,
-                            category_id=category_id,
-                            category_name=category_name,
-                            search_page=page,
-                            position_in_results=position + 1,
-                        )
-                except Exception as e:
-                    logger.error(f"Error associating product {product_id} with category: {e}")
-                    stats["errors"] += 1
-            continue
-            
-        unique_sellers.add(shop_id)
-        stats["unique_sellers_found"] += 1
+        # If this seller has already been processed in this run, don't count it as a new seller
+        # but still process the product
+        seller_already_processed = shop_id in unique_sellers
         
+        if not seller_already_processed:
+            unique_sellers.add(shop_id)
+            stats["unique_sellers_found"] += 1
+            
         # Insert or update the seller in the database
         if not dry_run:
             try:
-                # First, upsert the seller
-                is_new_seller = upsert_seller(
-                    shop_id=shop_id,
-                    shop_url=seller_info["shop_url"],
-                    shop_name=seller_info.get("shop_name"),
-                    raw_json=seller_info["raw_json"],
-                )
-                
-                if is_new_seller:
-                    stats["new_sellers_added"] += 1
-                else:
-                    stats["sellers_updated"] += 1
+                # Only upsert the seller if we haven't processed it yet in this run
+                is_new_seller = False
+                if not seller_already_processed:
+                    # First, upsert the seller
+                    is_new_seller = upsert_seller(
+                        shop_id=shop_id,
+                        shop_url=seller_info["shop_url"],
+                        shop_name=seller_info.get("shop_name"),
+                        raw_json=seller_info["raw_json"],
+                    )
+                    
+                    if is_new_seller:
+                        stats["new_sellers_added"] += 1
+                    else:
+                        stats["sellers_updated"] += 1
                     
                 # Now, upsert the product
                 product_title = product.get("product_title", "")
@@ -186,6 +288,7 @@ def _process_products(products, stats, unique_sellers, job_id, page, category_id
                     except (ValueError, TypeError):
                         pass
                         
+                # Upsert the product (always process every product)
                 upsert_product(
                     product_id=product_id,
                     shop_id=shop_id,
@@ -201,7 +304,11 @@ def _process_products(products, stats, unique_sellers, job_id, page, category_id
                     first_level_category_name=product.get("first_level_category_name"),
                     second_level_category_name=product.get("second_level_category_name"),
                     raw_json=product,
+                    status="PENDING",  # Explicitly set status to PENDING for regular products
                 )
+                
+                # Count products added to the database
+                stats["products_added"] = stats.get("products_added", 0) + 1
                 
                 # Associate product with category
                 if all_categories:
@@ -261,6 +368,7 @@ def _harvest_merchants(keywords=None, categories=None, limit=None, dry_run=False
 
     stats = {
         "total_products_processed": 0,
+        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
         "unique_sellers_found": 0,
         "new_sellers_added": 0,
         "sellers_updated": 0,
@@ -732,6 +840,7 @@ def init_harvest(limit=None, dry_run=False):
     # Create unified stats dictionary
     stats = {
         "total_products_processed": 0,
+        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
         "unique_sellers_found": 0,
         "new_sellers_added": 0,
         "sellers_updated": 0,
@@ -905,6 +1014,8 @@ def init_harvest(limit=None, dry_run=False):
         
     logger.info(f"Harvest complete. Summary:")
     logger.info(f"- Products processed: {stats['total_products_processed']}")
+    logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
+    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
     logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
     logger.info(f"- New sellers added: {stats['new_sellers_added']}")
     logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")
@@ -923,6 +1034,8 @@ def init_harvest(limit=None, dry_run=False):
 
     logger.info(f"Harvest complete. Summary:")
     logger.info(f"- Products processed: {stats['total_products_processed']}")
+    logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
+    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
     logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
     logger.info(f"- New sellers added: {stats['new_sellers_added']}")
     logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")
@@ -999,6 +1112,7 @@ def delta_harvest(limit=None, dry_run=False):
     # Create unified stats dictionary
     stats = {
         "total_products_processed": 0,
+        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
         "unique_sellers_found": 0,
         "new_sellers_added": 0,
         "sellers_updated": 0,
@@ -1172,6 +1286,8 @@ def delta_harvest(limit=None, dry_run=False):
         
     logger.info(f"Harvest complete. Summary:")
     logger.info(f"- Products processed: {stats['total_products_processed']}")
+    logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
+    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
     logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
     logger.info(f"- New sellers added: {stats['new_sellers_added']}")
     logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")

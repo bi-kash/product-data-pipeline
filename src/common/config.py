@@ -153,3 +153,29 @@ def get_api_page_size():
         return int(get_env("API_PAGE_SIZE", "50"))
     except (ValueError, TypeError):
         return 50
+
+
+def get_blacklisted_title_terms():
+    """
+    Get list of terms that should be blacklisted when they appear in product titles.
+    
+    When a product title contains any of these terms, the product and its seller
+    will be automatically skipped during harvesting. This helps filter out 
+    unwanted items like jewelry supplies, components, and tools.
+    
+    Configure this in .env file with:
+    BLACKLIST_TERMS_IN_TITLE=beads,findings,wire,chain by the foot,jump rings
+    
+    Returns:
+        list: List of lowercase terms to blacklist in product titles
+        
+    Example:
+        With BLACKLIST_TERMS_IN_TITLE=beads,findings,wire in .env
+        Returns: ['beads', 'findings', 'wire']
+    """
+    env_val = os.getenv("BLACKLIST_TERMS_IN_TITLE", "")
+    # Remove any inline comments (anything after a # symbol)
+    if '#' in env_val:
+        env_val = env_val.split('#')[0]
+    # Return lowercased terms for case-insensitive matching
+    return [t.strip().lower() for t in env_val.split(",") if t.strip()]

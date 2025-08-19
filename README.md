@@ -197,6 +197,22 @@ You can configure the pipeline to use:
 - Only category-based search (recommended for most cases)
 - Both category and keyword-based search together
 
+### Blacklisting by Product Title
+
+The pipeline automatically blacklists products and their sellers if the product title contains certain blacklisted terms. This helps filter out unwanted products during the harvesting process:
+
+```
+# Add terms that should automatically blacklist products if found in titles
+BLACKLIST_TERMS_IN_TITLE=bead,beads,supply,supplies,making,diy,component,findings
+```
+
+When a product title contains any of these terms:
+- The product is marked with status="BLACKLIST" in the database
+- The seller is marked with approval_status="BLACKLIST" in the database
+- These items are counted in the "blacklisted" statistics during harvesting
+
+This automatic blacklisting happens during the harvesting process, not after review import.
+
 For detailed information about configuring search parameters, avoiding jewelry supplies, and best practices, see the [Search Configuration Guide](./SEARCH_CONFIG.md).
 
 ### Category IDs

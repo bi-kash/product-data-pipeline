@@ -1,4 +1,0 @@
-id,job_type,start_time,end_time,duration_seconds,found_count,new_count,skipped_count,error_count,details
-1,HARVEST_INIT,2025-08-18 11:24:05.024252,2025-08-18 11:24:06.693679,1,27,27,0,0,"{""total_products_processed"": 38, ""unique_sellers_found"": 27, ""new_sellers_added"": 27, ""sellers_updated"": 0, ""errors"": 0}"
-2,HARVEST_DELTA,2025-08-18 11:24:32.541547,2025-08-18 11:24:34.217767,1,31,4,27,0,"{""total_products_processed"": 45, ""unique_sellers_found"": 31, ""new_sellers_added"": 4, ""sellers_updated"": 27, ""errors"": 0}"
-3,HARVEST_INIT,2025-08-18 11:51:44.224869,2025-08-18 11:51:52.289155,8,82,51,31,0,"{""total_products_processed"": 203, ""unique_sellers_found"": 82, ""new_sellers_added"": 51, ""sellers_updated"": 31, ""errors"": 0}"

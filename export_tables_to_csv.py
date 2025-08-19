@@ -59,7 +59,7 @@ def export_table_to_csv(table_name, export_dir):
         
         # Define the output file path
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        csv_file = os.path.join(export_dir, f"{table_name}_{timestamp}.csv")
+        csv_file = os.path.join(export_dir, f"{table_name}.csv")
         
         # Export to CSV
         df.to_csv(csv_file, index=False)

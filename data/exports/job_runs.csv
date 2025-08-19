@@ -1,0 +1,2 @@
+id,job_type,start_time,end_time,duration_seconds,found_count,new_count,skipped_count,error_count,keywords,categories,details
+1,HARVEST_DELTA,2025-08-19 11:55:00.652556,2025-08-19 11:55:04.080364,3,15,16,-1,0,,"200001680,1509,201239108,200370154","{""total_products_processed"": 84, ""blacklisted"": 3, ""unique_sellers_found"": 15, ""new_sellers_added"": 16, ""sellers_updated"": 0, ""errors"": 0, ""start_time"": ""2025-08-19T11:55:00.660085""}"

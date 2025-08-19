@@ -318,6 +318,10 @@ def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None, 
 def upsert_seller(shop_id, shop_url, shop_name=None, raw_json=None, note=None):
     """
     Insert or update a seller record.
+    
+    If the seller already exists, this function will update certain fields but will
+    NOT modify the approval_status. This ensures that once a seller has been
+    whitelisted or blacklisted, their status remains unchanged by automated updates.
 
     Args:
         shop_id: Unique shop/seller ID
@@ -339,6 +343,7 @@ def upsert_seller(shop_id, shop_url, shop_name=None, raw_json=None, note=None):
 
         if seller:
             # Update existing seller
+            # NOTE: We never update approval_status here to preserve manual whitelisting/blacklisting
             seller.last_seen_at = now
             if shop_name:
                 seller.shop_name = shop_name
@@ -596,6 +601,7 @@ def upsert_product(
     first_level_category_name=None,
     second_level_category_name=None,
     raw_json=None,
+    status=None,
 ):
     """
     Insert or update a product record.
@@ -615,6 +621,7 @@ def upsert_product(
         first_level_category_name: First level category
         second_level_category_name: Second level category
         raw_json: Original JSON data from API
+        status: Status of the product (e.g., "PENDING", "APPROVED", "BLACKLIST")
 
     Returns:
         Boolean indicating if this was a new record (True) or an update (False)
@@ -654,6 +661,9 @@ def upsert_product(
                 product.second_level_category_name = second_level_category_name
             if raw_json:
                 product.raw_json = raw_json
+            # Update status if provided (only when explicitly set)
+            if status:
+                product.status = status
         else:
             # Insert new product
             product = Product(
@@ -670,7 +680,7 @@ def upsert_product(
                 evaluate_rate=evaluate_rate,
                 first_level_category_name=first_level_category_name,
                 second_level_category_name=second_level_category_name,
-                status="PENDING",
+                status=status if status else "PENDING",
                 first_seen_at=now,
                 last_seen_at=now,
                 raw_json=raw_json,
