@@ -148,6 +148,8 @@ class JobRun(Base):
     new_count = Column(Integer, default=0)
     skipped_count = Column(Integer, default=0)
     error_count = Column(Integer, default=0)
+    keywords = Column(Text, nullable=True)  # Comma-separated or JSON string of keywords used
+    categories = Column(Text, nullable=True)  # Comma-separated or JSON string of categories used
     details = Column(JSON)
 
     def __repr__(self):
@@ -171,20 +173,35 @@ def get_utc_now():
     return datetime.now(timezone.utc)
 
 
-def start_job_run(job_type):
+def start_job_run(job_type, keywords=None, categories=None):
     """
     Create a new job run entry with start time.
 
     Args:
         job_type: Type of the job being run
+        keywords: List of keywords used (optional)
+        categories: List of categories used (optional)
 
     Returns:
         ID of the created job run
     """
     db = get_db_session()
 
+    # Convert lists to comma-separated strings if needed
+    keywords_str = None
+    categories_str = None
+    if keywords:
+        keywords_str = ",".join(keywords) if isinstance(keywords, list) else str(keywords)
+    if categories:
+        categories_str = ",".join([str(c) for c in categories]) if isinstance(categories, list) else str(categories)
+
     try:
-        job_run = JobRun(job_type=job_type, start_time=get_utc_now())
+        job_run = JobRun(
+            job_type=job_type,
+            start_time=get_utc_now(),
+            keywords=keywords_str,
+            categories=categories_str,
+        )
         db.add(job_run)
         db.commit()
         db.refresh(job_run)
@@ -193,7 +210,65 @@ def start_job_run(job_type):
         db.close()
 
 
-def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None):
+def update_job_run_progress(job_id, found=0, new=0, skipped=0, errors=0, details=None, keywords=None, categories=None):
+    """
+    Update job run entry with progress data without marking it as complete.
+    Also updates end_time and duration_seconds to current values so they are available
+    even if the process is interrupted.
+    
+    Args:
+        job_id: ID of the job run to update
+        found: Number of records found
+        new: Number of new records added
+        skipped: Number of records skipped
+        errors: Number of errors encountered
+        details: Additional details as a dict (will be stored as JSON)
+        keywords: String of comma-separated keywords used in the search so far
+        categories: String of comma-separated category IDs used in the search so far
+    """
+    if not job_id:
+        return
+        
+    db = get_db_session()
+    try:
+        job_run = db.query(JobRun).filter(JobRun.id == job_id).first()
+        if job_run:
+            # Update counts
+            job_run.found_count = found
+            job_run.new_count = new
+            job_run.skipped_count = skipped
+            job_run.error_count = errors
+            
+            # Update keywords and categories if provided
+            if keywords is not None:
+                job_run.keywords = keywords
+                
+            if categories is not None:
+                job_run.categories = categories
+            
+            # Always update end_time and duration so we have something if interrupted
+            end_time = get_utc_now()
+            
+            # Ensure start_time is aware of timezone if it's not already
+            start_time = job_run.start_time
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+                
+            duration_seconds = int((end_time - start_time).total_seconds())
+            
+            job_run.end_time = end_time
+            job_run.duration_seconds = duration_seconds
+            
+            # Update details if provided
+            if details:
+                job_run.details = details
+                
+            db.commit()
+    finally:
+        db.close()
+
+
+def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None, keywords=None, categories=None):
     """
     Update job run entry with completion data.
 
@@ -204,6 +279,8 @@ def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None):
         skipped: Number of records skipped
         errors: Number of errors encountered
         details: Additional details as a dict (will be stored as JSON)
+        keywords: String of comma-separated keywords used in the search
+        categories: String of comma-separated category IDs used in the search
     """
     db = get_db_session()
 
@@ -225,6 +302,13 @@ def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None):
             job_run.skipped_count = skipped
             job_run.error_count = errors
             job_run.details = details
+            
+            # Update keywords and categories if provided
+            if keywords is not None:
+                job_run.keywords = keywords
+                
+            if categories is not None:
+                job_run.categories = categories
 
             db.commit()
     finally:

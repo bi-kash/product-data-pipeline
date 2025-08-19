@@ -22,6 +22,9 @@ def setup_logging(module_name):
     logger = logging.getLogger(module_name)
     logger.setLevel(logging.INFO)
     
+    # Prevent propagation to root logger to avoid duplicate console output
+    logger.propagate = False
+    
     # Create formatters
     file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')

@@ -37,7 +37,7 @@
 ### Configuration:
 
 - **Environment Variables**: API keys, database connection details, etc. (.env file)
-- **Categories**: Jewelry categories are loaded from data/jewelry_categories.csv
+- **Categories and Keywords**: Jewelry categories and keywords are loaded from .env
 
 ### Next Steps:
 

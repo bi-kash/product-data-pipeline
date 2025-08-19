@@ -115,6 +115,8 @@ The database is managed using SQLAlchemy ORM for better code organization and ty
 
 ## Usage
 
+For a detailed explanation of each command, workflow steps, and troubleshooting, please refer to the [Quality Assurance Guide](./QA.md).
+
 ### Merchant Harvesting
 
 **Initialize merchant harvest:**
@@ -174,17 +176,36 @@ Options:
 
 - `--input PATH`: Specify input CSV file path (default: data/reviewed_merchants.csv)
 
-## Category-based Search
+## Search Configuration
 
-The pipeline now uses category-based search instead of keywords. Categories are defined in `data/jewelry_categories.csv` with the following format:
+The pipeline can search for products using two methods:
+1. **Category-based search**: Searches for products within specific AliExpress categories
+2. **Keyword-based search**: Searches for products matching specific keywords
+
+You can configure the pipeline to use:
+- Only category-based search (recommended for most cases)
+- Both category and keyword-based search together
+
+For detailed information about configuring search parameters, avoiding jewelry supplies, and best practices, see the [Search Configuration Guide](./SEARCH_CONFIG.md).
+
+### Category IDs
+
+Category IDs are configured directly in the `.env` file:
 
 ```
-category_id,category_name
-36,Jewelry & Accessories
-200001680,Fine Jewelry
-1509,Fashion Jewelry
-...
+CATEGORIES=200001680,1509,201239108,200370154
 ```
+
+Recommended categories for finished jewelry:
+- `200001680`: Fine Jewelry
+- `1509`: Fashion Jewelry
+- `201239108`: Customized Jewelry
+- `200370154`: Smart Jewelry
+
+Categories to avoid (primarily contain supplies):
+- `200001479`: Jewelry Packaging & Display
+- `200001478`: Jewelry Tools & Equipment
+- `201238105`: Jewelry Making
 
 The system efficiently searches multiple categories at once and implements paging with a default page size of 50.
 
@@ -210,7 +231,31 @@ ORDER BY COUNT(*) DESC;
 The pipeline is configured via:
 
 - `.env`: Contains database credentials, API keys, and application settings
-- `data/jewelry_categories.csv`: Contains categories for product search
+- `data/CATEGORIES.csv`: Contains categories for product search
+
+## Complete Workflow
+
+The product data pipeline follows this workflow:
+
+1. **Initial Data Collection** - Run `harvest:init` to collect initial merchant and product data
+2. **Regular Updates** - Run `harvest:delta` periodically to update and add new data
+3. **Export for Review** - Use `review:export-pending` to create a CSV file for expert reviewers
+4. **Expert Review** - Reviewers update approval statuses in the CSV file (WHITELIST or BLACKLIST)
+5. **Import Results** - Use `review:import-results` to update the database with reviewer decisions
+6. **Monitor & Analyze** - Use `harvest:status` and `export:tables` to track pipeline performance
+
+For a detailed explanation of each step, expected outcomes, and troubleshooting guidance, refer to the [Quality Assurance Guide](./QA.md).
+
+## Quality Assurance
+
+The [QA.md](./QA.md) document provides:
+
+- Detailed explanation of what each command does
+- Step-by-step testing procedures for all features
+- Complete workflow documentation
+- Troubleshooting guidance for common issues
+
+Use this guide both for testing the application and for understanding the complete data pipeline workflow.
 
 ## License
 

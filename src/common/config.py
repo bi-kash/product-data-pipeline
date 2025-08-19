@@ -10,59 +10,84 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def use_keywords():
+    """
+    Determine if keyword-based search should be used based on the USE_KEYWORDS environment variable.
+    
+    When USE_KEYWORDS is true:
+    - The harvester will search using both keywords AND categories
+    - It makes separate API calls for keyword search and category search
+    - Both approaches contribute to a single job_run record
+    
+    When USE_KEYWORDS is false:
+    - The harvester will search using ONLY categories
+    - This often yields better results by avoiding supply-heavy keyword searches
+    - Only category IDs are recorded in the job_run record
+    
+    Returns:
+        bool: True if USE_KEYWORDS is set to "true" (case-insensitive), False otherwise
+    """
+    return os.getenv("USE_KEYWORDS", "true").lower() == "true"
+
+
 def get_search_keywords():
     """
-    Load search keywords from the keywords.csv file.
-
+    Load search keywords from the KEYWORDS environment variable (comma-separated).
+    
+    These keywords are used for product search when USE_KEYWORDS=true.
+    Each keyword will trigger a separate API call and search.
+    
+    Recommended keywords are specific jewelry types like:
+    - necklace, ring, bracelet, earrings
+    
+    Avoid supply terms like:
+    - beads, findings, chain, wire
+    
     Returns:
-        List of keywords for merchant search
+        list: List of keywords for merchant search
+        
+    Example:
+        With KEYWORDS=necklace,ring,bracelet in .env
+        Returns: ['necklace', 'ring', 'bracelet']
     """
-    keyword_file = os.getenv("KEYWORD_FILE", "data/keywords.csv")
-
-    # Create the file with sample keywords if it doesn't exist
-    if not os.path.exists(keyword_file):
-        os.makedirs(os.path.dirname(keyword_file), exist_ok=True)
-        with open(keyword_file, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["keyword"])
-            writer.writerow(["jewelry"])
-
-    # Read keywords from file
-    keywords = []
-    with open(keyword_file, "r", newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        next(reader)  # Skip header
-        for row in reader:
-            if row and row[0].strip():
-                keywords.append(row[0].strip())
-
-    return keywords
+    env_val = os.getenv("KEYWORDS", "")
+    # Remove any inline comments (anything after a # symbol)
+    if '#' in env_val:
+        env_val = env_val.split('#')[0]
+    return [k.strip() for k in env_val.split(",") if k.strip()]
 
 
 def get_search_categories():
     """
-    Get list of category IDs to search from file.
-
+    Get list of category IDs from the CATEGORIES environment variable (comma-separated).
+    
+    These categories are used for:
+    1. Category-only search when USE_KEYWORDS=false
+    2. Additional category search when USE_KEYWORDS=true
+    
+    Recommended categories for finished jewelry:
+    - 200001680: Fine Jewelry
+    - 1509: Fashion Jewelry
+    - 201239108: Customized Jewelry
+    - 200370154: Smart Jewelry
+    
+    Categories to avoid (primarily contain supplies):
+    - 200001479: Jewelry Packaging & Display
+    - 200001478: Jewelry Tools & Equipment
+    - 201238105: Jewelry Making
+    
     Returns:
-        List of tuples (category_id, category_name)
+        list: List of category IDs as strings
+        
+    Example:
+        With CATEGORIES=200001680,1509 in .env
+        Returns: ['200001680', '1509']
     """
-    categories_file = os.getenv("CATEGORIES_FILE", "data/jewelry_categories.csv")
-
-    if not os.path.exists(categories_file):
-        return []
-
-    categories = []
-    with open(categories_file, "r", newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            try:
-                category_id = int(row["category_id"])
-                category_name = row["category_name"]
-                categories.append((category_id, category_name))
-            except (KeyError, ValueError):
-                continue
-
-    return categories
+    env_val = os.getenv("CATEGORIES", "")
+    # Remove any inline comments (anything after a # symbol)
+    if '#' in env_val:
+        env_val = env_val.split('#')[0]
+    return [c.strip() for c in env_val.split(",") if c.strip()]
 
 
 def create_example_env_file():

@@ -21,14 +21,14 @@ logger = setup_logging('main')
 
 
 # Wrapper functions to maintain compatibility with original CLI
-def init_harvest(limit=None, dry_run=False, use_categories=True):
+def init_harvest(limit=None, dry_run=False):
     """Initialize merchant harvest."""
-    original_init_harvest(limit=limit, dry_run=dry_run, use_categories=use_categories)
+    original_init_harvest(limit=limit, dry_run=dry_run)
 
 
-def delta_harvest(limit=None, dry_run=False, use_categories=True):
+def delta_harvest(limit=None, dry_run=False):
     """Run incremental merchant harvest."""
-    original_delta_harvest(limit=limit, dry_run=dry_run, use_categories=use_categories)
+    original_delta_harvest(limit=limit, dry_run=dry_run)
 
 
 def harvest_status():
@@ -53,11 +53,7 @@ def main():
     harvest_init_parser.add_argument(
         "--dry-run", action="store_true", help="Simulate without writing data"
     )
-    harvest_init_parser.add_argument(
-        "--use-keywords",
-        action="store_true",
-        help="Use keywords instead of categories for search",
-    )
+    # No --use-keywords argument needed; always uses categories if present, else keywords
 
     harvest_delta_parser = subparsers.add_parser(
         "harvest:delta", help="Run incremental merchant harvest"
@@ -67,11 +63,6 @@ def main():
     )
     harvest_delta_parser.add_argument(
         "--dry-run", action="store_true", help="Simulate without writing data"
-    )
-    harvest_delta_parser.add_argument(
-        "--use-keywords",
-        action="store_true",
-        help="Use keywords instead of categories for search",
     )
 
     subparsers.add_parser("harvest:status", help="Show harvest job status")
@@ -108,11 +99,11 @@ def main():
     # Execute command
     if args.command == "harvest:init":
         init_harvest(
-            limit=args.limit, dry_run=args.dry_run, use_categories=not args.use_keywords
+            limit=args.limit, dry_run=args.dry_run
         )
     elif args.command == "harvest:delta":
         delta_harvest(
-            limit=args.limit, dry_run=args.dry_run, use_categories=not args.use_keywords
+            limit=args.limit, dry_run=args.dry_run
         )
     elif args.command == "harvest:status":
         harvest_status()
