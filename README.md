@@ -40,7 +40,13 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-5. Edit the `.env` file with your database and RapidAPI credentials. Required variables include:
+5. **Subscribe to the AliExpress True API**:
+   - Visit [AliExpress True API on RapidAPI](https://rapidapi.com/georgekhananaev/api/aliexpress-true-api)
+   - Sign up for a RapidAPI account if you don't have one
+   - Subscribe to the API (they offer a free tier with limited requests)
+   - Copy your personal RapidAPI key from the dashboard
+
+6. Edit the `.env` file with your database and RapidAPI credentials. Required variables include:
 
 ```
 # Database configuration
@@ -52,7 +58,7 @@ DB_PORT=5432
 DB_NAME=product_pipeline
 
 # RapidAPI configuration
-RAPIDAPI_KEY=your_rapidapi_key
+RAPIDAPI_KEY=your_rapidapi_key  # Replace with your key from step 5
 RAPIDAPI_HOST=aliexpress-true-api.p.rapidapi.com
 
 # Region settings (for price and shipping data)
@@ -60,6 +66,8 @@ ALIEXPRESS_TARGET_CURRENCY=EUR
 ALIEXPRESS_TARGET_LANGUAGE=EN
 ALIEXPRESS_TARGET_COUNTRY=DE
 ```
+
+> **Note**: Never commit your `.env` file to version control as it contains sensitive information like your API key.
 
 ## Database Setup
 
@@ -230,8 +238,8 @@ ORDER BY COUNT(*) DESC;
 
 The pipeline is configured via:
 
-- `.env`: Contains database credentials, API keys, and application settings
-- `data/CATEGORIES.csv`: Contains categories for product search
+- `.env`: Contains database credentials, API keys, and application settings. This file must be created by copying `.env.example` and updating it with your personal RapidAPI key and other settings.
+- `SEARCH_CONFIG.md`: Contains detailed documentation on configuring search parameters to avoid jewelry supplies
 
 ## Complete Workflow
 
@@ -246,16 +254,15 @@ The product data pipeline follows this workflow:
 
 For a detailed explanation of each step, expected outcomes, and troubleshooting guidance, refer to the [Quality Assurance Guide](./QA.md).
 
-## Quality Assurance
+## Documentation
 
-The [QA.md](./QA.md) document provides:
+The project includes several documentation files:
 
-- Detailed explanation of what each command does
-- Step-by-step testing procedures for all features
-- Complete workflow documentation
-- Troubleshooting guidance for common issues
+- [QA.md](./QA.md): Quality assurance guide with detailed explanations of each command, step-by-step testing procedures, complete workflow documentation, and troubleshooting guidance.
 
-Use this guide both for testing the application and for understanding the complete data pipeline workflow.
+- [SEARCH_CONFIG.md](./SEARCH_CONFIG.md): Comprehensive guide on configuring search parameters, avoiding jewelry supplies, and optimizing category-based searches.
+
+Use these guides for testing the application, understanding the complete data pipeline workflow, and optimizing your search configuration.
 
 ## License
 
