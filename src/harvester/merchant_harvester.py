@@ -742,44 +742,11 @@ def init_harvest(limit=None, dry_run=False):
         dry_run: If True, don't write to database
     """
     create_example_env_file()
-
-    if not dry_run:
-        # Ensure tables exist
-        create_tables_if_not_exist()
-
-    logger.info(f"Starting initial merchant harvest{'(DRY RUN)' if dry_run else ''}")
-    if limit:
-        logger.info(f"Processing limit: {limit} products")
-
-    # Get categories first (used in both modes)
-    categories = get_search_categories()
     
-    # Get keywords if needed
-    all_keywords = get_search_keywords() if use_keywords() else None
-    
-    # We'll track which keywords and categories were actually used
-    used_keywords = []
-    # Initialize used_categories with all available categories
-    # so that they'll be in the job_run even if we interrupt early
-    used_categories = categories.copy() if categories else []
-    
-    # Initially create job run with no keywords/categories - we'll update later
-    job_id = None if dry_run else start_job_run(
-        job_type="HARVEST_INIT",
-        keywords=None,
-        categories=None
+    # Set up the harvest with common initialization code
+    job_id, categories, all_keywords, used_keywords, used_categories, stats = _setup_harvest(
+        "HARVEST_INIT", limit, dry_run
     )
-    
-    # Create unified stats dictionary
-    stats = {
-        "total_products_processed": 0,
-        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
-        "unique_sellers_found": 0,
-        "new_sellers_added": 0,
-        "sellers_updated": 0,
-        "errors": 0,
-        "start_time": datetime.utcnow().isoformat(),
-    }
     
     # Unique sellers set for the entire process
     unique_sellers = set()
@@ -967,6 +934,113 @@ def init_harvest(limit=None, dry_run=False):
 
 
 
+def _finalize_harvest(job_id, stats, used_keywords, used_categories, dry_run):
+    """
+    Common finalization for both initial and delta harvests.
+    
+    Args:
+        job_id: The ID of the job run to complete
+        stats: Dictionary containing harvest statistics
+        used_keywords: List of keywords used in the harvest
+        used_categories: List of categories used in the harvest
+        dry_run: Whether this was a dry run (no database writes)
+    
+    Returns:
+        The stats dictionary
+    """
+    # Complete job run if not a dry run
+    if job_id and not dry_run:
+        # Convert keywords and categories to strings for the database
+        keywords_str = ",".join(used_keywords) if used_keywords else None
+        categories_str = ",".join([str(c) for c in used_categories]) if used_categories else None
+        
+        # Complete the job run record
+        complete_job_run(
+            job_id=job_id,
+            found=stats["unique_sellers_found"],
+            new=stats["new_sellers_added"],
+            skipped=stats["unique_sellers_found"] - stats["new_sellers_added"],
+            errors=stats["errors"],
+            details=prepare_json_safe_dict(stats),
+            keywords=keywords_str,
+            categories=categories_str
+        )
+    
+    # Log summary statistics
+    logger.info(f"Harvest complete. Summary:")
+    logger.info(f"- Products processed: {stats['total_products_processed']}")
+    logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
+    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
+    logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
+    logger.info(f"- New sellers added: {stats['new_sellers_added']}")
+    logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")
+    logger.info(f"- Errors: {stats['errors']}")
+    
+    # Show approval stats if not a dry run
+    if not dry_run:
+        counts = get_seller_approval_counts()
+        logger.info(f"Current seller counts by status:")
+        logger.info(f"- PENDING: {counts['PENDING']}")
+        logger.info(f"- WHITELIST: {counts['WHITELIST']}")
+        logger.info(f"- BLACKLIST: {counts['BLACKLIST']}")
+        logger.info(f"- TOTAL: {counts['TOTAL']}")
+    
+    return stats
+
+def _setup_harvest(job_type, limit=None, dry_run=False):
+    """
+    Common setup for both initial and delta harvests.
+    
+    Args:
+        job_type: Type of harvest job (HARVEST_INIT or HARVEST_DELTA)
+        limit: Optional limit on the number of products to process
+        dry_run: If True, don't write to database
+    
+    Returns:
+        Tuple of (job_id, categories, all_keywords, used_keywords, used_categories, stats)
+    """
+    harvest_type = "initial" if job_type == "HARVEST_INIT" else "delta"
+    logger.info(f"Starting {harvest_type} merchant harvest{'(DRY RUN)' if dry_run else ''}")
+    
+    if not dry_run:
+        # Ensure tables exist
+        create_tables_if_not_exist()
+
+    if limit:
+        logger.info(f"Processing limit: {limit} products")
+
+    # Get categories first (used in both modes)
+    categories = get_search_categories()
+    
+    # Get keywords if needed
+    all_keywords = get_search_keywords() if use_keywords() else None
+    
+    # We'll track which keywords and categories were actually used
+    used_keywords = []
+    # Initialize used_categories with all available categories
+    # so that they'll be in the job_run even if we interrupt early
+    used_categories = categories.copy() if categories else []
+    
+    # Initially create job run with no keywords/categories - we'll update later
+    job_id = None if dry_run else start_job_run(
+        job_type=job_type,
+        keywords=None,
+        categories=None
+    )
+    
+    # Create unified stats dictionary
+    stats = {
+        "total_products_processed": 0,
+        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
+        "unique_sellers_found": 0,
+        "new_sellers_added": 0,
+        "sellers_updated": 0,
+        "errors": 0,
+        "start_time": datetime.utcnow().isoformat(),
+    }
+    
+    return job_id, categories, all_keywords, used_keywords, used_categories, stats
+
 def delta_harvest(limit=None, dry_run=False):
     """
     Run incremental merchant harvest - updates the database with new products/sellers.
@@ -997,44 +1071,10 @@ def delta_harvest(limit=None, dry_run=False):
         limit: Maximum number of products to process (None for unlimited)
         dry_run: If True, don't write to database
     """
-    logger.info(f"Starting delta merchant harvest{'(DRY RUN)' if dry_run else ''}")
-
-    if not dry_run:
-        # Ensure tables exist
-        create_tables_if_not_exist()
-
-    if limit:
-        logger.info(f"Processing limit: {limit} products")
-
-    # Get categories first (used in both modes)
-    categories = get_search_categories()
-    
-    # Get keywords if needed
-    all_keywords = get_search_keywords() if use_keywords() else None
-    
-    # We'll track which keywords and categories were actually used
-    used_keywords = []
-    # Initialize used_categories with all available categories
-    # so that they'll be in the job_run even if we interrupt early
-    used_categories = categories.copy() if categories else []
-    
-    # Initially create job run with no keywords/categories - we'll update later
-    job_id = None if dry_run else start_job_run(
-        job_type="HARVEST_DELTA",
-        keywords=None,
-        categories=None
+    # Set up the harvest with common initialization code
+    job_id, categories, all_keywords, used_keywords, used_categories, stats = _setup_harvest(
+        "HARVEST_DELTA", limit, dry_run
     )
-    
-    # Create unified stats dictionary
-    stats = {
-        "total_products_processed": 0,
-        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
-        "unique_sellers_found": 0,
-        "new_sellers_added": 0,
-        "sellers_updated": 0,
-        "errors": 0,
-        "start_time": datetime.utcnow().isoformat(),
-    }
     
     # Unique sellers set for the entire process
     unique_sellers = set()
