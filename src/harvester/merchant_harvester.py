@@ -17,8 +17,6 @@ from src.common.database import (
     upsert_product,
     get_seller_approval_counts,
     get_recent_job_runs,
-    associate_product_category,
-    get_product_categories_stats,
     get_db_session,
     JobRun,
     update_seller_approval,
@@ -310,25 +308,7 @@ def _process_products(
                 # Count products added to the database
                 stats["products_added"] = stats.get("products_added", 0) + 1
                 
-                # Associate product with category
-                if all_categories:
-                    # Associate with each provided category
-                    for cat_id in all_categories:
-                        associate_product_category(
-                            product_id=product_id,
-                            category_id=cat_id,
-                            category_name=str(cat_id),
-                            search_page=page,
-                            position_in_results=position + 1,
-                        )
-                elif category_id:
-                    associate_product_category(
-                        product_id=product_id,
-                        category_id=category_id,
-                        category_name=category_name,
-                        search_page=page,
-                        position_in_results=position + 1,
-                    )
+                # Previously associated product with category (removed)
                     
             except Exception as e:
                 logger.error(f"Error upserting seller/product {shop_id}: {e}")
@@ -432,22 +412,7 @@ def _harvest_merchants(keywords=None, categories=None, limit=None, dry_run=False
 
                         # Skip if this seller has already been processed in this run
                         if shop_id in unique_sellers:
-                            # Even if we skip this seller, we should still track that this
-                            # product was found via this keyword search
-                            if not dry_run:
-                                try:
-                                    associate_product_category(
-                                        product_id=product_id,
-                                        category_id=keyword,
-                                        category_name=keyword,
-                                        search_page=page,
-                                        position_in_results=position + 1,
-                                    )
-                                except Exception as e:
-                                    logger.error(
-                                        f"Error associating product {product_id} with keyword {keyword}: {e}"
-                                    )
-                                    stats["errors"] += 1
+                            # Product category association logic removed
                             continue
 
                         unique_sellers.add(shop_id)
@@ -533,14 +498,7 @@ def _harvest_merchants(keywords=None, categories=None, limit=None, dry_run=False
                                     raw_json=product,
                                 )
 
-                                # Associate product with keyword as category
-                                associate_product_category(
-                                    product_id=product_id,
-                                    category_id=keyword,
-                                    category_name=keyword,
-                                    search_page=page,
-                                    position_in_results=position + 1,
-                                )
+                                # Product category association removed
 
                             except Exception as e:
                                 logger.error(
@@ -629,24 +587,7 @@ def _harvest_merchants(keywords=None, categories=None, limit=None, dry_run=False
 
                     # Skip if this seller has already been processed in this run
                     if shop_id in unique_sellers:
-                        # Even if we skip this seller, we should still track that this
-                        # product was found via this category search
-                        if not dry_run:
-                            try:
-                                # Associate with each provided category
-                                for cat_id in all_category_ids:
-                                    associate_product_category(
-                                        product_id=product_id,
-                                        category_id=cat_id,
-                                        category_name=str(cat_id),
-                                        search_page=page,
-                                        position_in_results=position + 1,
-                                    )
-                            except Exception as e:
-                                logger.error(
-                                    f"Error associating product {product_id} with category {matching_cat_id}: {e}"
-                                )
-                                stats["errors"] += 1
+                        # Product category association logic removed
                         continue
 
                     unique_sellers.add(shop_id)
@@ -726,15 +667,7 @@ def _harvest_merchants(keywords=None, categories=None, limit=None, dry_run=False
                                 raw_json=product,
                             )
 
-                            # Associate product with each category
-                            for cat_id in all_category_ids:
-                                associate_product_category(
-                                    product_id=product_id,
-                                    category_id=cat_id,
-                                    category_name=str(cat_id),
-                                    search_page=page,
-                                    position_in_results=position + 1,
-                                )
+                            # Product category associations removed
 
                         except Exception as e:
                             logger.error(
@@ -1032,23 +965,6 @@ def init_harvest(limit=None, dry_run=False):
             
     return stats
 
-    logger.info(f"Harvest complete. Summary:")
-    logger.info(f"- Products processed: {stats['total_products_processed']}")
-    logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
-    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
-    logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
-    logger.info(f"- New sellers added: {stats['new_sellers_added']}")
-    logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")
-    logger.info(f"- Errors: {stats['errors']}")
-
-    if not dry_run:
-        # Show seller approval counts
-        counts = get_seller_approval_counts()
-        logger.info(f"Current seller counts by status:")
-        logger.info(f"- PENDING: {counts['PENDING']}")
-        logger.info(f"- WHITELIST: {counts['WHITELIST']}")
-        logger.info(f"- BLACKLIST: {counts['BLACKLIST']}")
-        logger.info(f"- TOTAL: {counts['TOTAL']}")
 
 
 def delta_harvest(limit=None, dry_run=False):
@@ -1344,27 +1260,7 @@ def harvest_status():
                 )
             )
 
-    # Get category stats
-    category_stats = get_product_categories_stats()
-
-    print("\n===== CATEGORY SEARCH STATS =====")
-    print(
-        f"Total category-product associations: {category_stats['total_associations']}"
-    )
-
-    if category_stats["top_categories"]:
-        print("\nTop categories by product count:")
-        print("{:<8} {:<30} {:<10}".format("ID", "CATEGORY", "PRODUCTS"))
-        print("-" * 50)
-
-        for item in category_stats["top_categories"]:
-            print(
-                "{:<8} {:<30} {:<10}".format(
-                    item["category_id"],
-                    item["category_name"][:28],
-                    item["product_count"],
-                )
-            )
+    # Category stats section removed
 
     print("\n===== SQL QUERIES FOR ANALYSIS =====")
     print("# Get merchants found in the last 24 hours:")
@@ -1375,11 +1271,4 @@ def harvest_status():
     print("SELECT approval_status, COUNT(*) FROM sellers GROUP BY approval_status;")
     print("\n# Get average number of merchants found per job run:")
     print("SELECT AVG(found_count) FROM job_runs WHERE job_type = 'harvest';")
-    print("\n# Get products by category:")
-    print(
-        "SELECT pc.category_name, COUNT(*) FROM product_categories pc GROUP BY pc.category_name ORDER BY COUNT(*) DESC;"
-    )
-    print("\n# Get all products for a specific category:")
-    print(
-        "SELECT p.product_id, p.product_title FROM products p JOIN product_categories pc ON p.product_id = pc.product_id WHERE pc.category_id = 1509;"
-    )
+    # Product category SQL queries removed

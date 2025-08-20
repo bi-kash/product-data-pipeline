@@ -98,8 +98,6 @@ The application automatically creates the required tables when first run. The da
   - `last_seen_at`: Timestamp when last seen (UTC)
   - `raw_json`: Raw data from the API
 
-- **product_categories:** Track product-category associations
-
   - `id`: Auto-incrementing primary key
   - `product_id`: Foreign key to products table
   - `category_id`: Category ID from AliExpress
@@ -160,7 +158,7 @@ This displays:
 
 - Seller counts by approval status
 - Recent job runs with statistics
-- Category search statistics
+
 - Useful SQL queries for analysis
 
 ### Merchant Review Workflow
@@ -207,6 +205,7 @@ BLACKLIST_TERMS_IN_TITLE=bead,beads,supply,supplies,making,diy,component,finding
 ```
 
 When a product title contains any of these terms:
+
 - The product is marked with status="BLACKLIST" in the database
 - The seller is marked with approval_status="BLACKLIST" in the database
 - These items are counted in the "blacklisted" statistics during harvesting
@@ -250,7 +249,7 @@ SELECT COUNT(*) FROM sellers WHERE first_seen_at >= NOW() - INTERVAL '24 hours';
 SELECT approval_status, COUNT(*) FROM sellers GROUP BY approval_status;
 
 -- Get products by category
-SELECT pc.category_name, COUNT(*) FROM product_categories pc
+
 GROUP BY pc.category_name
 ORDER BY COUNT(*) DESC;
 ```

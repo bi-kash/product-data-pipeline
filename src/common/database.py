@@ -81,24 +81,6 @@ class Seller(Base):
         return f"<Seller(shop_id='{self.shop_id}', approval_status='{self.approval_status}')>"
 
 
-class ProductCategory(Base):
-    """Model representing the relationship between products and search categories."""
-
-    __tablename__ = "product_categories"
-
-    id = Column(Integer, primary_key=True)
-    product_id = Column(String(255), ForeignKey("products.product_id"), nullable=False)
-    category_id = Column(Integer, nullable=False)
-    category_name = Column(String(255), nullable=True)
-    search_page = Column(Integer, nullable=False)
-    position_in_results = Column(Integer, nullable=True)
-    search_timestamp = Column(DateTime(timezone=True), nullable=False)
-
-    # Define the relationship to products
-    product = relationship("Product", back_populates="categories")
-
-    def __repr__(self):
-        return f"<ProductCategory(product_id='{self.product_id}', category_id='{self.category_id}')>"
 
 
 class Product(Base):
@@ -124,11 +106,8 @@ class Product(Base):
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
     raw_json = Column(JSON)
 
-    # Define the relationship to sellers and categories
+    # Define the relationship to sellers
     seller = relationship("Seller", back_populates="products")
-    categories = relationship(
-        "ProductCategory", back_populates="product", cascade="all, delete-orphan"
-    )
 
     def __repr__(self):
         return f"<Product(product_id='{self.product_id}', title='{self.product_title[:30]}...', status='{self.status}')>"
@@ -401,46 +380,7 @@ def get_seller_approval_counts():
         db.close()
 
 
-def get_product_categories_stats():
-    """
-    Get statistics about product-category associations.
 
-    Returns:
-        Dictionary with statistics
-    """
-    db = get_db_session()
-
-    try:
-        # Get total count
-        total_count = db.query(func.count(ProductCategory.id)).scalar() or 0
-
-        # Get top categories by product count
-        top_categories = (
-            db.query(
-                ProductCategory.category_id,
-                ProductCategory.category_name,
-                func.count(ProductCategory.product_id).label("product_count"),
-            )
-            .group_by(ProductCategory.category_id)
-            .order_by(func.count(ProductCategory.product_id).desc())
-            .limit(10)
-            .all()
-        )
-
-        # Format results
-        return {
-            "total_associations": total_count,
-            "top_categories": [
-                {
-                    "category_id": cat_id,
-                    "category_name": cat_name or f"Category {cat_id}",
-                    "product_count": count,
-                }
-                for cat_id, cat_name, count in top_categories
-            ],
-        }
-    finally:
-        db.close()
 
 
 def get_recent_job_runs(limit=10):
@@ -549,41 +489,6 @@ def update_seller_approval(shop_id, approval_status, note=None):
         db.close()
 
 
-def associate_product_category(
-    product_id, category_id, category_name=None, search_page=1, position_in_results=None
-):
-    """
-    Associate a product with a search category.
-
-    Args:
-        product_id: ID of the product
-        category_id: Category ID that produced this product
-        category_name: Category name (optional)
-        search_page: Page number in search results
-        position_in_results: Position in search results (optional)
-
-    Returns:
-        ID of the created association
-    """
-    db = get_db_session()
-    now = get_utc_now()
-
-    try:
-        # Create the association
-        association = ProductCategory(
-            product_id=product_id,
-            category_id=category_id,
-            category_name=category_name,
-            search_page=search_page,
-            position_in_results=position_in_results,
-            search_timestamp=now,
-        )
-        db.add(association)
-        db.commit()
-        db.refresh(association)
-        return association.id
-    finally:
-        db.close()
 
 
 def upsert_product(

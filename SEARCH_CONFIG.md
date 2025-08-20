@@ -5,10 +5,12 @@ This document explains how to effectively use and configure the search parameter
 ## Overview
 
 The product data pipeline can search for products using two methods:
+
 1. **Category-based search**: Searches for products within specific AliExpress categories
 2. **Keyword-based search**: Searches for products matching specific keywords
 
 You can configure the pipeline to use:
+
 - Only category-based search
 - Both category and keyword-based search together
 
@@ -38,11 +40,13 @@ This flag determines the search method:
 ### KEYWORDS Parameter
 
 A comma-separated list of keywords to search for when `USE_KEYWORDS=true`. For example:
+
 ```
 KEYWORDS=necklace,ring,bracelet,earrings,pendant necklace,brooch,anklet
 ```
 
 Best practices for keywords:
+
 - Use specific jewelry item types (like "necklace", "earrings")
 - Be precise with multi-word phrases (like "pendant necklace")
 - Avoid generic terms that might return supplies (like "beads", "chain")
@@ -52,6 +56,7 @@ Best practices for keywords:
 ### BLACKLIST_TERMS_IN_TITLE Parameter
 
 A comma-separated list of terms that, when found in product titles, will cause those products and their sellers to be automatically blacklisted during harvesting. For example:
+
 ```
 BLACKLIST_TERMS_IN_TITLE=beads,findings,jump rings,clasps,wire,chain by the foot,jewelry making,diy jewelry
 ```
@@ -59,11 +64,13 @@ BLACKLIST_TERMS_IN_TITLE=beads,findings,jump rings,clasps,wire,chain by the foot
 This is a powerful way to filter out unwanted items, particularly jewelry supplies and components, without having to modify your category selection.
 
 When a product title contains any of these terms:
+
 - The product is marked with status="BLACKLIST" in the database
 - The seller is marked with approval_status="BLACKLIST" in the database
 - These items are counted in the "blacklisted" statistics during harvesting
 
 Best practices for blacklist terms:
+
 - Include common jewelry supply terms like "beads", "findings", "clasps"
 - Include jewelry-making phrases like "diy jewelry", "jewelry making"
 - Use lowercase (matching is case-insensitive)
@@ -76,17 +83,20 @@ The harvester will log how many products were blacklisted due to their titles in
 ### CATEGORIES Parameter
 
 A comma-separated list of AliExpress category IDs to use in category-based searches. For example:
+
 ```
 CATEGORIES=200001680,1509,201239108,200370154
 ```
 
 The included categories are:
+
 - `200001680`: Fine Jewelry
-- `1509`: Fashion Jewelry 
+- `1509`: Fashion Jewelry
 - `201239108`: Customized Jewelry
 - `200370154`: Smart Jewelry
 
 Categories to avoid (they primarily contain supplies, not finished jewelry):
+
 - `200001479`: Jewelry Packaging & Display
 - `200001478`: Jewelry Tools & Equipment
 - `201238105`: Jewelry Making
@@ -96,12 +106,14 @@ Categories to avoid (they primarily contain supplies, not finished jewelry):
 ### Category-Only Search (`USE_KEYWORDS=false`)
 
 When `USE_KEYWORDS=false`:
+
 1. The harvester searches **only** using the categories specified in `CATEGORIES`
 2. A single job run is created in the database
 3. The categories column in the job_run table reflects the categories used
 4. The keywords column in the job_run table remains NULL
 
 This approach is recommended for most cases because:
+
 - It provides broader coverage of jewelry products
 - It avoids potential bias from keyword limitations
 - It's more efficient (fewer API calls)
@@ -110,6 +122,7 @@ This approach is recommended for most cases because:
 ### Combined Search (`USE_KEYWORDS=true`)
 
 When `USE_KEYWORDS=true`:
+
 1. The harvester first searches using each keyword specified in `KEYWORDS`
 2. Then it searches using the categories specified in `CATEGORIES`
 3. A single job run is created for the entire process
@@ -122,12 +135,14 @@ When `USE_KEYWORDS=true`:
 One common challenge is filtering out jewelry supplies (beads, findings, chains, etc.) to focus only on finished jewelry products. Here are strategies to avoid supplies:
 
 1. **Use category-only search** (`USE_KEYWORDS=false`) with carefully selected finished-jewelry categories:
+
    - `200001680` (Fine Jewelry)
    - `1509` (Fashion Jewelry)
    - `201239108` (Customized Jewelry)
    - `200370154` (Smart Jewelry)
 
 2. **Avoid supply-heavy categories**:
+
    - `200001479` (Jewelry Packaging & Display)
    - `200001478` (Jewelry Tools & Equipment)
    - `201238105` (Jewelry Making)
@@ -153,11 +168,13 @@ These columns are updated after each page of results is processed, ensuring that
 2. **Only enable keyword search** (`USE_KEYWORDS=true`) if you need to further filter or target specific types of jewelry.
 
 3. **Monitor job run records** to see which search parameters are being used and their effectiveness:
+
    ```bash
    python main.py harvest:status
    ```
 
 4. **Adjust your search strategy** based on the results:
+
    - If getting too many supplies: remove broader categories, add more specific ones
    - If missing certain product types: consider adding targeted keywords
 
@@ -171,6 +188,7 @@ These columns are updated after each page of results is processed, ensuring that
 ### Issue: Too many jewelry supplies in results
 
 **Solutions:**
+
 - Set `USE_KEYWORDS=false` and use only the recommended finished jewelry categories
 - Remove any supply-heavy categories from the `CATEGORIES` list
 - Add supply-related terms to `BLACKLIST_TERMS_IN_TITLE` to automatically skip products containing those terms
@@ -179,6 +197,7 @@ These columns are updated after each page of results is processed, ensuring that
 ### Issue: Using the title blacklist effectively
 
 **Best practices:**
+
 - Add common supply terms like "beads", "findings", "wire", "jump rings"
 - Include multi-word phrases without quotes, e.g., chain by the foot, jewelry making supplies
 - Use lowercase terms (matching is case-insensitive)
@@ -186,6 +205,7 @@ These columns are updated after each page of results is processed, ensuring that
 - Periodically review and refine your blacklist terms based on results
 
 **Understanding automatic blacklisting:**
+
 - Products with blacklisted terms in their titles are stored in the database with status="BLACKLIST"
 - Sellers of these products are stored with approval_status="BLACKLIST"
 - This happens automatically during the harvest process, not after review
@@ -195,6 +215,7 @@ These columns are updated after each page of results is processed, ensuring that
 ### Issue: Missing certain types of jewelry
 
 **Solutions:**
+
 - Add relevant categories that may contain those items
 - Set `USE_KEYWORDS=true` and add specific keywords for those jewelry types
 - Consider running a test harvest with a high limit to verify results
@@ -203,6 +224,7 @@ These columns are updated after each page of results is processed, ensuring that
 
 **Solution:**
 The pipeline is designed to update the job_run record after each page of results, so even if a harvest is interrupted:
+
 - The keywords column will show all keywords that were actually used before the interruption
 - The categories column will show all categories that were configured, as they're initialized at the start of the harvest
 - You can safely restart the harvest and it will continue building your database

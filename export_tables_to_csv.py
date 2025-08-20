@@ -11,7 +11,7 @@ import logging
 import argparse
 from datetime import datetime
 from sqlalchemy import inspect
-from src.common.database import engine, Base, get_db_session, Seller, Product, ProductCategory, JobRun
+from src.common.database import engine, Base, get_db_session, Seller, Product, JobRun
 
 # Configure logging
 logging.basicConfig(
