@@ -9,7 +9,7 @@ from src.common.database import get_pending_sellers, update_seller_approval
 from src.common.logging_config import setup_logging
 
 # Configure logging
-logger = setup_logging('merchant_review')
+logger = setup_logging("merchant_review")
 
 
 def export_pending_merchants(output_file="data/pending_merchants.csv"):
@@ -98,7 +98,7 @@ def import_review_results(input_file, dry_run=False):
             shop_id = row["shop_id"].strip()
             approval_status = row["approval_status"].strip().upper()
             note = row["note"].strip() if row["note"] else None
-            
+
             # Normalize approval status to handle different formats
             if approval_status == "WHITE_LIST" or approval_status == "WHITELIST":
                 approval_status = "WHITELIST"

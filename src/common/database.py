@@ -81,8 +81,6 @@ class Seller(Base):
         return f"<Seller(shop_id='{self.shop_id}', approval_status='{self.approval_status}')>"
 
 
-
-
 class Product(Base):
     """Model representing a product from AliExpress."""
 
@@ -127,8 +125,12 @@ class JobRun(Base):
     new_count = Column(Integer, default=0)
     skipped_count = Column(Integer, default=0)
     error_count = Column(Integer, default=0)
-    keywords = Column(Text, nullable=True)  # Comma-separated or JSON string of keywords used
-    categories = Column(Text, nullable=True)  # Comma-separated or JSON string of categories used
+    keywords = Column(
+        Text, nullable=True
+    )  # Comma-separated or JSON string of keywords used
+    categories = Column(
+        Text, nullable=True
+    )  # Comma-separated or JSON string of categories used
     details = Column(JSON)
 
     def __repr__(self):
@@ -170,9 +172,15 @@ def start_job_run(job_type, keywords=None, categories=None):
     keywords_str = None
     categories_str = None
     if keywords:
-        keywords_str = ",".join(keywords) if isinstance(keywords, list) else str(keywords)
+        keywords_str = (
+            ",".join(keywords) if isinstance(keywords, list) else str(keywords)
+        )
     if categories:
-        categories_str = ",".join([str(c) for c in categories]) if isinstance(categories, list) else str(categories)
+        categories_str = (
+            ",".join([str(c) for c in categories])
+            if isinstance(categories, list)
+            else str(categories)
+        )
 
     try:
         job_run = JobRun(
@@ -189,12 +197,21 @@ def start_job_run(job_type, keywords=None, categories=None):
         db.close()
 
 
-def update_job_run_progress(job_id, found=0, new=0, skipped=0, errors=0, details=None, keywords=None, categories=None):
+def update_job_run_progress(
+    job_id,
+    found=0,
+    new=0,
+    skipped=0,
+    errors=0,
+    details=None,
+    keywords=None,
+    categories=None,
+):
     """
     Update job run entry with progress data without marking it as complete.
     Also updates end_time and duration_seconds to current values so they are available
     even if the process is interrupted.
-    
+
     Args:
         job_id: ID of the job run to update
         found: Number of records found
@@ -207,7 +224,7 @@ def update_job_run_progress(job_id, found=0, new=0, skipped=0, errors=0, details
     """
     if not job_id:
         return
-        
+
     db = get_db_session()
     try:
         job_run = db.query(JobRun).filter(JobRun.id == job_id).first()
@@ -217,37 +234,46 @@ def update_job_run_progress(job_id, found=0, new=0, skipped=0, errors=0, details
             job_run.new_count = new
             job_run.skipped_count = skipped
             job_run.error_count = errors
-            
+
             # Update keywords and categories if provided
             if keywords is not None:
                 job_run.keywords = keywords
-                
+
             if categories is not None:
                 job_run.categories = categories
-            
+
             # Always update end_time and duration so we have something if interrupted
             end_time = get_utc_now()
-            
+
             # Ensure start_time is aware of timezone if it's not already
             start_time = job_run.start_time
             if start_time.tzinfo is None:
                 start_time = start_time.replace(tzinfo=timezone.utc)
-                
+
             duration_seconds = int((end_time - start_time).total_seconds())
-            
+
             job_run.end_time = end_time
             job_run.duration_seconds = duration_seconds
-            
+
             # Update details if provided
             if details:
                 job_run.details = details
-                
+
             db.commit()
     finally:
         db.close()
 
 
-def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None, keywords=None, categories=None):
+def complete_job_run(
+    job_id,
+    found=0,
+    new=0,
+    skipped=0,
+    errors=0,
+    details=None,
+    keywords=None,
+    categories=None,
+):
     """
     Update job run entry with completion data.
 
@@ -281,11 +307,11 @@ def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None, 
             job_run.skipped_count = skipped
             job_run.error_count = errors
             job_run.details = details
-            
+
             # Update keywords and categories if provided
             if keywords is not None:
                 job_run.keywords = keywords
-                
+
             if categories is not None:
                 job_run.categories = categories
 
@@ -297,7 +323,7 @@ def complete_job_run(job_id, found=0, new=0, skipped=0, errors=0, details=None, 
 def upsert_seller(shop_id, shop_url, shop_name=None, raw_json=None, note=None):
     """
     Insert or update a seller record.
-    
+
     If the seller already exists, this function will update certain fields but will
     NOT modify the approval_status. This ensures that once a seller has been
     whitelisted or blacklisted, their status remains unchanged by automated updates.
@@ -378,9 +404,6 @@ def get_seller_approval_counts():
         return counts
     finally:
         db.close()
-
-
-
 
 
 def get_recent_job_runs(limit=10):
@@ -487,8 +510,6 @@ def update_seller_approval(shop_id, approval_status, note=None):
         return True
     finally:
         db.close()
-
-
 
 
 def upsert_product(

@@ -14,10 +14,10 @@ from src.harvester.merchant_harvester import harvest_status as original_harvest_
 from src.common.logging_config import setup_logging
 
 # Ensure logs directory exists
-os.makedirs('logs', exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 # Set up main logger
-logger = setup_logging('main')
+logger = setup_logging("main")
 
 
 # Wrapper functions to maintain compatibility with original CLI
@@ -98,13 +98,9 @@ def main():
 
     # Execute command
     if args.command == "harvest:init":
-        init_harvest(
-            limit=args.limit, dry_run=args.dry_run
-        )
+        init_harvest(limit=args.limit, dry_run=args.dry_run)
     elif args.command == "harvest:delta":
-        delta_harvest(
-            limit=args.limit, dry_run=args.dry_run
-        )
+        delta_harvest(limit=args.limit, dry_run=args.dry_run)
     elif args.command == "harvest:status":
         harvest_status()
     elif args.command == "review:export-pending":

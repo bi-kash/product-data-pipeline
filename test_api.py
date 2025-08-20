@@ -21,7 +21,7 @@ from src.common.logging_config import setup_logging
 load_dotenv()
 
 # Configure logging
-logger = setup_logging('test_api')
+logger = setup_logging("test_api")
 
 
 def test_api_search():
