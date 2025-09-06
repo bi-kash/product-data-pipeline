@@ -260,10 +260,10 @@ class AliExpressClient:
         
         for product in products:
             # The sale_price can be either a dictionary with 'amount' or directly a float value
-            if isinstance(product.get("sale_price"), dict):
-                sale_price = product.get("sale_price", {}).get("amount", 0)
+            if isinstance(product.get("target_sale_price"), dict):
+                sale_price = product.get("target_sale_price", {}).get("amount", 0)
             else:
-                sale_price = product.get("sale_price", 0)
+                sale_price = product.get("target_sale_price", 0)
                 
             try:
                 sale_price = float(sale_price)
