@@ -208,13 +208,13 @@ class AliExpressClient:
             "target_currency": self.target_currency,
             "target_language": self.target_language,
             "ship_to_country": self.target_country,
-            "sort": "LAST_VOLUME_ASC",  # Default sort by relevance
+            "sort": "SALE_PRICE_DESC",  # Default sort by sale price descending
         }
 
         response = self._call_api(endpoint, params)
 
         if not response:
-            return []
+            return [], None
 
         # Extract products from response
         products = response.get("products", {}).get("product", [])

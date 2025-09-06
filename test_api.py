@@ -36,13 +36,14 @@ def test_api_search():
     keywords = ["jewelry", "necklace"]
     for keyword in keywords:
         print(f"\nSearching for '{keyword}'...")
-        products = client.search_products(keyword, page_no=1, page_size=3)
+        products, total = client.search_products(keyword, page_no=1, page_size=3)
 
         if not products:
             print(f"⚠️ No products found for '{keyword}'")
             continue
 
-        print(f"✓ Found {len(products)} products")
+        print(f"✓ Found {len(products)} products in this page")
+        print(f"✓ Total products in all pages: {total}")
 
         # Show sample data
         for i, product in enumerate(products[:2], 1):
