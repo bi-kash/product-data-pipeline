@@ -179,3 +179,23 @@ def get_blacklisted_title_terms():
         env_val = env_val.split("#")[0]
     # Return lowercased terms for case-insensitive matching
     return [t.strip().lower() for t in env_val.split(",") if t.strip()]
+
+
+def get_min_sale_price():
+    """
+    Get the minimum sale price for product filtering.
+    
+    Products with sale prices below this value will be filtered out from search results.
+    Set MIN_SALE_PRICE in the .env file to enable this filter.
+    
+    Returns:
+        float or None: The minimum sale price as a float, or None if not set or invalid
+    """
+    min_price = os.getenv("MIN_SALE_PRICE", "")
+    if not min_price:
+        return None
+        
+    try:
+        return float(min_price)
+    except ValueError:
+        return None

@@ -48,6 +48,16 @@ class AliExpressClient:
         self.target_currency = get_env("ALIEXPRESS_TARGET_CURRENCY", "EUR")
         self.target_language = get_env("ALIEXPRESS_TARGET_LANGUAGE", "EN")
         self.target_country = get_env("ALIEXPRESS_TARGET_COUNTRY", "DE")
+        
+        # Filtering configuration
+        self.min_sale_price = get_env("MIN_SALE_PRICE", None)
+        if self.min_sale_price:
+            try:
+                self.min_sale_price = float(self.min_sale_price)
+                logger.info(f"Using minimum sale price filter: {self.min_sale_price} {self.target_currency}")
+            except ValueError:
+                logger.error(f"Invalid MIN_SALE_PRICE value: {self.min_sale_price}. Must be a number.")
+                self.min_sale_price = None
 
         # Rate limiting and retry configuration
         self.rate_limit_delay = int(get_env("RATE_LIMIT_DELAY", "1"))
@@ -219,11 +229,54 @@ class AliExpressClient:
         # Extract products from response
         products = response.get("products", {}).get("product", [])
         total_count = response.get("total_record_count", 0)
-
-        logger.info(f"Found {len(products)} products (total: {total_count})")
-
-        # Return products and total count as a tuple
-        return products, total_count
+        
+        # Apply price filtering using the dedicated method
+        filtered_products, filtered_out = self._filter_products_by_price(products)
+        
+        # Log filtering results
+        if self.min_sale_price and filtered_out > 0:
+            logger.info(f"Filtered out {filtered_out} products below minimum price of {self.min_sale_price} {self.target_currency}")
+        
+        logger.info(f"Found {len(filtered_products)} products after filtering (page {page_no}, total API: {total_count})")
+        
+        # Return filtered products and total count
+        return filtered_products, total_count
+        
+    def _filter_products_by_price(self, products):
+        """
+        Filter products by minimum sale price if configured.
+        
+        Args:
+            products: List of products to filter
+            
+        Returns:
+            tuple: (filtered_products, filtered_out_count)
+        """
+        if not self.min_sale_price or not products:
+            return products, 0
+            
+        filtered_products = []
+        filtered_out = 0
+        
+        for product in products:
+            # The sale_price can be either a dictionary with 'amount' or directly a float value
+            if isinstance(product.get("sale_price"), dict):
+                sale_price = product.get("sale_price", {}).get("amount", 0)
+            else:
+                sale_price = product.get("sale_price", 0)
+                
+            try:
+                sale_price = float(sale_price)
+                if sale_price >= self.min_sale_price:
+                    filtered_products.append(product)
+                else:
+                    filtered_out += 1
+            except (ValueError, TypeError):
+                # If we can't parse the price, include the product to be safe
+                filtered_products.append(product)
+                logger.warning(f"Could not parse sale price: {sale_price} for product {product.get('product_id')}")
+        
+        return filtered_products, filtered_out
 
     def get_product_info(self, product_id):
         """
@@ -280,22 +333,29 @@ class AliExpressClient:
             "ship_to_country": self.target_country,
             "sort": "LAST_VOLUME_ASC",  # Default sort by relevance
         }
-
+        
         response = self._call_api(endpoint, params)
 
         if not response:
-            return []
+            return [], 0
 
         # Extract products from response
         products = response.get("products", {}).get("product", [])
         total_count = response.get("total_record_count", 0)
-
+        
+        # Apply price filtering using the dedicated method
+        filtered_products, filtered_out = self._filter_products_by_price(products)
+        
+        # Log filtering results
+        if self.min_sale_price and filtered_out > 0:
+            logger.info(f"Filtered out {filtered_out} products below minimum price of {self.min_sale_price} {self.target_currency}")
+            
         logger.info(
-            f"Found {len(products)} products in categories {category_ids} (total: {total_count})"
+            f"Found {len(filtered_products)} products in categories {category_ids} after filtering (page {page_no}, total API: {total_count})"
         )
 
-        # Return products and total count as a tuple
-        return products, total_count
+        # Return filtered products and total count as a tuple
+        return filtered_products, total_count
 
     def get_seller_info_from_product(self, product):
         """

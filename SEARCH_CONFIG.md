@@ -26,6 +26,9 @@ KEYWORDS=necklace,ring,bracelet,earrings,pendant necklace,brooch,anklet
 # Blacklist terms in product titles
 BLACKLIST_TERMS_IN_TITLE=beads,findings,jump rings,clasps,wire,chain by the foot
 
+# Price filtering
+MIN_SALE_PRICE=10
+
 # Jewelry categories (AliExpress category IDs)
 CATEGORIES=200001680,1509,201239108,200370154
 ```
@@ -62,6 +65,20 @@ BLACKLIST_TERMS_IN_TITLE=beads,findings,jump rings,clasps,wire,chain by the foot
 ```
 
 This is a powerful way to filter out unwanted items, particularly jewelry supplies and components, without having to modify your category selection.
+
+### MIN_SALE_PRICE Parameter
+
+Sets a minimum sale price for products. Any products with a price below this threshold will be filtered out from search results. For example:
+
+```
+MIN_SALE_PRICE=10
+```
+
+With this setting, any product with a price below 10 (in your target currency defined by ALIEXPRESS_TARGET_CURRENCY) will be excluded from the search results. This helps filter out very low-priced items that are likely to be supplies or low-quality products.
+
+- Set to a number to enable price filtering (e.g., `MIN_SALE_PRICE=10`)
+- Leave empty to disable price filtering (`MIN_SALE_PRICE=`)
+- The value is in the currency specified by ALIEXPRESS_TARGET_CURRENCY
 
 When a product title contains any of these terms:
 

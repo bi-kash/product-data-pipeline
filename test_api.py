@@ -62,7 +62,7 @@ def test_merchant_extraction():
     print("\n=== Testing Merchant Extraction ===")
 
     client = AliExpressClient()
-    products = client.search_products("jewelry", page_no=1, page_size=2)
+    products, total = client.search_products("jewelry", page_no=1, page_size=2)
 
     if not products:
         print("⚠️ No products to extract merchants from")
