@@ -137,6 +137,39 @@ class JobRun(Base):
         return f"<JobRun(id={self.id}, job_type='{self.job_type}')>"
 
 
+class SessionCode(Base):
+    """Model representing an AliExpress API session token."""
+
+    __tablename__ = "session_codes"
+
+    id = Column(Integer, primary_key=True)
+    code = Column(String(255), unique=True, nullable=False, index=True)
+    access_token = Column(Text, nullable=False)
+    refresh_token = Column(Text, nullable=False)
+    expire_time = Column(String(50), nullable=False)  # Store as string since API returns milliseconds
+    refresh_token_valid_time = Column(String(50), nullable=False)
+    expires_in = Column(String(10), nullable=False)  # Store as string to match API
+    refresh_expires_in = Column(String(10), nullable=False)
+    havana_id = Column(String(50))
+    locale = Column(String(10))
+    user_nick = Column(String(255))
+    account_id = Column(String(50))
+    user_id = Column(String(50))
+    account_platform = Column(String(50))
+    sp = Column(String(10))
+    request_id = Column(String(255))
+    seller_id = Column(String(50))
+    account = Column(String(255))
+    token_type = Column(String(20), default='original')  # 'original' or 'refreshed'
+    is_active = Column(Boolean, default=True)
+    response_json = Column(JSON)  # Store full response for reference
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<SessionCode(code='{self.code}', is_active={self.is_active}, token_type='{self.token_type}')>"
+
+
 def create_tables_if_not_exist():
     """
     Create the necessary tables if they don't exist.
@@ -616,5 +649,119 @@ def upsert_product(
 
         db.commit()
         return is_new
+    finally:
+        db.close()
+
+
+def create_session_code(code, api_response, token_type='original'):
+    """
+    Create or update a session code with the full API response.
+    
+    Args:
+        code: The session code
+        api_response: Full response from the AliExpress API
+        token_type: 'original' or 'refreshed'
+    
+    Returns:
+        SessionCode: The created or updated session object
+    """
+    db = get_db_session()
+    try:
+        # Check if session already exists
+        existing_session = db.query(SessionCode).filter_by(code=code).first()
+        
+        if existing_session:
+            # Update existing session
+            existing_session.access_token = api_response.get('access_token')
+            existing_session.refresh_token = api_response.get('refresh_token')
+            existing_session.expire_time = api_response.get('expire_time')
+            existing_session.refresh_token_valid_time = api_response.get('refresh_token_valid_time')
+            existing_session.expires_in = api_response.get('expires_in')
+            existing_session.refresh_expires_in = api_response.get('refresh_expires_in')
+            existing_session.havana_id = api_response.get('havana_id')
+            existing_session.locale = api_response.get('locale')
+            existing_session.user_nick = api_response.get('user_nick')
+            existing_session.account_id = api_response.get('account_id')
+            existing_session.user_id = api_response.get('user_id')
+            existing_session.account_platform = api_response.get('account_platform')
+            existing_session.sp = api_response.get('sp')
+            existing_session.request_id = api_response.get('request_id')
+            existing_session.seller_id = api_response.get('seller_id')
+            existing_session.account = api_response.get('account')
+            existing_session.token_type = token_type
+            existing_session.is_active = True
+            existing_session.response_json = api_response
+            existing_session.updated_at = func.now()
+            session_obj = existing_session
+        else:
+            # Create new session
+            session_obj = SessionCode(
+                code=code,
+                access_token=api_response.get('access_token'),
+                refresh_token=api_response.get('refresh_token'),
+                expire_time=api_response.get('expire_time'),
+                refresh_token_valid_time=api_response.get('refresh_token_valid_time'),
+                expires_in=api_response.get('expires_in'),
+                refresh_expires_in=api_response.get('refresh_expires_in'),
+                havana_id=api_response.get('havana_id'),
+                locale=api_response.get('locale'),
+                user_nick=api_response.get('user_nick'),
+                account_id=api_response.get('account_id'),
+                user_id=api_response.get('user_id'),
+                account_platform=api_response.get('account_platform'),
+                sp=api_response.get('sp'),
+                request_id=api_response.get('request_id'),
+                seller_id=api_response.get('seller_id'),
+                account=api_response.get('account'),
+                token_type=token_type,
+                is_active=True,
+                response_json=api_response
+            )
+            db.add(session_obj)
+        
+        db.commit()
+        db.refresh(session_obj)
+        return session_obj
+    finally:
+        db.close()
+
+
+def get_active_session_by_code(code):
+    """
+    Get the active session for a given code.
+    
+    Args:
+        code: The session code
+    
+    Returns:
+        SessionCode: The active session object or None
+    """
+    db = get_db_session()
+    try:
+        session = db.query(SessionCode).filter_by(code=code, is_active=True).first()
+        return session
+    finally:
+        db.close()
+
+
+def deactivate_session(code):
+    """
+    Mark a session as inactive.
+    
+    Args:
+        code: The session code to deactivate
+    
+    Returns:
+        bool: True if session was found and deactivated, False otherwise
+    """
+    db = get_db_session()
+    try:
+        session = db.query(SessionCode).filter_by(code=code).first()
+        if session:
+            session.is_active = False
+            session.updated_at = func.now()
+            db.commit()
+            return True
+        return False
     finally:
         db.close()

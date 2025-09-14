@@ -1,0 +1,19 @@
+
+{
+  "refresh_token_valid_time": 1758031377000,
+  "havana_id": "3001567942143",
+  "expire_time": 1757944977000,
+  "locale": "zh_CN",
+  "user_nick": "de1422957146tjgae",
+  "access_token": "50000901a16lErsndYkivCMzVikf1587d13dJjVdy0kCymuScOxvSonW0f65saMyDVex",
+  "refresh_token": "50001900316cKkoYbrTlwFJHP1rr1cd13e06ZbYf1kIPbVuGYgjpgnsUhGvnIvKvNOM3",
+  "user_id": "6204726999",
+  "account_platform": "buyerApp",
+  "refresh_expires_in": 172800,
+  "expires_in": 86400,
+  "sp": "ae",
+  "seller_id": "6204726999",
+  "account": "bkash.timsina@gmail.com",
+  "code": "0",
+  "request_id": "2102fafa17578585773834347"
+}

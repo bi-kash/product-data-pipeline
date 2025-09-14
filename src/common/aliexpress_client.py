@@ -49,6 +49,15 @@ class AliExpressClient:
         self.target_language = get_env("ALIEXPRESS_TARGET_LANGUAGE", "EN")
         self.target_country = get_env("ALIEXPRESS_TARGET_COUNTRY", "DE")
         
+        # Token validation configuration (for future official API)
+        self.use_token_validation = get_env("USE_TOKEN_VALIDATION", "false").lower() == "true"
+        self.session_code = get_env("ALIEXPRESS_SESSION_CODE")
+        
+        if self.use_token_validation:
+            logger.info("Token validation is enabled for future official API integration")
+            if not self.session_code:
+                logger.warning("USE_TOKEN_VALIDATION is enabled but ALIEXPRESS_SESSION_CODE is not set")
+        
         # Filtering configuration
         self.min_sale_price = get_env("MIN_SALE_PRICE", None)
         if self.min_sale_price:
@@ -69,6 +78,27 @@ class AliExpressClient:
 
         # Flag to use mock data if API fails
         self.use_mock_data = get_env("USE_MOCK_DATA", "false").lower() == "true"
+
+    def _validate_token_if_enabled(self):
+        """
+        Validate token if token validation is enabled.
+        This is for future official API integration.
+        
+        Returns:
+            tuple: (success: bool, token: str or None, message: str)
+        """
+        if not self.use_token_validation:
+            return True, None, "Token validation disabled"
+            
+        try:
+            from src.session.token_validator import validate_token_before_api_call
+            return validate_token_before_api_call(self.session_code)
+        except ImportError:
+            logger.warning("Token validation requested but session modules not available")
+            return True, None, "Token validation modules not available"
+        except Exception as e:
+            logger.error(f"Token validation failed: {str(e)}")
+            return False, None, f"Token validation error: {str(e)}"
 
     def _call_api(self, endpoint, params=None, retry_count=0):
         """

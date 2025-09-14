@@ -11,6 +11,7 @@ from src.review.merchant_review import export_pending_merchants, import_review_r
 from src.harvester.merchant_harvester import init_harvest as original_init_harvest
 from src.harvester.merchant_harvester import delta_harvest as original_delta_harvest
 from src.harvester.merchant_harvester import harvest_status as original_harvest_status
+from src.session.session_manager import create_session, refresh_session_token, list_sessions
 from src.common.logging_config import setup_logging
 
 # Ensure logs directory exists
@@ -93,6 +94,29 @@ def main():
         help="Simulate import without updating the database",
     )
 
+    # Session management commands
+    session_create_parser = subparsers.add_parser(
+        "create_session", help="Create a new AliExpress API session"
+    )
+    session_create_parser.add_argument(
+        "--code", 
+        type=str, 
+        required=True,
+        help="Authorization code from AliExpress"
+    )
+
+    session_refresh_parser = subparsers.add_parser(
+        "refresh_session", help="Refresh an existing session token"
+    )
+    session_refresh_parser.add_argument(
+        "--code",
+        type=str,
+        required=True,
+        help="Session code to refresh"
+    )
+
+    subparsers.add_parser("list_sessions", help="List all sessions")
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -107,6 +131,46 @@ def main():
         export_pending_merchants(output_file=args.output)
     elif args.command == "review:import-results":
         import_review_results(input_file=args.input, dry_run=args.dry_run)
+    elif args.command == "create_session":
+        result = create_session(args.code)
+        if result['success']:
+            print(f"✅ Session created successfully!")
+            print(f"Code: {result['code']}")
+            print(f"Token: {result['token'][:20]}...")
+            print(f"Session ID: {result['session_id']}")
+            print(f"\n📋 Full API Response:")
+            import json
+            print(json.dumps(result['response'], indent=2))
+        else:
+            print(f"❌ Failed to create session: {result['message']}")
+            sys.exit(1)
+    elif args.command == "refresh_session":
+        result = refresh_session_token(args.code)
+        if result['success']:
+            print(f"✅ Token refreshed successfully!")
+            print(f"Code: {result['code']}")
+            print(f"New Token: {result['token'][:20]}...")
+            print(f"\n📋 Full API Response:")
+            import json
+            print(json.dumps(result['response'], indent=2))
+        else:
+            print(f"❌ Failed to refresh token: {result['message']}")
+            sys.exit(1)
+    elif args.command == "list_sessions":
+        sessions = list_sessions()
+        if sessions:
+            print(f"📋 Found {len(sessions)} session(s):")
+            for session in sessions:
+                status = "🟢 Active" if session['is_active'] else "🔴 Inactive"
+                print(f"\n- Code: {session['code']}")
+                print(f"  Status: {status}")
+                print(f"  Type: {session['token_type']}")
+                print(f"  User: {session['user_nick'] or 'N/A'}")
+                print(f"  Account: {session['account'] or 'N/A'}")
+                print(f"  Created: {session['created_at']}")
+                print(f"  Updated: {session['updated_at']}")
+        else:
+            print("No sessions found.")
     else:
         parser.print_help()
 
