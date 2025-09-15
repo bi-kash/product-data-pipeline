@@ -29,36 +29,11 @@ from src.common.config import (
     use_keywords,
     get_blacklisted_title_terms,
 )
-from src.common.official_aliexpress_client import OfficialAliExpressClient as AliExpressClient
+from src.common.aliexpress_client import AliExpressClient
 from src.common.logging_config import setup_logging
 
 # Configure logging
 logger = setup_logging("merchant_harvester")
-
-
-def _get_aliexpress_client():
-    """
-    Initialize the Official AliExpress API client with session code from database.
-    
-    Returns:
-        AliExpressClient: Initialized client instance
-        
-    Raises:
-        ValueError: If no session codes are available
-    """
-    try:
-        from src.session.session_manager import list_sessions
-        sessions = list_sessions()
-        session_code = sessions[0]['code'] if sessions else None
-        if not session_code:
-            logger.error("No session codes available. Please create a session first using main.py")
-            raise ValueError("No session codes available")
-        client = AliExpressClient(session_code=session_code)
-        logger.info(f"Using session code: {session_code[:10]}...")
-        return client
-    except Exception as e:
-        logger.error(f"Failed to initialize AliExpress client: {e}")
-        raise
 
 
 def prepare_json_safe_dict(data):
@@ -403,8 +378,7 @@ def _harvest_merchants(
     if not keywords and not categories:
         raise ValueError("Must provide either keywords or categories for search")
 
-    # Initialize the Official AliExpress API client
-    client = _get_aliexpress_client()
+    client = AliExpressClient()
     # Pass keywords and categories to start_job_run to record them in the database
     job_id = (
         None
@@ -825,7 +799,7 @@ def init_harvest(limit=None, dry_run=False):
     # Unique sellers set for the entire process
     unique_sellers = set()
 
-    client = _get_aliexpress_client()
+    client = AliExpressClient()
 
     try:
         # If USE_KEYWORDS is true: Use both keywords AND categories
@@ -1174,7 +1148,7 @@ def delta_harvest(limit=None, dry_run=False):
     # Unique sellers set for the entire process
     unique_sellers = set()
 
-    client = _get_aliexpress_client()
+    client = AliExpressClient()
 
     try:
         # If USE_KEYWORDS is true: Use both keywords AND categories

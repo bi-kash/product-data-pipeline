@@ -11,7 +11,7 @@ from src.review.merchant_review import export_pending_merchants, import_review_r
 from src.harvester.merchant_harvester import init_harvest as original_init_harvest
 from src.harvester.merchant_harvester import delta_harvest as original_delta_harvest
 from src.harvester.merchant_harvester import harvest_status as original_harvest_status
-from src.session.session_manager import create_session, refresh_session_token, list_sessions
+from src.session.session_manager import create_session, refresh_session_token, auto_refresh_session, list_sessions
 from src.common.logging_config import setup_logging
 
 # Ensure logs directory exists
@@ -106,13 +106,17 @@ def main():
     )
 
     session_refresh_parser = subparsers.add_parser(
-        "refresh_session", help="Refresh an existing session token"
+        "refresh_session", help="Refresh session token (requires both access token and refresh token)"
     )
     session_refresh_parser.add_argument(
-        "--code",
+        "--token",
         type=str,
-        required=True,
-        help="Session code to refresh"
+        help="Current access token (session parameter for API)"
+    )
+    session_refresh_parser.add_argument(
+        "--refresh-token",
+        type=str,
+        help="Refresh token to use"
     )
 
     subparsers.add_parser("list_sessions", help="List all sessions")
@@ -145,7 +149,10 @@ def main():
             print(f"❌ Failed to create session: {result['message']}")
             sys.exit(1)
     elif args.command == "refresh_session":
-        result = refresh_session_token(args.code)
+        result = auto_refresh_session(
+            access_token=getattr(args, 'token', None),
+            refresh_token=getattr(args, 'refresh_token', None)
+        )
         if result['success']:
             print(f"✅ Token refreshed successfully!")
             print(f"Code: {result['code']}")
@@ -154,7 +161,11 @@ def main():
             import json
             print(json.dumps(result['response'], indent=2))
         else:
-            print(f"❌ Failed to refresh token: {result['message']}")
+            if result.get('needs_tokens'):
+                print(f"❌ {result['message']}")
+                print(f"\n💡 Usage: python main.py refresh_session --token YOUR_ACCESS_TOKEN --refresh-token YOUR_REFRESH_TOKEN")
+            else:
+                print(f"❌ Failed to refresh token: {result['message']}")
             sys.exit(1)
     elif args.command == "list_sessions":
         sessions = list_sessions()

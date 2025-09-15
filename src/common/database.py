@@ -612,8 +612,8 @@ def upsert_product(
                 product.target_sale_price_currency = target_sale_price_currency
             if discount:
                 product.discount = discount
-            if evaluate_rate:
-                product.evaluate_rate = evaluate_rate
+            # Always update evaluate_rate, including None values to set it to NULL
+            product.evaluate_rate = evaluate_rate
             if first_level_category_name:
                 product.first_level_category_name = first_level_category_name
             if second_level_category_name:
