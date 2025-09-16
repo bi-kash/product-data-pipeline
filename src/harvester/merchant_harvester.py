@@ -439,8 +439,22 @@ def _harvest_merchants(
                     )
                     products = result[0]
                     total_count = result[1]
+                    original_count = result[2] if len(result) > 2 else len(products)
+                    should_continue = result[3] if len(result) > 3 else True
 
-                    if not products:
+                    # Check for early stopping condition based on price threshold
+                    if not should_continue:
+                        logger.info(f"All products on page below minimum price threshold, stopping pagination for keyword '{keyword}'")
+                        break
+
+                    # Check if we have original products from API but zero after filtering
+                    if original_count > 0 and not products:
+                        logger.info(f"Page {page} had {original_count} products but 0 after filtering, continuing to next page")
+                        page += 1
+                        continue
+
+                    # Check if we have no products at all from API
+                    if not products and original_count == 0:
                         logger.info(f"No more results for keyword '{keyword}'")
                         break
 
@@ -614,8 +628,22 @@ def _harvest_merchants(
                 )
                 products = result[0]
                 total_count = result[1]
+                original_count = result[2] if len(result) > 2 else len(products)
+                should_continue = result[3] if len(result) > 3 else True
 
-                if not products:
+                # Check for early stopping condition based on price threshold
+                if not should_continue:
+                    logger.info(f"All products on page below minimum price threshold, stopping pagination for categories")
+                    break
+
+                # Check if we have original products from API but zero after filtering
+                if original_count > 0 and not products:
+                    logger.info(f"Page {page} had {original_count} products but 0 after filtering, continuing to next page")
+                    page += 1
+                    continue
+
+                # Check if we have no products at all from API
+                if not products and original_count == 0:
                     logger.info("No more results for the categories")
                     break
 
@@ -922,10 +950,26 @@ def init_harvest(limit=None, dry_run=False):
                 )
                 products = result[0]
                 total_count = result[1]
+                original_count = result[2] if len(result) > 2 else len(products)
+                should_continue = result[3] if len(result) > 3 else True
 
-                if not products:
+                # Check for early stopping condition based on price threshold
+                if not should_continue:
+                    logger.info(f"All products on page below minimum price threshold, stopping pagination for categories")
+                    break
+
+                # Check if we have original products from API but zero after filtering
+                if original_count > 0 and not products:
+                    logger.info(f"Page {page} had {original_count} products but 0 after filtering, continuing to next page")
+                    page += 1
+                    continue
+
+                # Check if we have no products at all from API
+                if not products and original_count == 0:
                     logger.info(f"No more results for categories")
                     break
+
+                # No need to add categories here as we've already added them at the beginning
 
                 # No need to add categories here as we've already added them at the beginning
 
@@ -1271,10 +1315,26 @@ def delta_harvest(limit=None, dry_run=False):
                 )
                 products = result[0]
                 total_count = result[1]
+                original_count = result[2] if len(result) > 2 else len(products)
+                should_continue = result[3] if len(result) > 3 else True
 
-                if not products:
+                # Check for early stopping condition based on price threshold
+                if not should_continue:
+                    logger.info(f"All products on page below minimum price threshold, stopping pagination for categories")
+                    break
+
+                # Check if we have original products from API but zero after filtering
+                if original_count > 0 and not products:
+                    logger.info(f"Page {page} had {original_count} products but 0 after filtering, continuing to next page")
+                    page += 1
+                    continue
+
+                # Check if we have no products at all from API
+                if not products and original_count == 0:
                     logger.info(f"No more results for categories")
                     break
+
+                # No need to add categories here as we've already added them at the beginning
 
                 # No need to add categories here as we've already added them at the beginning
 

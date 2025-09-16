@@ -56,6 +56,15 @@ class OfficialAliExpressClient:
             except ValueError:
                 logger.error(f"Invalid MIN_SALE_PRICE value: {self.min_sale_price}. Must be a number.")
                 self.min_sale_price = None
+        
+        self.max_sale_price = get_env("MAX_SALE_PRICE", None)
+        if self.max_sale_price:
+            try:
+                self.max_sale_price = float(self.max_sale_price)
+                logger.info(f"Using maximum sale price filter: {self.max_sale_price} {self.target_currency}")
+            except ValueError:
+                logger.error(f"Invalid MAX_SALE_PRICE value: {self.max_sale_price}. Must be a number.")
+                self.max_sale_price = None
 
         # Rate limiting configuration
         self.rate_limit_delay = int(get_env("RATE_LIMIT_DELAY", "1"))
@@ -287,7 +296,11 @@ class OfficialAliExpressClient:
             page_size: Number of products per page
             
         Returns:
-            tuple: (products_list, total_count) for compatibility with existing harvester
+            tuple: (products_list, total_count, original_count, should_continue) where:
+                - products_list: filtered products based on price
+                - total_count: total products available from API
+                - original_count: number of products returned by API for this page (before filtering)
+                - should_continue: whether pagination should continue (False if min price reached)
         """
         try:
             response = self.search_products_raw(
@@ -304,21 +317,41 @@ class OfficialAliExpressClient:
                 products_data = data.get('products', {})
                 products = products_data.get('selection_search_product', [])
                 
-                # Convert to format expected by existing code
+                # Track original count from API before filtering
+                original_count = len(products)
+                
+                # Convert to format expected by existing code and check for min price threshold
                 converted_products = []
+                should_continue = True
+                below_min_price_count = 0
+                
                 for product in products:
+                    # Count products below minimum price threshold
+                    if self.min_sale_price:
+                        try:
+                            sale_price = float(product.get('targetSalePrice', 0))
+                            if sale_price < self.min_sale_price:
+                                below_min_price_count += 1
+                        except (ValueError, TypeError):
+                            pass  # Continue processing if price can't be parsed
+                    
                     if self._should_include_product(product):
                         converted_products.append(self._convert_product_format(product))
+                
+                # Check if ALL products on this page are below minimum price threshold
+                if self.min_sale_price and original_count > 0 and below_min_price_count == original_count:
+                    logger.info(f"All {original_count} products on page are below minimum price threshold ({self.min_sale_price}). Stopping pagination.")
+                    should_continue = False
                         
-                logger.info(f"Found {len(converted_products)} products for keyword '{keyword}' (total: {total_count})")
-                return converted_products, total_count
+                logger.info(f"Found {len(converted_products)} products for keyword '{keyword}' (API returned: {original_count}, total available: {total_count}, continue: {should_continue})")
+                return converted_products, total_count, original_count, should_continue
             else:
                 logger.warning(f"Unexpected response format: {response}")
-                return [], 0
+                return [], 0, 0, False
                 
         except Exception as e:
             logger.error(f"Error searching products by keyword '{keyword}': {e}")
-            return [], 0
+            return [], 0, 0, False
 
     def search_products_by_category(self, category_ids, page_no=1, page_size=20):
         """
@@ -330,7 +363,7 @@ class OfficialAliExpressClient:
             page_size: Products per page
             
         Returns:
-            tuple: (products_list, total_count) for compatibility with existing harvester
+            tuple: (products_list, total_count, original_count, should_continue) for compatibility with existing harvester
         """
         try:
             # Handle both list and string inputs
@@ -341,7 +374,7 @@ class OfficialAliExpressClient:
                 
             if not category_id:
                 logger.warning("No category ID provided")
-                return [], 0
+                return [], 0, 0, False
                 
             response = self.search_products_raw(
                 category_id=category_id,
@@ -357,17 +390,37 @@ class OfficialAliExpressClient:
                 products_data = data.get('products', {})
                 products = products_data.get('selection_search_product', [])
                 
+                # Track original count before filtering
+                original_count = len(products)
+                
                 # Convert to format expected by existing code
                 converted_products = []
+                should_continue = True
+                below_min_price_count = 0
+                
                 for product in products:
+                    # Count products below minimum price threshold
+                    if self.min_sale_price:
+                        try:
+                            target_price = product.get('target_sale_price', product.get('sale_price', 0))
+                            if float(target_price) < self.min_sale_price:
+                                below_min_price_count += 1
+                        except (ValueError, TypeError):
+                            pass  # Continue processing if price can't be parsed
+                    
                     if self._should_include_product(product):
                         converted_products.append(self._convert_product_format(product))
+                
+                # Check if ALL products on this page are below minimum price threshold
+                if self.min_sale_price and original_count > 0 and below_min_price_count == original_count:
+                    logger.info(f"All {original_count} products on page are below minimum price threshold ({self.min_sale_price}) for category '{category_id}'. Stopping pagination.")
+                    should_continue = False
                         
-                logger.info(f"Found {len(converted_products)} products for category '{category_id}' (total: {total_count})")
-                return converted_products, total_count
+                logger.info(f"Found {len(converted_products)} products for category '{category_id}' (API returned: {original_count}, total available: {total_count}, continue: {should_continue})")
+                return converted_products, total_count, original_count, should_continue
             else:
                 logger.warning(f"Unexpected response format: {response}")
-                return [], 0
+                return [], 0, 0, False
                 
         except Exception as e:
             logger.error(f"Error searching products by category '{category_ids}': {e}")
@@ -518,35 +571,16 @@ class OfficialAliExpressClient:
         # Note: Some basic searches work without these parameters
         if page_no > 1 or page_size != 20:  # Only add if non-default
             params['pageIndex'] = page_no
-            params['pageSize'] = min(page_size, 50)  # API limit is 50
+            params['pageSize'] = min(page_size, 100)  # API limit is 50
         if sort_by:
             params['sortBy'] = sort_by
-            
+        
+  
         logger.info(f"Searching products: keyword='{keyword}', category='{category_id}', page={page_no}")
         
         response = self._make_api_call('aliexpress.ds.text.search', params)
         return response
-        """
-        Check if a product should be included based on filtering criteria.
-        
-        Args:
-            product: Product data from API
-            
-        Returns:
-            bool: True if product should be included
-        """
-        # Apply minimum price filter
-        if self.min_sale_price:
-            try:
-                # Use target sale price (USD) for filtering
-                sale_price = float(product.get('targetSalePrice', 0))
-                if sale_price < self.min_sale_price:
-                    logger.debug(f"Filtering out product {product.get('itemId')} - price {sale_price} below minimum {self.min_sale_price}")
-                    return False
-            except (ValueError, TypeError):
-                logger.debug(f"Could not parse price for product {product.get('itemId')}")
-                
-        return True
+
 
     def _convert_product_format(self, product):
         """
@@ -591,6 +625,9 @@ class OfficialAliExpressClient:
             try:
                 # Use target sale price (USD) for filtering
                 sale_price = float(product.get('targetSalePrice', 0))
+                if sale_price > self.max_sale_price:
+                    logger.debug(f"Filtering out product {product.get('itemId')} - price {sale_price} above maximum {self.max_sale_price}")
+                    return False
                 if sale_price < self.min_sale_price:
                     logger.debug(f"Filtering out product {product.get('itemId')} - price {sale_price} below minimum {self.min_sale_price}")
                     return False
