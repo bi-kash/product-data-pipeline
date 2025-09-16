@@ -97,18 +97,17 @@ class Product(Base):
     target_sale_price_currency = Column(String(10), nullable=True)
     discount = Column(String(20), nullable=True)
     evaluate_rate = Column(String(20), nullable=True)
-    first_level_category_name = Column(String(255), nullable=True)
-    second_level_category_name = Column(String(255), nullable=True)
-    status = Column(String(20), nullable=False, default="PENDING")
+    category_id = Column(String(100), nullable=True)  # Store comma-separated category IDs like "15,3710,100001404,200042147"
     first_seen_at = Column(DateTime(timezone=True), nullable=False)
     last_seen_at = Column(DateTime(timezone=True), nullable=False)
-    raw_json = Column(JSON)
+    raw_json_search = Column(JSON)  # Store text search API response data for individual product
+    raw_json_detail = Column(JSON)  # Store aliexpress.ds.product.get API response data
 
     # Define the relationship to sellers
     seller = relationship("Seller", back_populates="products")
 
     def __repr__(self):
-        return f"<Product(product_id='{self.product_id}', title='{self.product_title[:30]}...', status='{self.status}')>"
+        return f"<Product(product_id='{self.product_id}', title='{self.product_title[:30]}...')>"
 
 
 class JobRun(Base):
@@ -557,10 +556,10 @@ def upsert_product(
     target_sale_price_currency=None,
     discount=None,
     evaluate_rate=None,
-    first_level_category_name=None,
-    second_level_category_name=None,
-    raw_json=None,
-    status=None,
+    category_id=None,
+    raw_json_search=None,  # For text search API response data
+    raw_json_detail=None,  # For aliexpress.ds.product.get API response data
+    raw_json=None,         # Backward compatibility - will be stored as raw_json_search
 ):
     """
     Insert or update a product record.
@@ -577,10 +576,10 @@ def upsert_product(
         target_sale_price_currency: Currency of the sale price
         discount: Discount information
         evaluate_rate: Evaluation rate (e.g. 97.5%)
-        first_level_category_name: First level category
-        second_level_category_name: Second level category
-        raw_json: Original JSON data from API
-        status: Status of the product (e.g., "PENDING", "APPROVED", "BLACKLIST")
+        category_id: Comma-separated category IDs (e.g. "15,3710,100001404,200042147")
+        raw_json_search: JSON data from text search API (individual product from search results)
+        raw_json_detail: JSON data from aliexpress.ds.product.get API
+        raw_json: Backward compatibility - will be stored as raw_json_search
 
     Returns:
         Boolean indicating if this was a new record (True) or an update (False)
@@ -588,6 +587,10 @@ def upsert_product(
     db = get_db_session()
     now = get_utc_now()
     is_new = False
+
+    # Handle backward compatibility for raw_json parameter
+    if raw_json and not raw_json_search:
+        raw_json_search = raw_json
 
     try:
         # Check if product exists
@@ -614,15 +617,12 @@ def upsert_product(
                 product.discount = discount
             # Always update evaluate_rate, including None values to set it to NULL
             product.evaluate_rate = evaluate_rate
-            if first_level_category_name:
-                product.first_level_category_name = first_level_category_name
-            if second_level_category_name:
-                product.second_level_category_name = second_level_category_name
-            if raw_json:
-                product.raw_json = raw_json
-            # Update status if provided (only when explicitly set)
-            if status:
-                product.status = status
+            if category_id:
+                product.category_id = category_id
+            if raw_json_search:
+                product.raw_json_search = raw_json_search
+            if raw_json_detail:
+                product.raw_json_detail = raw_json_detail
         else:
             # Insert new product
             product = Product(
@@ -637,12 +637,11 @@ def upsert_product(
                 target_sale_price_currency=target_sale_price_currency,
                 discount=discount,
                 evaluate_rate=evaluate_rate,
-                first_level_category_name=first_level_category_name,
-                second_level_category_name=second_level_category_name,
-                status=status if status else "PENDING",
+                category_id=category_id,
                 first_seen_at=now,
                 last_seen_at=now,
-                raw_json=raw_json,
+                raw_json_search=raw_json_search,
+                raw_json_detail=raw_json_detail,
             )
             db.add(product)
             is_new = True

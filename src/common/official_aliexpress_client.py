@@ -604,9 +604,7 @@ class OfficialAliExpressClient:
             'discount': product.get('discount'),
             'evaluate_rate': product.get('evaluateRate') if product.get('evaluateRate') and product.get('evaluateRate').strip() else None,
             'orders': product.get('orders'),
-            'product_video_url': None,  # Not provided in search response
-            'first_level_category_name': None,  # Not provided in search response
-            'second_level_category_name': None,  # Not provided in search response
+            'category_id': product.get('cateId'),  # Category ID from API
             'raw_json': product  # Store original response for reference
         }
 

@@ -227,6 +227,15 @@ def _process_products(
                         pass
 
                 # Upsert the product (always process every product)
+                # Get detailed product information
+                try:
+                    logger.debug(f"Fetching detailed information for product {product_id}")
+                    product_details = client.get_product_details(product_id)
+                    raw_json_detail = product_details if product_details else None
+                except Exception as e:
+                    logger.warning(f"Could not fetch detailed info for product {product_id}: {e}")
+                    raw_json_detail = None
+
                 upsert_product(
                     product_id=product_id,
                     shop_id=shop_id,
@@ -239,12 +248,9 @@ def _process_products(
                     target_sale_price_currency=target_sale_price_currency,
                     discount=product.get("discount"),
                     evaluate_rate=product.get("evaluate_rate"),
-                    first_level_category_name=product.get("first_level_category_name"),
-                    second_level_category_name=product.get(
-                        "second_level_category_name"
-                    ),
-                    raw_json=product,
-                    status="PENDING",  # Explicitly set status to PENDING for regular products
+                    category_id=product.get("category_id"),  # Use category_id from converted product format
+                    raw_json_search=product,  # Store text search result in raw_json_search
+                    raw_json_detail=raw_json_detail,  # Store detailed product information
                 )
 
                 # Count products added to the database
@@ -453,13 +459,8 @@ def _harvest_merchants(
                                     target_sale_price_currency=target_sale_price_currency,
                                     discount=product.get("discount"),
                                     evaluate_rate=product.get("evaluate_rate"),
-                                    first_level_category_name=product.get(
-                                        "first_level_category_name"
-                                    ),
-                                    second_level_category_name=product.get(
-                                        "second_level_category_name"
-                                    ),
-                                    raw_json=product,
+                                    category_id=product.get("category_id"),  # Use category_id from converted product format
+                                    raw_json_search=product,  # Store text search result in raw_json_search
                                 )
 
                                 # Product category association removed
@@ -641,13 +642,8 @@ def _harvest_merchants(
                                 target_sale_price_currency=target_sale_price_currency,
                                 discount=product.get("discount"),
                                 evaluate_rate=product.get("evaluate_rate"),
-                                first_level_category_name=product.get(
-                                    "first_level_category_name"
-                                ),
-                                second_level_category_name=product.get(
-                                    "second_level_category_name"
-                                ),
-                                raw_json=product,
+                                category_id=product.get("category_id"),  # Use category_id from converted product format
+                                raw_json_search=product,  # Store text search result in raw_json_search
                             )
 
                             # Product category associations removed
