@@ -148,134 +148,15 @@ def _process_products(
                     break
 
         if blacklisted_term_found:
-            print(
-                f"BLACKLISTED: {product.get('product_id', 'unknown')} - Term: {blacklisted_term} - Title: {product_title[:50]}..."
+            logger.info(
+                f"SKIPPING PRODUCT: {product.get('product_id', 'unknown')} - Contains blacklisted term: '{blacklisted_term}' - Title: {product_title[:50]}..."
             )
-            # Count as "blacklisted" in stats
-            stats["blacklisted"] = stats.get("blacklisted", 0) + 1
+            # Count as "skipped" in stats
+            stats["products_skipped_blacklisted_terms"] = stats.get("products_skipped_blacklisted_terms", 0) + 1
 
-            # Get seller info even for blacklisted products
-            seller_info = client.get_seller_info_from_product(product)
-            if seller_info:
-                shop_id = seller_info["shop_id"]
-                shop_url = seller_info["shop_url"]
-                shop_name = seller_info.get("shop_name")
-                product_id = str(product.get("product_id", ""))
-
-                # Automatically blacklist the seller if their product contains blacklisted terms
-                if not dry_run:
-                    # Always blacklist the seller and product, regardless of whether
-                    # the seller was processed before
-                    seller_already_processed = shop_id in unique_sellers
-                    if not seller_already_processed:
-                        unique_sellers.add(shop_id)
-
-                    note = f"Automatically blacklisted due to product title containing term: '{blacklisted_term}'"
-                    logger.info(
-                        f"Blacklisting seller {shop_id} due to blacklisted term in product title: {blacklisted_term}"
-                    )
-
-                    # Add seller to database as BLACKLIST
-                    try:
-                        is_new = upsert_seller(
-                            shop_id=shop_id,
-                            shop_url=shop_url,
-                            shop_name=shop_name,
-                            raw_json=seller_info["raw_json"],
-                            note=note,
-                        )
-
-                        # Then explicitly set status to BLACKLIST
-                        update_seller_approval(shop_id, "BLACKLIST", note)
-
-                        if is_new:
-                            stats["new_sellers_added"] += 1
-                        else:
-                            stats["sellers_updated"] += 1
-
-                    except Exception as e:
-                        logger.error(f"Error blacklisting seller {shop_id}: {e}")
-                        stats["errors"] += 1
-
-                    # Always add the product to the database with BLACKLIST status
-                    if product_id:
-                        try:
-                            # Now, upsert the product with BLACKLIST status
-                            product_title = product.get("product_title", "")
-                            product_detail_url = product.get("product_detail_url", "")
-                            product_main_image_url = product.get(
-                                "product_main_image_url", ""
-                            )
-
-                            # Handle prices
-                            original_price = None
-                            target_sale_price = None
-                            original_price_currency = None
-                            target_sale_price_currency = None
-
-                            if (
-                                "original_price" in product
-                                and product["original_price"]
-                            ):
-                                try:
-                                    original_price = float(product["original_price"])
-                                    original_price_currency = product.get(
-                                        "original_price_currency"
-                                    )
-                                except (ValueError, TypeError):
-                                    pass
-
-                            if (
-                                "target_sale_price" in product
-                                and product["target_sale_price"]
-                            ):
-                                try:
-                                    target_sale_price = float(
-                                        product["target_sale_price"]
-                                    )
-                                    target_sale_price_currency = product.get(
-                                        "target_sale_price_currency"
-                                    )
-                                except (ValueError, TypeError):
-                                    pass
-
-                            # Upsert with BLACKLIST status
-                            upsert_product(
-                                product_id=product_id,
-                                shop_id=shop_id,
-                                product_title=product_title,
-                                product_detail_url=product_detail_url,
-                                product_main_image_url=product_main_image_url,
-                                original_price=original_price,
-                                target_sale_price=target_sale_price,
-                                original_price_currency=original_price_currency,
-                                target_sale_price_currency=target_sale_price_currency,
-                                discount=product.get("discount"),
-                                evaluate_rate=product.get("evaluate_rate"),
-                                first_level_category_name=product.get(
-                                    "first_level_category_name"
-                                ),
-                                second_level_category_name=product.get(
-                                    "second_level_category_name"
-                                ),
-                                raw_json=product,
-                                status="BLACKLIST",
-                            )
-
-                            # Count products added to the database
-                            stats["products_added"] = stats.get("products_added", 0) + 1
-
-                            logger.info(
-                                f"Added product {product_id} to database with BLACKLIST status"
-                            )
-                        except Exception as e:
-                            logger.error(
-                                f"Error adding blacklisted product {product_id}: {e}"
-                            )
-                            stats["errors"] += 1
-
+            # Skip this product entirely - don't add to database, don't blacklist seller
             logger.debug(
-                f"Skipping further processing of product with blacklisted term '{blacklisted_term}' in title: {product_title[:50]}..."
+                f"Skipping product with blacklisted term '{blacklisted_term}' in title: {product_title[:50]}..."
             )
             continue
 
@@ -414,7 +295,7 @@ def _harvest_merchants(
 
     stats = {
         "total_products_processed": 0,
-        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
+        "products_skipped_blacklisted_terms": 0,  # Count of products skipped due to blacklisted terms in title
         "unique_sellers_found": 0,
         "new_sellers_added": 0,
         "sellers_updated": 0,
@@ -1049,7 +930,7 @@ def init_harvest(limit=None, dry_run=False):
     logger.info(f"Harvest complete. Summary:")
     logger.info(f"- Products processed: {stats['total_products_processed']}")
     logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
-    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
+    logger.info(f"- Products skipped (blacklisted terms): {stats.get('products_skipped_blacklisted_terms', 0)}")
     logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
     logger.info(f"- New sellers added: {stats['new_sellers_added']}")
     logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")
@@ -1105,7 +986,7 @@ def _finalize_harvest(job_id, stats, used_keywords, used_categories, dry_run):
     logger.info(f"Harvest complete. Summary:")
     logger.info(f"- Products processed: {stats['total_products_processed']}")
     logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
-    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
+    logger.info(f"- Products skipped (blacklisted terms): {stats.get('products_skipped_blacklisted_terms', 0)}")
     logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
     logger.info(f"- New sellers added: {stats['new_sellers_added']}")
     logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")
@@ -1169,7 +1050,7 @@ def _setup_harvest(job_type, limit=None, dry_run=False):
     # Create unified stats dictionary
     stats = {
         "total_products_processed": 0,
-        "blacklisted": 0,  # Count of products skipped due to blacklisted terms in title,
+        "products_skipped_blacklisted_terms": 0,  # Count of products skipped due to blacklisted terms in title
         "unique_sellers_found": 0,
         "new_sellers_added": 0,
         "sellers_updated": 0,
@@ -1414,7 +1295,7 @@ def delta_harvest(limit=None, dry_run=False):
     logger.info(f"Harvest complete. Summary:")
     logger.info(f"- Products processed: {stats['total_products_processed']}")
     logger.info(f"- Products added to database: {stats.get('products_added', 0)}")
-    logger.info(f"- Products blacklisted by title: {stats.get('blacklisted', 0)}")
+    logger.info(f"- Products skipped (blacklisted terms): {stats.get('products_skipped_blacklisted_terms', 0)}")
     logger.info(f"- Unique sellers found: {stats['unique_sellers_found']}")
     logger.info(f"- New sellers added: {stats['new_sellers_added']}")
     logger.info(f"- Existing sellers updated: {stats['sellers_updated']}")

@@ -620,15 +620,15 @@ class OfficialAliExpressClient:
         Returns:
             bool: True if product should be included
         """
-        # Apply minimum price filter
-        if self.min_sale_price:
+        # Apply price filters
+        if self.min_sale_price or self.max_sale_price:
             try:
                 # Use target sale price (USD) for filtering
                 sale_price = float(product.get('targetSalePrice', 0))
-                if sale_price > self.max_sale_price:
+                if self.max_sale_price and sale_price > self.max_sale_price:
                     logger.debug(f"Filtering out product {product.get('itemId')} - price {sale_price} above maximum {self.max_sale_price}")
                     return False
-                if sale_price < self.min_sale_price:
+                if self.min_sale_price and sale_price < self.min_sale_price:
                     logger.debug(f"Filtering out product {product.get('itemId')} - price {sale_price} below minimum {self.min_sale_price}")
                     return False
             except (ValueError, TypeError):
