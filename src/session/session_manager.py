@@ -608,3 +608,78 @@ def list_sessions():
         return result
     finally:
         db.close()
+
+
+def get_latest_valid_tokens():
+    """
+    Get the latest valid tokens from the database regardless of session code.
+    This is simpler than using session codes.
+    
+    Returns:
+        dict: Result with success status, message, and token data
+    """
+    from src.common.database import get_db_session, SessionCode
+    import time
+    
+    db = get_db_session()
+    try:
+        # Get the most recently updated active session
+        session = db.query(SessionCode).filter(
+            SessionCode.is_active == True
+        ).order_by(SessionCode.updated_at.desc()).first()
+        
+        if not session:
+            return {
+                'success': False,
+                'message': 'No active sessions found',
+                'token': None
+            }
+        
+        # Check if token is still valid
+        current_time_ms = int(time.time() * 1000)
+        expire_time = int(session.expire_time) if isinstance(session.expire_time, str) else session.expire_time
+        
+        # If token expires within 1 hour, refresh it
+        if expire_time - current_time_ms < 3600000:  # 1 hour in ms
+            logger.info(f"Token expires soon, refreshing...")
+            return refresh_latest_session_token()
+        
+        return {
+            'success': True,
+            'message': 'Valid token found',
+            'token': session.access_token,
+            'refreshed': False
+        }
+        
+    finally:
+        db.close()
+
+
+def refresh_latest_session_token():
+    """
+    Refresh the token for the latest session in the database.
+    
+    Returns:
+        dict: Result with success status, message, and token data
+    """
+    from src.common.database import get_db_session, SessionCode
+    
+    db = get_db_session()
+    try:
+        # Get the most recently updated active session
+        session = db.query(SessionCode).filter(
+            SessionCode.is_active == True
+        ).order_by(SessionCode.updated_at.desc()).first()
+        
+        if not session:
+            return {
+                'success': False,
+                'message': 'No active sessions found to refresh',
+                'token': None
+            }
+        
+        # Use the existing refresh logic but with the latest session
+        return refresh_session_token(session.code)
+        
+    finally:
+        db.close()

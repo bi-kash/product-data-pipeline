@@ -38,23 +38,17 @@ logger = setup_logging("merchant_harvester")
 
 def _get_aliexpress_client():
     """
-    Initialize the Official AliExpress API client with session code from database.
+    Initialize the Official AliExpress API client.
     
     Returns:
         AliExpressClient: Initialized client instance
         
     Raises:
-        ValueError: If no session codes are available
+        ValueError: If initialization fails
     """
     try:
-        from src.session.session_manager import list_sessions
-        sessions = list_sessions()
-        session_code = sessions[0]['code'] if sessions else None
-        if not session_code:
-            logger.error("No session codes available. Please create a session first using main.py")
-            raise ValueError("No session codes available")
-        client = AliExpressClient(session_code=session_code)
-        logger.info(f"Using session code: {session_code[:10]}...")
+        client = AliExpressClient()
+        logger.info("AliExpress client initialized successfully")
         return client
     except Exception as e:
         logger.error(f"Failed to initialize AliExpress client: {e}")

@@ -19,15 +19,14 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 
 from src.common.database import (
-    SessionLocal, 
     Product, 
     Seller, 
     FilteredProduct,
+    ShippingInfo,
     get_db_session
 )
 from src.common.config import get_env
 from src.common.official_aliexpress_client import OfficialAliExpressClient
-from src.session.session_manager import list_sessions
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -48,13 +47,12 @@ class ProductFilterEngine:
         self.max_delivery_days = max_delivery_days or int(get_env("MAX_DELIVERY_DAYS", "8"))
         
         # Initialize API client for enrichment
-        sessions = list_sessions()
-        session_code = sessions[0]['code'] if sessions else None
-        if not session_code:
-            logger.warning("No session code available for API enrichment")
+        try:
+            self.api_client = OfficialAliExpressClient()
+            logger.info("API client initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize API client: {e}")
             self.api_client = None
-        else:
-            self.api_client = OfficialAliExpressClient(session_code=session_code)
         
         logger.info(f"Filter engine initialized: max_price_eur={self.max_price_eur}, max_delivery_days={self.max_delivery_days}")
 
@@ -87,17 +85,12 @@ class ProductFilterEngine:
             
             for product in whitelisted_products:
                 try:
+                    # Use a savepoint for each product to allow partial rollbacks
+                    savepoint = db.begin_nested()
+                    
+                    # Only count as processed if we're actually going to process it
                     stats['products_processed'] += 1
                     logger.info(f"Processing product {product.product_id} from seller {product.shop_id}")
-                    
-                    # Check if already filtered
-                    existing_filter = db.query(FilteredProduct).filter(
-                        FilteredProduct.product_id == product.product_id
-                    ).first()
-                    
-                    if existing_filter:
-                        logger.debug(f"Product {product.product_id} already filtered, skipping")
-                        continue
                     
                     # Apply filtering rules
                     filter_result = self._apply_filtering_rules(product, db)
@@ -118,18 +111,27 @@ class ProductFilterEngine:
                             self._create_filtered_product(product, filter_result, db)
                         stats['products_passed_filter'] += 1
                         logger.info(f"✅ Product {product.product_id} passed all filters")
+                        savepoint.commit()
                     else:
                         logger.info(f"❌ Product {product.product_id} failed filters: price={filter_result['passed_price_rule']}, shipping={filter_result['passed_shipping_rule']}")
+                        savepoint.rollback()
                 
                 except Exception as e:
                     logger.error(f"Error processing product {product.product_id}: {e}")
                     stats['errors'] += 1
+                    # Rollback the savepoint for this product
+                    try:
+                        savepoint.rollback()
+                    except Exception as rollback_error:
+                        logger.error(f"Error during savepoint rollback: {rollback_error}")
             
+            # Commit all successful changes
             if not dry_run:
                 db.commit()
             
         except Exception as e:
             logger.error(f"Error in filter processing: {e}")
+            # Rollback the entire transaction
             db.rollback()
             raise
         finally:
@@ -138,9 +140,13 @@ class ProductFilterEngine:
         return stats
 
     def _get_whitelisted_products(self, db, limit: int = None) -> List[Product]:
-        """Get products from whitelisted sellers."""
-        query = db.query(Product).join(Seller).filter(
-            Seller.approval_status == 'WHITELIST'
+        """Get products from whitelisted sellers that haven't been filtered yet."""
+        # Query for products from whitelisted sellers that are NOT already in filtered_products
+        query = db.query(Product).join(Seller).outerjoin(
+            FilteredProduct, Product.product_id == FilteredProduct.product_id
+        ).filter(
+            Seller.approval_status == 'WHITELIST',
+            FilteredProduct.product_id.is_(None)  # Only products not yet filtered
         )
         
         if limit:
@@ -173,7 +179,7 @@ class ProductFilterEngine:
             result['api_enriched'] = True
         
         # Apply price rule
-        price_result = self._apply_price_rule(product, product_data)
+        price_result = self._apply_price_rule(product, product_data, db)
         result.update(price_result)
         
         # Apply shipping rule
@@ -205,9 +211,14 @@ class ProductFilterEngine:
         
         return None
 
-    def _apply_price_rule(self, product: Product, product_data: Optional[Dict]) -> Dict:
+    def _apply_price_rule(self, product: Product, product_data: Optional[Dict], db=None) -> Dict:
         """
         Apply price filtering rule: (max_variant_price + min_shipping_cost) <= max_price_eur
+        
+        Args:
+            product: Product to apply price rule to
+            product_data: Product detail data
+            db: Database session (optional, for getting shipping costs)
         
         Returns:
             Dict with price rule results
@@ -223,9 +234,8 @@ class ProductFilterEngine:
             # Extract variant prices from product detail data
             max_variant_price = self._extract_max_variant_price(product, product_data)
             
-            # Extract shipping costs (simplified - using 0 for now)
-            # TODO: Implement actual shipping cost extraction if available in API
-            min_shipping_cost = 0.0
+            # Get minimum shipping cost from existing data if available
+            min_shipping_cost = self._get_min_shipping_cost(product, db) if db else 0.0
             
             if max_variant_price is not None:
                 total_cost = max_variant_price + min_shipping_cost
@@ -299,6 +309,11 @@ class ProductFilterEngine:
 
     def _extract_max_variant_price(self, product: Product, product_data: Optional[Dict]) -> Optional[float]:
         """Extract the highest variant price from product data."""
+        max_variant_info = self._extract_max_variant_info(product, product_data)
+        return max_variant_info['price'] if max_variant_info else None
+
+    def _extract_max_variant_info(self, product: Product, product_data: Optional[Dict]) -> Optional[Dict]:
+        """Extract the highest variant price and its associated SKU ID from product data."""
         if not product_data:
             logger.debug(f"No product data for {product.product_id}")
             return None
@@ -316,25 +331,34 @@ class ProductFilterEngine:
                 return None
             
             max_price = 0.0
+            max_price_sku_id = None
             prices_found = []
+            
             for i, sku in enumerate(skus):
+                sku_id = sku.get('sku_id')
                 # Prioritize sale prices over regular prices
-                # Check offer_sale_price first (discounted/sale price)
-                # Then check offer_bulk_sale_price as fallback
-                # Skip sku_price as it's usually the original price before discount
                 price_fields = ['offer_sale_price', 'offer_bulk_sale_price']
                 for field in price_fields:
                     if field in sku:
                         try:
                             price = float(sku[field])
-                            prices_found.append(f"SKU{i}:{field}={price}")
-                            max_price = max(max_price, price)
+                            prices_found.append(f"SKU{i}({sku_id}):{field}={price}")
+                            if price > max_price:
+                                max_price = price
+                                max_price_sku_id = sku_id
                             break  # Stop after finding first valid price for this SKU
                         except (ValueError, TypeError):
                             continue
             
-            logger.debug(f"Sale prices found for {product.product_id}: {prices_found}, max_price={max_price}")
-            return max_price if max_price > 0 else None
+            logger.debug(f"Sale prices found for {product.product_id}: {prices_found}, max_price={max_price}, max_sku_id={max_price_sku_id}")
+            
+            if max_price > 0 and max_price_sku_id:
+                return {
+                    'price': max_price,
+                    'sku_id': max_price_sku_id
+                }
+            
+            return None
             
         except Exception as e:
             logger.error(f"Error extracting variant prices: {e}")
@@ -415,8 +439,48 @@ class ProductFilterEngine:
             logger.error(f"Error extracting shipping speed rating: {e}")
             return None
 
+    def _get_min_shipping_cost(self, product: Product, db) -> float:
+        """
+        Get the minimum shipping cost for a product from existing data.
+        
+        Args:
+            product: Product to get shipping cost for
+            db: Database session
+            
+        Returns:
+            Minimum shipping cost (0.0 if no data available)
+        """
+        try:
+            # First, check if we have it in filtered_products
+            from src.common.database import FilteredProduct
+            filtered_product = db.query(FilteredProduct).filter(
+                FilteredProduct.product_id == product.product_id
+            ).first()
+            
+            if filtered_product and filtered_product.min_shipping_price is not None:
+                logger.debug(f"Found existing min_shipping_price for product {product.product_id}: {filtered_product.min_shipping_price}")
+                return filtered_product.min_shipping_price
+            
+            # If not in filtered_products, check shipping_info table
+            from src.common.database import ShippingInfo
+            shipping_info = db.query(ShippingInfo).filter(
+                ShippingInfo.product_id == product.product_id
+            ).first()
+            
+            if shipping_info and shipping_info.shipping_fee is not None:
+                logger.debug(f"Found shipping fee in shipping_info for product {product.product_id}: {shipping_info.shipping_fee}")
+                return shipping_info.shipping_fee
+            
+            # Default to 0.0 if no shipping data available
+            logger.debug(f"No shipping cost data found for product {product.product_id}, using 0.0")
+            return 0.0
+            
+        except Exception as e:
+            logger.error(f"Error getting min shipping cost for product {product.product_id}: {e}")
+            return 0.0
+
     def _create_filtered_product(self, product: Product, filter_result: Dict, db) -> FilteredProduct:
-        """Create a new filtered product entry."""
+        """Create a new filtered product entry and fetch detailed shipping information."""
         filtered_product = FilteredProduct(
             # Copy all fields from the original product
             product_id=product.product_id,
@@ -438,11 +502,225 @@ class ProductFilterEngine:
             # Add the three extra fields specific to filtered products
             ship_to_country=filter_result.get('ship_to_country'),
             delivery_time=filter_result.get('delivery_time'),
-            max_variant_price=filter_result.get('max_variant_price')
+            max_variant_price=filter_result.get('max_variant_price'),
+            min_shipping_price=None  # Will be updated after freight queries
         )
         
+        # Add to database
         db.add(filtered_product)
+        db.flush()  # Ensure filtered_product is in DB before adding shipping info
+        
+        # Fetch detailed shipping information using freight query API
+        self._fetch_and_store_shipping_info(product, db)
+        
         return filtered_product
+
+    def _fetch_and_store_shipping_info(self, product: Product, db):
+        """
+        Fetch shipping information for the max-priced variant only and store the cheapest valid option.
+        
+        Args:
+            product: Product to fetch shipping info for
+            db: Database session
+        """
+        if not self.api_client:
+            logger.warning(f"No API client available for freight query for product {product.product_id}")
+            return
+            
+        try:
+            # Get max delivery days threshold from environment
+            max_delivery_days = int(get_env("MAX_DELIVERY_DAYS", 30))
+            
+            # Get ship_to_country from environment or default to target country
+            ship_to_country = get_env("ALIEXPRESS_TARGET_COUNTRY", "DE")
+            
+            # Extract max-priced variant information
+            max_variant_info = self._extract_max_variant_info(product, product.raw_json_detail)
+            if not max_variant_info:
+                logger.warning(f"No max variant info found for product {product.product_id}")
+                return
+                
+            max_sku_id = max_variant_info['sku_id']
+            max_price = max_variant_info['price']
+            
+            logger.info(f"Processing max-priced variant for product {product.product_id}: SKU {max_sku_id}, price {max_price}")
+            
+            try:
+                logger.debug(f"Querying freight for product {product.product_id}, max-priced SKU {max_sku_id}")
+                
+                # Query freight information for the max-priced SKU only
+                freight_response = self.api_client.query_freight(
+                    product_id=product.product_id,
+                    selected_sku_id=max_sku_id,
+                    ship_to_country=ship_to_country,
+                    quantity=1
+                )
+                
+                if not freight_response:
+                    logger.warning(f"No freight response for product {product.product_id}, SKU {max_sku_id}")
+                    return
+                
+                # Extract delivery options from response
+                if isinstance(freight_response, dict) and 'aliexpress_ds_freight_query_response' in freight_response:
+                    result = freight_response['aliexpress_ds_freight_query_response'].get('result', {})
+                    
+                    # Ensure result is a dictionary
+                    if not isinstance(result, dict):
+                        logger.warning(f"Unexpected result format for product {product.product_id}, SKU {max_sku_id}: result is {type(result)}")
+                        return
+                        
+                    delivery_options = result.get('delivery_options', [])
+                    
+                    # Handle different possible structures for delivery_options
+                    if isinstance(delivery_options, dict):
+                        # Check for the actual API response structure
+                        if 'delivery_option_d_t_o' in delivery_options:
+                            delivery_list = delivery_options['delivery_option_d_t_o']
+                        elif 'aeop_logistics_dto' in delivery_options:
+                            delivery_list = delivery_options['aeop_logistics_dto']
+                        elif 'aeop_ds_logistics_dto' in delivery_options:
+                            delivery_list = delivery_options['aeop_ds_logistics_dto']
+                        else:
+                            # If it's a single delivery option in dict format, wrap it in a list
+                            delivery_list = [delivery_options]
+                    elif isinstance(delivery_options, list):
+                        delivery_list = delivery_options
+                    else:
+                        logger.warning(f"Unexpected delivery_options format for product {product.product_id}, SKU {max_sku_id}: {type(delivery_options)}")
+                        return
+                    
+                    logger.info(f"Found {len(delivery_list)} shipping options for product {product.product_id}, max-priced SKU {max_sku_id}")
+                    
+                    # Filter valid shipping options and prioritize free shipping
+                    valid_options = []
+                    free_shipping_options = []
+                    
+                    for i, option in enumerate(delivery_list):
+                        # Ensure each option is a dictionary
+                        if not isinstance(option, dict):
+                            logger.warning(f"Skipping delivery option {i} for product {product.product_id}, SKU {max_sku_id}: option is {type(option)}, value: {option}")
+                            continue
+                        
+                        # Check delivery time constraint
+                        max_delivery = self._parse_int(option.get('max_delivery_days'))
+                        if max_delivery is not None and max_delivery > max_delivery_days:
+                            logger.debug(f"Skipping shipping option {i} for product {product.product_id}: delivery time {max_delivery} exceeds limit {max_delivery_days}")
+                            continue
+                        
+                        # Check if this is a free shipping option
+                        is_free_shipping = self._parse_bool(option.get('free_shipping'))
+                        
+                        # Extract shipping fee
+                        shipping_fee = self._parse_float(option.get('shipping_fee_cent'))
+                        if shipping_fee is None:
+                            # Try alternative field names for shipping fee
+                            shipping_fee = self._parse_float(option.get('logisticsFee'))
+                        
+                        # If free shipping is available and meets delivery time, prioritize it
+                        if is_free_shipping:
+                            free_shipping_options.append({
+                                'option': option,
+                                'shipping_fee': 0.0,  # Free shipping cost is 0
+                                'index': i
+                            })
+                            logger.debug(f"Found free shipping option {i} for product {product.product_id}: delivery {max_delivery} days")
+                        elif shipping_fee is not None:
+                            valid_options.append({
+                                'option': option,
+                                'shipping_fee': shipping_fee,
+                                'index': i
+                            })
+                    
+                    # Prioritize free shipping options first, then regular options
+                    all_valid_options = free_shipping_options + valid_options
+                    
+                    if not all_valid_options:
+                        logger.warning(f"No valid shipping options found for product {product.product_id} (delivery time <= {max_delivery_days} days)")
+                        return
+                    
+                    # Find the best option (free shipping first, then cheapest paid option)
+                    if free_shipping_options:
+                        # If we have free shipping options, pick the fastest free option
+                        best_free_option = min(free_shipping_options, key=lambda x: self._parse_int(x['option'].get('max_delivery_days', 999)))
+                        best_option = best_free_option['option']
+                        min_shipping_price = 0.0
+                        logger.info(f"Selected free shipping option for product {product.product_id}: delivery {self._parse_int(best_option.get('max_delivery_days'))} days")
+                    else:
+                        # No free shipping, pick the cheapest paid option
+                        cheapest_option = min(valid_options, key=lambda x: x['shipping_fee'])
+                        best_option = cheapest_option['option']
+                        min_shipping_price = cheapest_option['shipping_fee']
+                        logger.info(f"Selected cheapest paid shipping option for product {product.product_id}: fee {min_shipping_price}")
+                    
+                    logger.info(f"Selected shipping option for product {product.product_id}: fee {min_shipping_price}, delivery {self._parse_int(best_option.get('max_delivery_days'))} days")
+                    
+                    # Store only the best shipping option (free or cheapest paid)
+                    shipping_info = ShippingInfo(
+                        product_id=product.product_id,
+                        sku_id=max_sku_id,
+                        code=best_option.get('code'),
+                        company=best_option.get('company'),
+                        shipping_fee=min_shipping_price,
+                        shipping_fee_currency=best_option.get('shipping_fee_currency'),
+                        free_shipping=self._parse_bool(best_option.get('free_shipping')),
+                        min_delivery_days=self._parse_int(best_option.get('min_delivery_days')),
+                        max_delivery_days=self._parse_int(best_option.get('max_delivery_days')),
+                        guaranteed_delivery_days=self._parse_int(best_option.get('guaranteed_delivery_days')),
+                        ship_from_country=best_option.get('ship_from_country'),
+                        tracking=self._parse_bool(best_option.get('tracking')),
+                        raw_freight_response=freight_response
+                    )
+                    
+                    # Add shipping info to database
+                    db.add(shipping_info)
+                    
+                    # Update filtered_products with minimum shipping price
+                    filtered_product = db.query(FilteredProduct).filter(
+                        FilteredProduct.product_id == product.product_id
+                    ).first()
+                    
+                    if filtered_product:
+                        filtered_product.min_shipping_price = min_shipping_price
+                        logger.info(f"Updated product {product.product_id} with min shipping price: {min_shipping_price}")
+                    
+                    logger.info(f"Stored cheapest valid shipping option for product {product.product_id}, min shipping price: {min_shipping_price}")
+                        
+                else:
+                    logger.warning(f"Unexpected freight response format for product {product.product_id}, SKU {max_sku_id}: {freight_response}")
+                    
+            except Exception as e:
+                logger.error(f"Error fetching shipping info for product {product.product_id}, SKU {max_sku_id}: {e}")
+                
+        except Exception as e:
+            logger.error(f"Error fetching shipping info for product {product.product_id}: {e}")
+
+    def _parse_float(self, value) -> Optional[float]:
+        """Safely parse float value."""
+        if value is None or value == "null":
+            return None
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_int(self, value) -> Optional[int]:
+        """Safely parse integer value."""
+        if value is None or value == "null":
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_bool(self, value) -> Optional[bool]:
+        """Safely parse boolean value."""
+        if value is None or value == "null":
+            return None
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes')
+        return None
 
 
 def run_product_filtering(max_price_eur: float = None, max_delivery_days: int = None, 

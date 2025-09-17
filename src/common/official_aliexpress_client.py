@@ -15,7 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'iop'))
 import iop
 
 from src.common.config import get_env
-from src.session.session_manager import get_valid_token_for_code
+from src.session.session_manager import get_latest_valid_tokens
 
 # Configure logging
 logging.basicConfig(
@@ -28,19 +28,16 @@ logger = logging.getLogger(__name__)
 class OfficialAliExpressClient:
     """Client for interacting with the official AliExpress API using iop module."""
 
-    def __init__(self, session_code=None):
+    def __init__(self):
         """
         Initialize the Official AliExpress API client.
-        
-        Args:
-            session_code: Session code for authentication. If None, will try to get from env.
+        Will automatically fetch the latest valid tokens as needed.
         """
         # API configuration
         self.api_url = get_env("IOP_URL", "https://api-sg.aliexpress.com/sync")
         self.auth_url = "https://api-sg.aliexpress.com/rest"  # For authentication endpoints
         self.appkey = get_env("IOP_APPKEY")
         self.app_secret = get_env("IOP_APPSECRET")
-        self.session_code = session_code or get_env("ALIEXPRESS_SESSION_CODE")
         
         # Target market configuration
         self.target_currency = get_env("ALIEXPRESS_TARGET_CURRENCY", "USD")
@@ -75,9 +72,6 @@ class OfficialAliExpressClient:
             logger.error("IOP_APPKEY and IOP_APPSECRET must be set in .env file")
             raise ValueError("Missing IOP credentials")
             
-        if not self.session_code:
-            logger.warning("No session code provided. Some API calls may fail.")
-            
         logger.info(f"Initializing Official AliExpress API client")
         logger.info(f"API URL: {self.api_url}")
         logger.info(f"Auth URL: {self.auth_url}")
@@ -94,10 +88,7 @@ class OfficialAliExpressClient:
         Raises:
             Exception: If no valid token can be obtained
         """
-        if not self.session_code:
-            raise Exception("No session code configured")
-            
-        token_result = get_valid_token_for_code(self.session_code)
+        token_result = get_latest_valid_tokens()
         
         if not token_result['success']:
             raise Exception(f"Failed to get valid token: {token_result['message']}")
@@ -120,17 +111,14 @@ class OfficialAliExpressClient:
             dict: API response
         """
         try:
-            # Get valid session token
-            session_token = self._get_valid_session_token()
+            # Get valid access token
+            access_token = self._get_valid_session_token()
             
             # Create IOP client and request - use sync endpoint for product operations
             client = iop.IopClient(self.api_url, self.appkey, self.app_secret)
             request = iop.IopRequest(api_method)
             
-            # Add session token
-            request.add_api_param('session', session_token)
-            
-            # Add all other parameters
+            # Add all parameters (do NOT add session/token as parameter)
             for key, value in params.items():
                 if value is not None:  # Only add non-None parameters
                     request.add_api_param(key, str(value))
@@ -140,7 +128,8 @@ class OfficialAliExpressClient:
                 time.sleep(self.rate_limit_delay * retry_count)
                 
             logger.debug(f"Making API call: {api_method} with params: {params}")
-            response = client.execute(request)
+            # Pass access token directly to execute() method
+            response = client.execute(request, access_token)
             
             # Log response details for debugging
             logger.debug(f"Response code: {response.code}")
@@ -633,3 +622,45 @@ class OfficialAliExpressClient:
                 logger.debug(f"Could not parse price for product {product.get('itemId')}")
                 
         return True
+
+    def query_freight(self, product_id, selected_sku_id, quantity=1, ship_to_country=None):
+        """
+        Query freight/shipping information for a product using aliexpress.ds.freight.query API.
+        
+        Args:
+            product_id: Product ID to query freight for
+            selected_sku_id: Specific SKU ID (required)
+            quantity: Quantity to ship (default: 1)
+            ship_to_country: Destination country code (e.g., "FR", "DE", "US")
+            
+        Returns:
+            dict: Freight query response with delivery options
+        """
+        # Use target country if not specified
+        if not ship_to_country:
+            ship_to_country = self.target_country
+            
+        # Build the query delivery request payload as dict then convert to JSON string
+        query_delivery_req = {
+            "quantity": str(quantity),
+            "shipToCountry": ship_to_country,
+            "productId": str(product_id),
+            "selectedSkuId": str(selected_sku_id),
+            "language": self.target_language,
+            "currency": self.target_currency,
+            "locale": "zh_CN"  # Default locale for API
+        }
+            
+        params = {
+            'queryDeliveryReq': json.dumps(query_delivery_req)  # Use proper JSON formatting
+        }
+        
+        logger.info(f"Querying freight for product {product_id} to {ship_to_country}")
+        logger.debug(f"Freight query params: {params}")
+        
+        try:
+            response = self._make_api_call('aliexpress.ds.freight.query', params)
+            return response
+        except Exception as e:
+            logger.error(f"Error querying freight for product {product_id}: {e}")
+            return None

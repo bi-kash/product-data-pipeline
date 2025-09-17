@@ -1,0 +1,129 @@
+{
+    "aliexpress_ds_freight_query_response": {
+        "result": {
+            "msg": "Call succeeds",
+            "code": 200,
+            "success": true,
+            "delivery_options": {
+                "delivery_option_d_t_o": [
+                    {
+                        "code": "CAINIAO_STANDARD_HEAVY",
+                        "free_shipping": true,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "75",
+                        "max_delivery_days": 28,
+                        "tracking": true,
+                        "delivery_date_desc": "Sep. 26 - Oct. 15",
+                        "company": "Cainiao Heavy Parcel Line",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 9
+                    },
+                    {
+                        "code": "CPAP",
+                        "free_shipping": true,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "60",
+                        "max_delivery_days": 33,
+                        "tracking": false,
+                        "delivery_date_desc": "Oct. 20",
+                        "company": "China Post Air Parcel",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 9
+                    },
+                    {
+                        "code": "CAINIAO_STANDARD",
+                        "shipping_fee_currency": "EUR",
+                        "free_shipping": false,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "60",
+                        "max_delivery_days": 13,
+                        "tracking": true,
+                        "shipping_fee_format": "19,39\u20ac",
+                        "delivery_date_desc": "Sep 24 - 30",
+                        "company": "AliExpress standard shipping",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 7,
+                        "shipping_fee_cent": "19.39"
+                    },
+                    {
+                        "code": "EMS",
+                        "shipping_fee_currency": "EUR",
+                        "free_shipping": false,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "35",
+                        "max_delivery_days": 28,
+                        "tracking": true,
+                        "shipping_fee_format": "51,50\u20ac",
+                        "delivery_date_desc": "Oct. 15",
+                        "company": "EMS",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 6,
+                        "shipping_fee_cent": "51.50"
+                    },
+                    {
+                        "code": "E_EMS",
+                        "shipping_fee_currency": "EUR",
+                        "free_shipping": false,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "35",
+                        "max_delivery_days": 20,
+                        "tracking": true,
+                        "shipping_fee_format": "52,21\u20ac",
+                        "delivery_date_desc": "Oct. 07",
+                        "company": "e-EMS",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 4,
+                        "shipping_fee_cent": "52.21"
+                    },
+                    {
+                        "code": "UPSE",
+                        "shipping_fee_currency": "EUR",
+                        "free_shipping": false,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "35",
+                        "max_delivery_days": 28,
+                        "tracking": true,
+                        "shipping_fee_format": "114,53\u20ac",
+                        "delivery_date_desc": "Oct. 15",
+                        "company": "UPS Expedited",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 6,
+                        "shipping_fee_cent": "114.53"
+                    },
+                    {
+                        "code": "FEDEX",
+                        "shipping_fee_currency": "EUR",
+                        "free_shipping": false,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "35",
+                        "max_delivery_days": 22,
+                        "tracking": true,
+                        "shipping_fee_format": "140,87\u20ac",
+                        "delivery_date_desc": "Oct. 09",
+                        "company": "Fedex IP",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 4,
+                        "shipping_fee_cent": "140.87"
+                    },
+                    {
+                        "code": "DHL",
+                        "shipping_fee_currency": "EUR",
+                        "free_shipping": false,
+                        "mayHavePFS": false,
+                        "guaranteed_delivery_days": "35",
+                        "max_delivery_days": 18,
+                        "tracking": true,
+                        "shipping_fee_format": "155,52\u20ac",
+                        "delivery_date_desc": "Oct. 05",
+                        "company": "DHL",
+                        "ship_from_country": "CN",
+                        "min_delivery_days": 4,
+                        "shipping_fee_cent": "155.52"
+                    }
+                ]
+            }
+        },
+        "request_id": "212e59e617581168794585748",
+        "_trace_id_": "21411b6217581168794572957e452e"
+    }
+}

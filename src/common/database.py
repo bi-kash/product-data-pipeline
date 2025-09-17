@@ -5,6 +5,7 @@ Database models and helper functions using SQLAlchemy ORM.
 import os
 import json
 import sqlite3
+import logging
 from datetime import datetime, timezone
 from sqlalchemy import (
     create_engine,
@@ -204,6 +205,7 @@ class FilteredProduct(Base):
     ship_to_country = Column(String(10), nullable=True)  # Country code (e.g., "US", "DE")
     delivery_time = Column(Integer, nullable=True)  # Estimated delivery time in days
     max_variant_price = Column(Float, nullable=True)  # Highest variant price found
+    min_shipping_price = Column(Float, nullable=True)  # Cheapest shipping price among all SKU variants
     
     # Timestamps for filtering
     filtered_at = Column(DateTime(timezone=True), default=func.now())
@@ -214,6 +216,51 @@ class FilteredProduct(Base):
 
     def __repr__(self):
         return f"<FilteredProduct(product_id='{self.product_id}', delivery_time={self.delivery_time}, max_variant_price={self.max_variant_price})>"
+
+
+class ShippingInfo(Base):
+    """
+    Model representing detailed shipping information for filtered products.
+    
+    This table stores shipping options retrieved from aliexpress.ds.freight.query API
+    for each filtered product, including multiple delivery options with pricing.
+    """
+
+    __tablename__ = "shipping_info"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False)
+    sku_id = Column(String(255), nullable=False)  # SKU ID for which shipping info was queried
+    
+    # Shipping option details
+    code = Column(String(100), nullable=True)  # e.g., "CAINIAO_FULFILLMENT_STD"
+    company = Column(String(200), nullable=True)  # e.g., "AliExpress Selection Standard"
+    
+    # Pricing information
+    shipping_fee = Column(Float, nullable=True)  # Numeric shipping fee
+    shipping_fee_currency = Column(String(10), nullable=True)  # e.g., "USD"
+    free_shipping = Column(Boolean, nullable=True)
+    
+    # Delivery timing
+    min_delivery_days = Column(Integer, nullable=True)
+    max_delivery_days = Column(Integer, nullable=True)
+    guaranteed_delivery_days = Column(Integer, nullable=True)
+    
+    # Shipping attributes
+    ship_from_country = Column(String(10), nullable=True)  # e.g., "CN"
+    tracking = Column(Boolean, nullable=True)
+    
+    # API response metadata
+    raw_freight_response = Column(JSON)  # Store full API response
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="shipping_options")
+
+    def __repr__(self):
+        return f"<ShippingInfo(product_id='{self.product_id}', sku_id='{self.sku_id}', company='{self.company}', fee={self.shipping_fee}, days={self.min_delivery_days}-{self.max_delivery_days})>"
 
 
 def create_tables_if_not_exist():
@@ -452,6 +499,9 @@ def upsert_seller(shop_id, shop_url, shop_name=None, raw_json=None, note=None):
 
         db.commit()
         return is_new
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
 
@@ -695,6 +745,9 @@ def upsert_product(
 
         db.commit()
         return is_new
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
 
@@ -768,6 +821,10 @@ def create_session_code(code, api_response, token_type='original'):
         db.commit()
         db.refresh(session_obj)
         return session_obj
+        
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
 
@@ -809,5 +866,8 @@ def deactivate_session(code):
             db.commit()
             return True
         return False
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
