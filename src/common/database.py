@@ -169,6 +169,53 @@ class SessionCode(Base):
         return f"<SessionCode(code='{self.code}', is_active={self.is_active}, token_type='{self.token_type}')>"
 
 
+class FilteredProduct(Base):
+    """
+    Model representing a filtered product.
+    
+    This table mirrors the products table structure and adds only:
+    - ship_to_country: Destination country for shipping
+    - delivery_time: Estimated delivery time in days  
+    - max_variant_price: Highest variant price found
+    """
+
+    __tablename__ = "filtered_products"
+
+    # Primary key - use product_id as primary key
+    product_id = Column(String(255), ForeignKey("products.product_id"), primary_key=True)
+    
+    # Mirror all fields from products table
+    shop_id = Column(String(255), ForeignKey("sellers.shop_id"), nullable=False)
+    product_title = Column(String(500), nullable=True)
+    product_detail_url = Column(String(500), nullable=True)
+    product_main_image_url = Column(String(500), nullable=True)
+    original_price = Column(Float, nullable=True)
+    target_sale_price = Column(Float, nullable=True)
+    original_price_currency = Column(String(10), nullable=True)
+    target_sale_price_currency = Column(String(10), nullable=True)
+    discount = Column(String(20), nullable=True)
+    evaluate_rate = Column(String(20), nullable=True)
+    category_id = Column(String(100), nullable=True)  # Store comma-separated category IDs
+    first_seen_at = Column(DateTime(timezone=True), nullable=False)
+    last_seen_at = Column(DateTime(timezone=True), nullable=False)
+    raw_json_detail = Column(JSON)  # Store aliexpress.ds.product.get API response data
+    
+    # Additional fields specific to filtered products
+    ship_to_country = Column(String(10), nullable=True)  # Country code (e.g., "US", "DE")
+    delivery_time = Column(Integer, nullable=True)  # Estimated delivery time in days
+    max_variant_price = Column(Float, nullable=True)  # Highest variant price found
+    
+    # Timestamps for filtering
+    filtered_at = Column(DateTime(timezone=True), default=func.now())
+    
+    # Relationships
+    product = relationship("Product", backref="filtered_entries")
+    seller = relationship("Seller", backref="filtered_products")
+
+    def __repr__(self):
+        return f"<FilteredProduct(product_id='{self.product_id}', delivery_time={self.delivery_time}, max_variant_price={self.max_variant_price})>"
+
+
 def create_tables_if_not_exist():
     """
     Create the necessary tables if they don't exist.

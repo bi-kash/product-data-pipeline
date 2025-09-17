@@ -4,47 +4,249 @@
       "ae_item_sku_info_dtos": {
         "ae_item_sku_info_d_t_o": [
           {
-            "sku_attr": "14:29#Retro Color",
-            "offer_sale_price": "58.69",
-            "sku_id": "12000048519700798",
+            "sku_attr": "200000783:193#60cm;200001034:2604813136#24mm band width",
+            "offer_sale_price": "55.39",
+            "sku_id": "10000015496564334",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "124.88",
-            "offer_bulk_sale_price": "58.69",
-            "sku_available_stock": 85,
-            "id": "14:29#Retro Color",
+            "sku_price": "68.38",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "55.39",
+            "sku_available_stock": 78,
+            "id": "200000783:193#60cm;200001034:2604813136#24mm band width",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "WHITE",
-                  "sku_image": "https://ae01.alicdn.com/kf/S761fd6e86dd04bb58395c30ce434f66cm.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "Retro Color",
-                  "property_value_id": 29,
-                  "sku_property_id": 14
+                  "sku_property_value": "Blue Zinc",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "24mm band width",
+                  "property_value_id": 2604813136,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "black",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "60cm",
+                  "property_value_id": 193,
+                  "sku_property_id": 200000783
                 }
               ]
             }
           },
           {
-            "sku_attr": "14:193#White",
-            "offer_sale_price": "58.69",
-            "sku_id": "12000048519700799",
+            "sku_attr": "200000783:175#70cm;200001034:2604813136#24mm band width",
+            "offer_sale_price": "60.39",
+            "sku_id": "10000015496564335",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "124.88",
-            "offer_bulk_sale_price": "58.69",
-            "sku_available_stock": 63,
-            "id": "14:193#White",
+            "sku_price": "74.55",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "60.39",
+            "sku_available_stock": 78,
+            "id": "200000783:175#70cm;200001034:2604813136#24mm band width",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
+                  "sku_property_value": "Blue Zinc",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "24mm band width",
+                  "property_value_id": 2604813136,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "green",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "70cm",
+                  "property_value_id": 175,
+                  "sku_property_id": 200000783
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000783:29#50cm;200001034:2604813136#24mm band width",
+            "offer_sale_price": "50.39",
+            "sku_id": "10000015496564333",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "62.21",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "50.39",
+            "sku_available_stock": 78,
+            "id": "200000783:29#50cm;200001034:2604813136#24mm band width",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue Zinc",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "24mm band width",
+                  "property_value_id": 2604813136,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "WHITE",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "50cm",
+                  "property_value_id": 29,
+                  "sku_property_id": 200000783
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000783:10#80cm;200001034:201673808#32mm band width",
+            "offer_sale_price": "79.39",
+            "sku_id": "10000015496564340",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "98.01",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "79.39",
+            "sku_available_stock": 78,
+            "id": "200000783:10#80cm;200001034:201673808#32mm band width",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Dark Gold",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "32mm band width",
+                  "property_value_id": 201673808,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "Red",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "80cm",
+                  "property_value_id": 10,
+                  "sku_property_id": 200000783
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000783:193#60cm;200001034:201673808#32mm band width",
+            "offer_sale_price": "63.99",
+            "sku_id": "10000015496564338",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "79.00",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "63.99",
+            "sku_available_stock": 78,
+            "id": "200000783:193#60cm;200001034:201673808#32mm band width",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Dark Gold",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "32mm band width",
+                  "property_value_id": 201673808,
+                  "sku_property_id": 200001034
+                },
+                {
                   "sku_property_value": "black",
-                  "sku_image": "https://ae01.alicdn.com/kf/S04a234cb6bee419a91006bb263211c25J.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "White",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "60cm",
                   "property_value_id": 193,
-                  "sku_property_id": 14
+                  "sku_property_id": 200000783
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000783:175#70cm;200001034:201673808#32mm band width",
+            "offer_sale_price": "71.69",
+            "sku_id": "10000015496564339",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "88.51",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "71.69",
+            "sku_available_stock": 78,
+            "id": "200000783:175#70cm;200001034:201673808#32mm band width",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Dark Gold",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "32mm band width",
+                  "property_value_id": 201673808,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "green",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "70cm",
+                  "property_value_id": 175,
+                  "sku_property_id": 200000783
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000783:10#80cm;200001034:2604813136#24mm band width",
+            "offer_sale_price": "65.69",
+            "sku_id": "10000015496564336",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "81.10",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "65.69",
+            "sku_available_stock": 78,
+            "id": "200000783:10#80cm;200001034:2604813136#24mm band width",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue Zinc",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "24mm band width",
+                  "property_value_id": 2604813136,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "Red",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "80cm",
+                  "property_value_id": 10,
+                  "sku_property_id": 200000783
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000783:29#50cm;200001034:201673808#32mm band width",
+            "offer_sale_price": "56.39",
+            "sku_id": "10000015496564337",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "69.62",
+            "buy_amount_limit_set_by_promotion": "9",
+            "offer_bulk_sale_price": "56.39",
+            "sku_available_stock": 78,
+            "id": "200000783:29#50cm;200001034:201673808#32mm band width",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Dark Gold",
+                  "sku_property_name": "Metal Color",
+                  "property_value_definition_name": "32mm band width",
+                  "property_value_id": 201673808,
+                  "sku_property_id": 200001034
+                },
+                {
+                  "sku_property_value": "WHITE",
+                  "sku_property_name": "Main Stone Color",
+                  "property_value_definition_name": "50cm",
+                  "property_value_id": 29,
+                  "sku_property_id": 200000783
                 }
               ]
             }
@@ -52,13 +254,25 @@
         ]
       },
       "ae_multimedia_info_dto": {
-        "image_urls": "https://ae01.alicdn.com/kf/S7c994cc439584c1ab58570560263f930W.jpg;https://ae01.alicdn.com/kf/S904e5575fb084f22ab70046a244271759.jpg;https://ae01.alicdn.com/kf/S745a4fea9fa642cc9d31f1d3ff162d321.jpg;https://ae01.alicdn.com/kf/Se39b2dab87e44460a365b80f6120fb9aI.jpg;https://ae01.alicdn.com/kf/S30835e3de3294dd2bed7a09c8f043adeZ.jpg;https://ae01.alicdn.com/kf/Sf8a09e8fe3ef4322b9b41cda5072b38eP.jpg"
+        "ae_video_dtos": {
+          "ae_video_d_t_o": [
+            {
+              "media_status": "approved",
+              "media_type": "video",
+              "poster_url": "https://img.alicdn.com/imgextra/i1/6000000002164/O1CN01qHqWVK1Rr9jalgZ7z_!!6000000002164-0-tbvideo.jpg",
+              "ali_member_id": 202048869,
+              "media_id": 292565134437,
+              "media_url": "https://video.aliexpress-media.com/play/292565134437.mp4"
+            }
+          ]
+        },
+        "image_urls": "https://ae01.alicdn.com/kf/Sa67ec7d2532b4df5879efcd89b687c18r.jpg;https://ae01.alicdn.com/kf/Sae910cf4590e486eab227674632566a5e.jpg;https://ae01.alicdn.com/kf/Se2d2bb09c1464ff9922a412d7756600fM.jpg;https://ae01.alicdn.com/kf/S0ebddfa01d9f4c95b56ac7f1ce653321n.jpg;https://ae01.alicdn.com/kf/S03d7e04a28a04433b34e6b0f7db4f3a8D.jpg"
       },
       "package_info_dto": {
-        "package_width": 15,
-        "package_height": 35,
-        "package_length": 23,
-        "gross_weight": "1.800",
+        "package_width": 25,
+        "package_height": 5,
+        "package_length": 18,
+        "gross_weight": "0.700",
         "package_type": false,
         "product_unit": 100000015
       },
@@ -67,41 +281,47 @@
         "ship_to_country": "DE"
       },
       "product_id_converter_result": {
-        "main_product_id": 1005009261686587,
-        "sub_product_id": "{\"US\":3256809075371835}"
+        "main_product_id": 4001259143638,
+        "sub_product_id": "{\"US\":2255801072828886}"
       },
       "ae_item_base_info_dto": {
-        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"text\",\"data\":{\"content\":\"Product Information\\nName: Necklace Box\\nMaterial: MDF board/alloy/acrylic\\nSize: 17.5X9.7X29.5CM\\nColor: Burgundy/White\\nStyle: Retro\\nProduct Features\\n1. Acrylic transparent cabinet door, multi-faceted display of jewelry\\n2.6 retro metal hanging, it is recommended to hang 1-2 pieces per grain\\n3. Cabinet door strong magnetic adsorption design, easy storage\\n4. Hardware hinge, strong and durable, no rust\\n5. Add the base to make the jewelry cabinet look more beautiful\",\"style\":{\"fontSize\":13,\"fontWeight\":\"normal\",\"align\":\"left\",\"color\":\"#434649\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sa38798ab9d2946a48edcb09a27104690R.jpg\",\"style\":{\"width\":750,\"height\":819}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Scd22d00bcda740c0957e19f6c580cbd3C.jpg\",\"style\":{\"width\":750,\"height\":141}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S47867bfc5e2847c3886529c0d781b4ebi.jpg\",\"style\":{\"width\":750,\"height\":753}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sa8491a031bd84d6c97def86fe5c870c2l.jpg\",\"style\":{\"width\":750,\"height\":195}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S8f0281cff9164a92bf11aa263802ab3bE.jpg\",\"style\":{\"width\":750,\"height\":807}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S3398b4e39d004fa18c473b9de8a029d4C.jpg\",\"style\":{\"width\":750,\"height\":87}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S9b9664dda82c49c3b39618ef545eed880.jpg\",\"style\":{\"width\":750,\"height\":750}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S7ac5fc4ca3b94240973db65345a59acbD.jpg\",\"style\":{\"width\":750,\"height\":211}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S0b97c57581854aeb9b04e96d3520da0bn.jpg\",\"style\":{\"width\":750,\"height\":816}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Se0fda988537c4774b5f9613235a1b94e5.jpg\",\"style\":{\"width\":750,\"height\":77}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sdfe3947d60574cf8947da324fb16051cK.jpg\",\"style\":{\"width\":750,\"height\":717}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sf3e1e70c91494327bcfe3712b20f991an.jpg\",\"style\":{\"width\":750,\"height\":176}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd82be95a6bff41ce8604350b657a162bc.jpg\",\"style\":{\"width\":750,\"height\":816}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S5e72daad6927407887ada7e14e86c0cdJ.jpg\",\"style\":{\"width\":750,\"height\":12}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S084368fd0f0f43718af93bd25e3ea204X.jpg\",\"style\":{\"width\":750,\"height\":876}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S60cbd2524c5e46ef82cfe50ecf61af74V.jpg\",\"style\":{\"width\":750,\"height\":21}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S6ec2b5cd64b643a7a2654f81948c88a0W.jpg\",\"style\":{\"width\":750,\"height\":794}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S1df08486a5bf4b60ab357e5a96dfd447k.jpg\",\"style\":{\"width\":750,\"height\":762}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S506db0c27d824e13a989d2e026ced297r.jpg\",\"style\":{\"width\":750,\"height\":27}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sef235de66dc84f10ad6ea6a1c90977cat.jpg\",\"style\":{\"width\":750,\"height\":735}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sb9a5176e5a0f49bab47565bcac70b6fcr.jpg\",\"style\":{\"width\":750,\"height\":735}}},{\"type\":\"text\",\"data\":{\"content\":\"Attention:\\n1. due to different measuring tools, manual measurement will have 1-2cm error, the specific size please receive the actual subject!\\n2. Physical shooting, due to differences in lighting, viewing angles, screen resolution, and color cognition. Different mobile phone display effects, computer display effects, and laptop display effects may cause color differences in the product. Please refer to the actual product for accuracy!\",\"style\":{\"fontSize\":13,\"fontWeight\":\"normal\",\"align\":\"left\",\"color\":\"#434649\"}}}]}",
-        "subject": "Wooden Necklace Box Retro Display Case Necklace Organizer Transparent Acrylic Display Stand Storage Jewelry Bracelet Boxes Gifts",
-        "evaluation_count": "0",
-        "sales_count": "0",
+        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"text\",\"data\":{\"content\":\"Description:\\n Features: necklace\\n Material: 316L Stainless steel\\n color: gold & silver tone\\n Specifications:\\n 100% Brand New And High Quality\\n Band width: 24mm\\n Length: 16-30 inch\\n Package included:\\n 1 necklace\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae04.alicdn.com/kf/H1bd91f5d3e1342ccb59fdc6f91dce67ea.jpg\",\"style\":{\"width\":0,\"height\":0}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae04.alicdn.com/kf/H2226df9fc67f4a81a36fac6be4187f54e.jpg\",\"style\":{\"width\":0,\"height\":0}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae04.alicdn.com/kf/He2d37d6a9a6042eba48b59ddf2e8d823Y.jpg\",\"style\":{\"width\":0,\"height\":0}}}]}",
+        "subject": "Fashion necklace Jewlery for Gift",
+        "evaluation_count": "1",
+        "sales_count": "3",
         "product_status_type": "onSelling",
-        "avg_evaluation_rating": "0.0",
-        "currency_code": "CNY",
-        "category_id": 200001479,
-        "product_id": 1005009261686587,
-        "detail": "<div class=\"detailmodule_html\"><div class=\"detail-desc-decorate-richtext\"><kse:widget data-widget-type=\"relatedProduct\" id=\"1005000018390004\" title=\"首饰盒A3\" type=\"relation\"></kse:widget><br>\n<strong><span style=\"font-size:22px;\">Product Information</span></strong> <span style=\"font-size:20px;\"><br>\nName: Necklace Box<br>\nMaterial: MDF board/alloy/acrylic<br>\nSize: 17.5X9.7X29.5CM<br>\nColor: Burgundy/White<br>\nStyle: Retro</span><br>\n<strong><span style=\"font-size:22px;\">Product Features</span></strong> <span style=\"font-size:20px;\"><br>\n1. Acrylic transparent cabinet door, multi-faceted display of jewelry<br>\n2.6 retro metal hanging, it is recommended to hang 1-2 pieces per grain<br>\n3. Cabinet door strong magnetic adsorption design, easy storage<br>\n4. Hardware hinge, strong and durable, no rust<br>\n5. Add the base to make the jewelry cabinet look more beautiful</span>\n<p style=\"text-align:left;margin:0;\"><img data-id=\"ckeditor_img97\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sa38798ab9d2946a48edcb09a27104690R.jpg?width=750&height=819&hash=1569\" style=\"width: 750px; height: 819px;\"><img data-id=\"ckeditor_img98\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Scd22d00bcda740c0957e19f6c580cbd3C.jpg?width=750&height=141&hash=891\" style=\"width: 750px; height: 141px;\"><img data-id=\"ckeditor_img99\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S47867bfc5e2847c3886529c0d781b4ebi.jpg?width=750&height=753&hash=1503\" style=\"width: 750px; height: 753px;\"><img data-id=\"ckeditor_img100\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sa8491a031bd84d6c97def86fe5c870c2l.jpg?width=750&height=195&hash=945\" style=\"width: 750px; height: 195px;\"><img data-id=\"ckeditor_img101\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S8f0281cff9164a92bf11aa263802ab3bE.jpg?width=750&height=807&hash=1557\" style=\"width: 750px; height: 807px;\"><img data-id=\"ckeditor_img102\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S3398b4e39d004fa18c473b9de8a029d4C.jpg?width=750&height=87&hash=837\" style=\"width: 750px; height: 87px;\"><img data-id=\"ckeditor_img103\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S9b9664dda82c49c3b39618ef545eed880.jpg?width=750&height=750&hash=1500\" style=\"width: 750px; height: 750px;\"><img data-id=\"ckeditor_img104\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S7ac5fc4ca3b94240973db65345a59acbD.jpg?width=750&height=211&hash=961\" style=\"width: 750px; height: 211px;\"><img data-id=\"ckeditor_img105\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S0b97c57581854aeb9b04e96d3520da0bn.jpg?width=750&height=816&hash=1566\" style=\"width: 750px; height: 816px;\"><img data-id=\"ckeditor_img106\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Se0fda988537c4774b5f9613235a1b94e5.jpg?width=750&height=77&hash=827\" style=\"width: 750px; height: 77px;\"><img data-id=\"ckeditor_img107\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sdfe3947d60574cf8947da324fb16051cK.jpg?width=750&height=717&hash=1467\" style=\"width: 750px; height: 717px;\"><img data-id=\"ckeditor_img108\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sf3e1e70c91494327bcfe3712b20f991an.jpg?width=750&height=176&hash=926\" style=\"width: 750px; height: 176px;\"><img data-id=\"ckeditor_img109\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sd82be95a6bff41ce8604350b657a162bc.jpg?width=750&height=816&hash=1566\" style=\"width: 750px; height: 816px;\"><img data-id=\"ckeditor_img110\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S5e72daad6927407887ada7e14e86c0cdJ.jpg?width=750&height=12&hash=762\" style=\"width: 750px; height: 12px;\"><img data-id=\"ckeditor_img111\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S084368fd0f0f43718af93bd25e3ea204X.jpg?width=750&height=876&hash=1626\" style=\"width: 750px; height: 876px;\"><img data-id=\"ckeditor_img112\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S60cbd2524c5e46ef82cfe50ecf61af74V.jpg?width=750&height=21&hash=771\" style=\"width: 750px; height: 21px;\"><img data-id=\"ckeditor_img113\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S6ec2b5cd64b643a7a2654f81948c88a0W.jpg?width=750&height=794&hash=1544\" style=\"width: 750px; height: 794px;\"><img data-id=\"ckeditor_img114\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S1df08486a5bf4b60ab357e5a96dfd447k.jpg?width=750&height=762&hash=1512\" style=\"width: 750px; height: 762px;\"><img data-id=\"ckeditor_img115\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/S506db0c27d824e13a989d2e026ced297r.jpg?width=750&height=27&hash=777\" style=\"width: 750px; height: 27px;\"><img data-id=\"ckeditor_img116\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sef235de66dc84f10ad6ea6a1c90977cat.jpg?width=750&height=735&hash=1485\" style=\"width: 750px; height: 735px;\"><img data-id=\"ckeditor_img117\" referrerpolicy=\"no-referrer\" src=\"https://ae01.alicdn.com/kf/Sb9a5176e5a0f49bab47565bcac70b6fcr.jpg?width=750&height=735&hash=1485\" style=\"width: 750px; height: 735px;\"><span style=\"color:#ff0000;\"><strong><span style=\"font-size:22px;\">Attention:</span></strong><span style=\"font-size:20px;\"><br>\n1. due to different measuring tools, manual measurement will have 1-2cm error, the specific size please receive the actual subject!<br>\n2. Physical shooting, due to differences in lighting, viewing angles, screen resolution, and color cognition. Different mobile phone display effects, computer display effects, and laptop display effects may cause color differences in the product. Please refer to the actual product for accuracy!&nbsp;</span></span></p>\n</div></div>\r\n"
+        "avg_evaluation_rating": "5.0",
+        "currency_code": "USD",
+        "category_id": 200000162,
+        "product_id": 4001259143638,
+        "detail": "<div class=\"detailmodule_html\"><div class=\"detail-desc-decorate-richtext\"><div style=\"margin:0 auto;display:inline-block;max-width:1000px;\"><p style=\"overflow:hidden;height:1px;display:block;padding:0;margin:0;\">RM3391649780875340</p><img src=\"http://ae01.alicdn.com/kf/H387b29ad113a471f8c7884d127e09914H.jpg?width=930&amp;height=546&amp;hash=1476\" style=\"font-size:10px;\"><div style=\"margin-top:-45.81%;\"><div style=\"margin-left:0.0%;width:33.3333%;\"><a href=\"http://www.aliexpress.com/item/info/32532783141.html\"><img src=\"http://ae01.alicdn.com/kf/H243232755e8e4be0a36e7f644d7231b47.png?width=310&amp;height=426&amp;hash=736\" style=\"font-size:10px;\"></a></div><div style=\"margin-left:33.3333%;margin-top:-45.81%;width:33.3333%;\"><a href=\"http://www.aliexpress.com/item/info/4000874842143.html\"><img src=\"http://ae01.alicdn.com/kf/H243232755e8e4be0a36e7f644d7231b47.png?width=310&amp;height=426&amp;hash=736\" style=\"font-size:10px;\"></a></div><div style=\"margin-left:66.6666%;margin-top:-45.81%;width:33.3333%;\"><a href=\"http://www.aliexpress.com/item/info/4000668328072.html\"><img src=\"http://ae01.alicdn.com/kf/H243232755e8e4be0a36e7f644d7231b47.png?width=310&amp;height=426&amp;hash=736\" style=\"font-size:10px;\"></a></div></div></div><div>\n<div>\n<div>\n<div>\n<div>\n<div><span style=\"font-size:20px;\">Description:<br>\nFeatures: necklace<br>\nMaterial: 316L Stainless steel<br>\ncolor: gold &amp; silver tone<br>\n<br>\nSpecifications:<br>\n100% Brand New And High Quality<br>\n<br>\n<strong>Band width: 24mm</strong><br>\nLength: 16-30 inch<br>\n<br>\nPackage included:<br>\n1 necklace<br>\n<br>\n<img referrerpolicy=\"no-referrer\" src=\"https://ae04.alicdn.com/kf/H1bd91f5d3e1342ccb59fdc6f91dce67ea.jpg\"><img referrerpolicy=\"no-referrer\" src=\"https://ae04.alicdn.com/kf/H2226df9fc67f4a81a36fac6be4187f54e.jpg\"><img referrerpolicy=\"no-referrer\" src=\"https://ae04.alicdn.com/kf/He2d37d6a9a6042eba48b59ddf2e8d823Y.jpg\"></span></div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div></div>\r\n"
       },
       "has_whole_sale": false,
       "ae_item_properties": {
         "ae_item_property": [
           {
             "attr_name_id": 2,
-            "attr_value_id": 34494757,
+            "attr_value_id": 202634989,
             "attr_name": "Brand Name",
-            "attr_value": "abdo"
+            "attr_value": "AHAPPY"
           },
           {
-            "attr_name_id": 873,
-            "attr_value_id": 23399558158,
-            "attr_name": "Inside Material",
-            "attr_value": "Velvet"
+            "attr_name_id": 400049602,
+            "attr_value_id": 23399591357,
+            "attr_name": "Setting Material",
+            "attr_value": "None"
           },
           {
             "attr_name_id": 400000603,
             "attr_value_id": 23399591357,
             "attr_name": "Hign-concerned Chemical",
             "attr_value": "None"
+          },
+          {
+            "attr_name_id": 100005859,
+            "attr_value_id": 206,
+            "attr_name": "Metals Type",
+            "attr_value": "Stainless Steel"
           },
           {
             "attr_name_id": 219,
@@ -111,161 +331,72 @@
           },
           {
             "attr_name_id": 266081643,
-            "attr_value_id": 100015189,
+            "attr_value_id": 100015190,
             "attr_name": "CN",
-            "attr_value": "Fujian"
+            "attr_value": "Guangdong"
+          },
+          {
+            "attr_name_id": 200000221,
+            "attr_value_id": 200000560,
+            "attr_name": "Necklace Type",
+            "attr_value": "Chains Necklaces"
+          },
+          {
+            "attr_name_id": 284,
+            "attr_value_id": 361190,
+            "attr_name": "Gender",
+            "attr_value": "Unisex"
+          },
+          {
+            "attr_name_id": 326,
+            "attr_value_id": 100013307,
+            "attr_name": "Style",
+            "attr_value": "Classic"
+          },
+          {
+            "attr_name_id": 200000785,
+            "attr_value_id": 200003778,
+            "attr_name": "Fine or Fashion",
+            "attr_value": "Fashion"
           },
           {
             "attr_name_id": 10,
-            "attr_value_id": 350383,
+            "attr_value_id": 398,
             "attr_name": "Material",
-            "attr_value": "Wood"
-          },
-          {
-            "attr_name_id": 200000063,
-            "attr_value_id": -1,
-            "attr_name": "Item Length",
-            "attr_value": "17.5"
-          },
-          {
-            "attr_name_id": 200000137,
-            "attr_value_id": 1983116067,
-            "attr_name": "Item Type",
-            "attr_value": "Jewelry Storage Box"
-          },
-          {
-            "attr_name_id": 200000193,
-            "attr_value_id": -1,
-            "attr_name": "Item Width",
-            "attr_value": "9.7"
-          },
-          {
-            "attr_name_id": 200317262,
-            "attr_value_id": 21350894534,
-            "attr_name": "Shape",
-            "attr_value": "Polygon"
-          },
-          {
-            "attr_name_id": 400045203,
-            "attr_value_id": 23399602077,
-            "attr_name": "Jewelry Use Type",
-            "attr_value": "Necklace"
-          },
-          {
-            "attr_name_id": 200000194,
-            "attr_value_id": -1,
-            "attr_name": "Item Height",
-            "attr_value": "29.5"
-          },
-          {
-            "attr_name_id": 200001153,
-            "attr_value_id": 23399594042,
-            "attr_name": "Closure Type",
-            "attr_value": "Magnetic"
-          },
-          {
-            "attr_name_id": 400045602,
-            "attr_value_id": 23399263756,
-            "attr_name": "Crowd",
-            "attr_value": "Women"
-          },
-          {
-            "attr_name_id": 200000195,
-            "attr_value_id": -1,
-            "attr_name": "Item Weight",
-            "attr_value": "1700"
-          },
-          {
-            "attr_name_id": 200000196,
-            "attr_value_id": -1,
-            "attr_name": "Item Diameter",
-            "attr_value": "17.5"
-          },
-          {
-            "attr_name_id": 200000181,
-            "attr_value_id": 200003802,
-            "attr_name": "Product Features",
-            "attr_value": "Portable"
+            "attr_value": "Metal"
           },
           {
             "attr_name_id": 1186,
-            "attr_value_id": 201292419,
+            "attr_value_id": 200002407,
             "attr_name": "Occasion",
-            "attr_value": "Domestic"
+            "attr_value": "Party"
           },
           {
-            "attr_name_id": 3,
-            "attr_value_id": -1,
-            "attr_name": "Model Number",
-            "attr_value": "Necklace box"
+            "attr_name_id": 200000171,
+            "attr_value_id": 200000450,
+            "attr_name": "Chain Type",
+            "attr_value": "Link Chain"
           },
           {
-            "attr_name_id": 340062610,
-            "attr_value_id": 1983116242,
-            "attr_name": "Mounting type",
-            "attr_value": "Desk top"
-          },
-          {
-            "attr_name_id": 200000185,
-            "attr_value_id": 200000485,
-            "attr_name": "Jewelry Packaging & Display Type",
-            "attr_value": "Carrying Cases"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Name",
-            "attr_value": "Necklace box"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Material",
-            "attr_value": "MDF/alloy"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Size",
-            "attr_value": "17.5X9.7X29.5CM"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Color",
-            "attr_value": "Retro color/white"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Applicable space",
-            "attr_value": "Bedroom"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Gross weight",
-            "attr_value": "About 1.7KG"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Dropshipping",
-            "attr_value": "Support"
+            "attr_name_id": 200000137,
+            "attr_value_id": 361229,
+            "attr_name": "Item Type",
+            "attr_value": "NECKLACES"
           }
         ]
       },
       "ae_store_info": {
-        "store_id": 1103553112,
-        "shipping_speed_rating": "4.6",
+        "store_id": 927159,
+        "shipping_speed_rating": "4.7",
         "communication_rating": "4.6",
-        "store_name": "Frank · Gallagher Store",
+        "store_name": "Fashion-Jewelry-Store",
         "store_country_code": "CN",
         "item_as_described_rating": "4.7"
       }
     },
     "rsp_code": 200,
     "rsp_msg": "Call succeeds",
-    "request_id": "212a633117580016247331951"
+    "request_id": "0baf045d17580965394395961",
+    "_trace_id_": "2140e70617580965394387839e7e82"
   }
 }

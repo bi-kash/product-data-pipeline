@@ -24,10 +24,32 @@ from src.common.database import (
     get_active_session_by_code,
     deactivate_session
 )
+from src.common.config import get_env
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def get_oauth_authorization_url():
+    """
+    Generate OAuth authorization URL for AliExpress using app credentials from .env
+    
+    Returns:
+        str: Complete OAuth authorization URL
+    """
+    try:
+        app_key = get_env('IOP_APPKEY')
+        app_secret = get_env('IOP_APPSECRET')
+        
+        if not app_key or not app_secret:
+            return "https://auth.aliexpress.com/oauth/authorize?response_type=code&client_id=YOUR_APP_KEY&client_secret=YOUR_APP_SECRET"
+        
+        return f"https://auth.aliexpress.com/oauth/authorize?response_type=code&client_id={app_key}&client_secret={app_secret}"
+        
+    except Exception as e:
+        logger.error(f"Error generating OAuth URL: {e}")
+        return "https://auth.aliexpress.com/oauth/authorize?response_type=code&client_id=YOUR_APP_KEY&client_secret=YOUR_APP_SECRET"
 
 
 def create_session(code):
@@ -87,11 +109,14 @@ def create_session(code):
             logger.error(f"Error executing IOP request: {error_str}")
             
             # Handle specific JSON parsing errors
+            oauth_url = get_oauth_authorization_url()
+            
             if 'Expecting value' in error_str or 'JSON' in error_str:
                 return {
                     'success': False,
-                    'message': 'The authorization code appears to be invalid or expired. Please get a new authorization code from AliExpress.',
-                    'code': code
+                    'message': f'The authorization code appears to be invalid or expired. Get a new authorization code from:\n{oauth_url}',
+                    'code': code,
+                    'oauth_url': oauth_url
                 }
             elif 'Connection' in error_str or 'timeout' in error_str.lower():
                 return {
@@ -123,10 +148,11 @@ def create_session(code):
         # Check for API errors
         if response.code != "0":
             error_msg = response.message or 'Unknown error'
+            oauth_url = get_oauth_authorization_url()
             
             # Provide specific error messages for common issues
             if 'invalid' in error_msg.lower() or 'expired' in error_msg.lower():
-                error_msg = f"Authorization code is invalid or expired. Please get a new code. Original error: {error_msg}"
+                error_msg = f"Authorization code is invalid or expired. Get a new code from:\n{oauth_url}\n\nOriginal error: {error_msg}"
             elif 'unauthorized' in error_msg.lower():
                 error_msg = f"Invalid API credentials. Please check IOP_APPKEY and IOP_APPSECRET. Original error: {error_msg}"
             
@@ -134,7 +160,8 @@ def create_session(code):
             return {
                 'success': False,
                 'message': error_msg,
-                'code': code
+                'code': code,
+                'oauth_url': oauth_url if 'invalid' in error_msg.lower() or 'expired' in error_msg.lower() else None
             }
         
         # Save session to database
@@ -162,14 +189,13 @@ def create_session(code):
 
 def auto_refresh_session(access_token=None, refresh_token=None):
     """
-    Auto-refresh session token.
-    - If both tokens provided, uses them directly
-    - If only refresh_token provided, tries to find access_token from database
-    - If no tokens provided, tries to find both from database
+    Auto-refresh session token with simplified logic:
+    1. If session exists in database, use it automatically (tokens are optional)
+    2. If no session exists, require tokens or suggest using create_session
     
     Args:
-        access_token: Current access token (session parameter)
-        refresh_token: Refresh token to use
+        access_token: Current access token (optional if session exists in DB)
+        refresh_token: Refresh token to use (optional if session exists in DB)
     
     Returns:
         dict: Result with success status, message, and session data
@@ -180,55 +206,41 @@ def auto_refresh_session(access_token=None, refresh_token=None):
         # Ensure tables exist
         create_tables_if_not_exist()
         
-        # If both tokens provided, use them directly
-        if access_token and refresh_token:
-            logger.info("Using provided access token and refresh token")
-            return refresh_with_tokens(access_token, refresh_token, None)
-        
-        # Try to get the most recent active session from database
+        # Try to get the most recent session from database (active or inactive)
         db = get_db_session()
         try:
-            recent_session = db.query(SessionCode).filter(
-                SessionCode.is_active == True
-            ).order_by(SessionCode.updated_at.desc()).first()
+            recent_session = db.query(SessionCode).order_by(SessionCode.updated_at.desc()).first()
             
             if recent_session and recent_session.access_token and recent_session.refresh_token:
-                # Found session with both tokens in database
-                if refresh_token:
-                    # Use provided refresh_token with database access_token
-                    logger.info(f"Using access token from database session '{recent_session.code}' with provided refresh token")
-                    return refresh_with_tokens(recent_session.access_token, refresh_token, recent_session.code)
-                else:
-                    # Use both tokens from database
-                    logger.info(f"Using both tokens from database session '{recent_session.code}'")
-                    return refresh_with_tokens(recent_session.access_token, recent_session.refresh_token, recent_session.code)
-            
-            elif recent_session and access_token:
-                # Have access_token parameter and session in database
+                # Found session with tokens in database - use them
+                db_access_token = access_token or recent_session.access_token
                 db_refresh_token = refresh_token or recent_session.refresh_token
-                if db_refresh_token:
-                    logger.info(f"Using provided access token with refresh token from session '{recent_session.code}'")
-                    return refresh_with_tokens(access_token, db_refresh_token, recent_session.code)
+                
+                logger.info(f"Using session from database: '{recent_session.code}' (using {'provided' if access_token else 'database'} access_token, {'provided' if refresh_token else 'database'} refresh_token)")
+                return refresh_with_tokens(db_access_token, db_refresh_token, recent_session.code)
             
-            # Need both tokens
-            missing = []
-            if not access_token and (not recent_session or not recent_session.access_token):
-                missing.append("access token (--token)")
-            if not refresh_token and (not recent_session or not recent_session.refresh_token):
-                missing.append("refresh token (--refresh-token)")
-            
-            if missing:
-                return {
-                    'success': False,
-                    'message': f"Missing required parameters: {', '.join(missing)}. Both access token and refresh token are required for the API.",
-                    'needs_tokens': True
-                }
-            
-            return {
-                'success': False,
-                'message': "Unable to find required tokens. Please provide both --token and --refresh-token parameters.",
-                'needs_tokens': True
-            }
+            else:
+                # No valid session in database - require tokens
+                oauth_url = get_oauth_authorization_url()
+                
+                if not access_token or not refresh_token:
+                    missing = []
+                    if not access_token:
+                        missing.append("access token (--token)")
+                    if not refresh_token:
+                        missing.append("refresh token (--refresh-token)")
+                    
+                    return {
+                        'success': False,
+                        'message': f"No session found in database. Please provide: {', '.join(missing)}.\n\nIf you don't have tokens, get authorization code from:\n{oauth_url}\n\nThen use: python main.py create_session --code YOUR_CODE",
+                        'needs_tokens': True,
+                        'suggest_create': True,
+                        'oauth_url': oauth_url
+                    }
+                
+                # Use provided tokens
+                logger.info("No database session found, using provided tokens")
+                return refresh_with_tokens(access_token, refresh_token, None)
             
         finally:
             db.close()
@@ -295,10 +307,14 @@ def refresh_with_tokens(access_token, refresh_token, existing_code=None):
             if existing_code:
                 deactivate_session(existing_code)
             
+            oauth_url = get_oauth_authorization_url()
+            
             if 'Expecting value' in error_str or 'JSON' in error_str:
                 return {
                     'success': False,
-                    'message': 'The refresh token appears to be invalid or expired. Please get a new authorization code.',
+                    'message': f'The refresh token appears to be invalid or expired. Please get a new authorization code from:\n{oauth_url}\n\nThen use: python main.py create_session --code YOUR_CODE',
+                    'oauth_url': oauth_url,
+                    'suggest_create': True
                 }
             elif 'Connection' in error_str or 'timeout' in error_str.lower():
                 return {
@@ -318,6 +334,17 @@ def refresh_with_tokens(access_token, refresh_token, existing_code=None):
             
             if existing_code:
                 deactivate_session(existing_code)
+            
+            oauth_url = get_oauth_authorization_url()
+            
+            # Check for specific error types that indicate need for new authorization
+            if 'IllegalRefreshToken' in error_msg or 'invalid' in error_msg.lower() or 'expired' in error_msg.lower():
+                return {
+                    'success': False,
+                    'message': f"Refresh token is invalid or expired: {error_msg}\n\nGet a new authorization code from:\n{oauth_url}\n\nThen use: python main.py create_session --code YOUR_CODE",
+                    'oauth_url': oauth_url,
+                    'suggest_create': True
+                }
             
             return {
                 'success': False,
@@ -467,14 +494,15 @@ def refresh_session_token(code):
         }
 
 
-def get_valid_token_for_code(code, refresh_margin_seconds=300):
+def get_valid_token_for_code(code, refresh_margin_seconds=300, refresh_interval_hours=6):
     """
     Get a valid access token for the given session code.
-    Automatically refreshes the token if it's expired or about to expire.
+    Automatically refreshes the token if it's expired, about to expire, or if 6 hours have passed since last refresh.
     
     Args:
         code: Session code
         refresh_margin_seconds: Refresh token this many seconds before expiry (default: 5 minutes)
+        refresh_interval_hours: Refresh token after this many hours since last update (default: 6 hours)
     
     Returns:
         dict: Result with success status, token, and metadata
@@ -490,13 +518,29 @@ def get_valid_token_for_code(code, refresh_margin_seconds=300):
                 'refreshed': False
             }
         
-        # Check if token is expired or about to expire
+        # Check both expiry time and time since last refresh
         current_time = int(time.time() * 1000)  # Convert to milliseconds
         expire_time = int(session.expire_time) if session.expire_time else None
         
-        if expire_time and current_time >= (expire_time - (refresh_margin_seconds * 1000)):
-            # Token is expired or about to expire, refresh it
-            logger.info(f"Token for session '{code}' is expired or about to expire, refreshing...")
+        # Check if token is expired or about to expire (existing logic)
+        token_needs_expiry_refresh = expire_time and current_time >= (expire_time - (refresh_margin_seconds * 1000))
+        
+        # Check if 6 hours have passed since last refresh (new logic)
+        time_needs_refresh = False
+        if session.updated_at:
+            # Convert updated_at to timestamp in milliseconds
+            updated_at_timestamp = int(session.updated_at.timestamp() * 1000)
+            refresh_interval_ms = refresh_interval_hours * 3600 * 1000  # Convert hours to milliseconds
+            time_needs_refresh = current_time >= (updated_at_timestamp + refresh_interval_ms)
+        
+        # Refresh if either condition is met
+        if token_needs_expiry_refresh or time_needs_refresh:
+            if token_needs_expiry_refresh:
+                logger.info(f"Token for session '{code}' is expired or about to expire, refreshing...")
+            elif time_needs_refresh:
+                hours_since_update = (current_time - updated_at_timestamp) / (1000 * 3600)
+                logger.info(f"Token for session '{code}' was last refreshed {hours_since_update:.1f} hours ago (>= {refresh_interval_hours}h), refreshing...")
+            
             refresh_result = refresh_session_token(code)
             
             if refresh_result.get('success'):
@@ -515,7 +559,7 @@ def get_valid_token_for_code(code, refresh_margin_seconds=300):
                     'refreshed': False
                 }
         
-        # Token is still valid
+        # Token is still valid and not due for refresh
         return {
             'success': True,
             'token': session.access_token,
