@@ -263,6 +263,46 @@ class ShippingInfo(Base):
         return f"<ShippingInfo(product_id='{self.product_id}', sku_id='{self.sku_id}', company='{self.company}', fee={self.shipping_fee}, days={self.min_delivery_days}-{self.max_delivery_days})>"
 
 
+class ProductImage(Base):
+    """
+    Model representing product images for filtered products.
+    
+    Stores all available image URLs (hero, gallery, and variant) for each product.
+    """
+
+    __tablename__ = "product_images"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False)
+    
+    # Image details
+    image_url = Column(Text, nullable=False)  # Full image URL
+    image_role = Column(String(20), nullable=False)  # 'hero', 'gallery', 'variant'
+    
+    # Property details (replaces variant_key)
+    property_value = Column(String(100), nullable=True)  # The property value (e.g., "Red", "Blue")
+    property_name = Column(String(100), nullable=True)  # The property name (e.g., "Color", "Size")
+    property_value_definition_name = Column(String(200), nullable=True)  # Full definition name (e.g., "Cherry Wood Color")
+    
+    sort_index = Column(Integer, nullable=False, default=0)  # For ordering images
+    
+    # Optional image dimensions
+    width = Column(Integer, nullable=True)
+    height = Column(Integer, nullable=True)
+    
+    # Metadata
+    is_primary = Column(Boolean, default=False)  # Mark primary/hero image
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="product_images")
+
+    def __repr__(self):
+        return f"<ProductImage(product_id='{self.product_id}', role='{self.image_role}', property='{self.property_value}', url='{self.image_url[:50]}...')>"
+
+
 def create_tables_if_not_exist():
     """
     Create the necessary tables if they don't exist.

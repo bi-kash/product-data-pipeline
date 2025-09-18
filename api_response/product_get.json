@@ -1,0 +1,357 @@
+{
+  "aliexpress_ds_product_get_response": {
+    "result": {
+      "ae_item_sku_info_dtos": {
+        "ae_item_sku_info_d_t_o": [
+          {
+            "sku_attr": "200000226:200025551#Blue Kyanite set;200000369:699;200000639:200661028",
+            "offer_sale_price": "142.39",
+            "sku_id": "12000039477690841",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "167.52",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "142.39",
+            "sku_available_stock": 110,
+            "id": "200000226:200025551#Blue Kyanite set;200000369:699;200000639:200661028",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Blue Kyanite set",
+                  "property_value_id": 200025551,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "8",
+                  "sku_property_name": "Ring Size",
+                  "property_value_id": 699,
+                  "sku_property_id": 200000369
+                },
+                {
+                  "sku_property_value": "45cm",
+                  "sku_property_name": "Length",
+                  "property_value_id": 200661028,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:200025551#Blue Kyanite set;200000369:3434;200000639:200661028",
+            "offer_sale_price": "142.39",
+            "sku_id": "12000039477690840",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "167.52",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "142.39",
+            "sku_available_stock": 110,
+            "id": "200000226:200025551#Blue Kyanite set;200000369:3434;200000639:200661028",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Blue Kyanite set",
+                  "property_value_id": 200025551,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "7",
+                  "sku_property_name": "Ring Size",
+                  "property_value_id": 3434,
+                  "sku_property_id": 200000369
+                },
+                {
+                  "sku_property_value": "45cm",
+                  "sku_property_name": "Length",
+                  "property_value_id": 200661028,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:200025551#Blue Kyanite set;200000369:1583;200000639:200661028",
+            "offer_sale_price": "142.39",
+            "sku_id": "12000039477690843",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "167.52",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "142.39",
+            "sku_available_stock": 110,
+            "id": "200000226:200025551#Blue Kyanite set;200000369:1583;200000639:200661028",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Blue Kyanite set",
+                  "property_value_id": 200025551,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "10",
+                  "sku_property_name": "Ring Size",
+                  "property_value_id": 1583,
+                  "sku_property_id": 200000369
+                },
+                {
+                  "sku_property_value": "45cm",
+                  "sku_property_name": "Length",
+                  "property_value_id": 200661028,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:200025551#Blue Kyanite set;200000369:350262;200000639:200661028",
+            "offer_sale_price": "142.39",
+            "sku_id": "12000039477690842",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "167.52",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "142.39",
+            "sku_available_stock": 110,
+            "id": "200000226:200025551#Blue Kyanite set;200000369:350262;200000639:200661028",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Blue Kyanite set",
+                  "property_value_id": 200025551,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "9",
+                  "sku_property_name": "Ring Size",
+                  "property_value_id": 350262,
+                  "sku_property_id": 200000369
+                },
+                {
+                  "sku_property_value": "45cm",
+                  "sku_property_name": "Length",
+                  "property_value_id": 200661028,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:200025551#Blue Kyanite set;200000369:1394;200000639:200661028",
+            "offer_sale_price": "142.39",
+            "sku_id": "12000039477690839",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "167.52",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "142.39",
+            "sku_available_stock": 110,
+            "id": "200000226:200025551#Blue Kyanite set;200000369:1394;200000639:200661028",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Blue Kyanite set",
+                  "property_value_id": 200025551,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "6",
+                  "sku_property_name": "Ring Size",
+                  "property_value_id": 1394,
+                  "sku_property_id": 200000369
+                },
+                {
+                  "sku_property_value": "45cm",
+                  "sku_property_name": "Length",
+                  "property_value_id": 200661028,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "ae_multimedia_info_dto": {
+        "image_urls": "https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg;https://ae01.alicdn.com/kf/S03e451fe554749be869ebed34a3054130.jpg;https://ae01.alicdn.com/kf/S810f3b45d46a4ddda75b1e924b685e74u.jpg;https://ae01.alicdn.com/kf/Se2173b85e4214087b670226c1b634990B.jpg;https://ae01.alicdn.com/kf/Sf2f86e5551f8476795b5d568b6b0f24dH.jpg;https://ae01.alicdn.com/kf/See7d2a6e199e4e24bcf510c9ee054f53U.jpg"
+      },
+      "package_info_dto": {
+        "package_width": 18,
+        "package_height": 5,
+        "package_length": 20,
+        "gross_weight": "0.100",
+        "package_type": false,
+        "product_unit": 100000017
+      },
+      "logistics_info_dto": {
+        "delivery_time": 5,
+        "ship_to_country": "DE"
+      },
+      "product_id_converter_result": {
+        "main_product_id": 1005007123776409,
+        "sub_product_id": "{\"US\":3256806937461657}"
+      },
+      "ae_item_base_info_dto": {
+        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S344ff23680a8429aa236975269b4dd9cH.jpg\",\"style\":{\"width\":1000,\"height\":92}}},{\"type\":\"text\",\"data\":{\"content\":\"material:925 silver white\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Silver weight:approx.11.03g\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Item:925 sterling silver Ring Earring pendant necklace\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Main stone:Natural Blue Kyanite oval 5*7mm\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Gemstone weight:12ct\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"side stone:cubic zircon\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Jewelry Box and Silver polish cloth is attached.\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S82d6cb302d7c4d9ea9b242529f2010f09.jpg\",\"style\":{\"width\":1000,\"height\":92}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S06acad873388449cbdb177d273456e110.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S810f3b45d46a4ddda75b1e924b685e74u.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S0d97fd3b30ff4bb18b44b26c2cfe4a1dk.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S03e451fe554749be869ebed34a3054130.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sf2f86e5551f8476795b5d568b6b0f24dH.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Se2173b85e4214087b670226c1b634990B.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S6aa9272fa6d34cd0a705316ea36e9c27H.jpg\",\"style\":{\"width\":1000,\"height\":1000,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S56cef0d021b040e5a1dc81ecd8c1500b9.jpg\",\"style\":{\"width\":800,\"height\":545,\"paddingBottom\":10}}},{\"type\":\"image\",\"data\":{\"url\":\"http://ae01.alicdn.com/kf/UTB8WtIsfKvJXKJkSajhq6A7aFXaR.jpg\",\"style\":{\"width\":800,\"height\":413}}}]}",
+        "subject": "Natural Blue Kyanite gemstones set 925 sterling silver ring earrings pendant simple exquisite jewelry suitable for everyday wear",
+        "evaluation_count": "0",
+        "sales_count": "0",
+        "product_status_type": "onSelling",
+        "avg_evaluation_rating": "0.0",
+        "currency_code": "USD",
+        "category_id": 200001697,
+        "product_id": 1005007123776409,
+        "detail": "<div class=\"detailmodule_image\"><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S344ff23680a8429aa236975269b4dd9cH.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_text\"><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">material:925 silver white</span></p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">Silver weight:approx.11.03g</span></p><br/></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">Item:925 sterling silver Ring Earring pendant necklace</span></p><br/></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">Main stone:Natural Blue Kyanite oval 5*7mm</span></p><br/></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">Gemstone weight:12ct</span></p><br/></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">side stone:cubic zircon</span></p><br/></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\"><span style=\"font-size:22px;font-family:arial, helvetica, sans-serif\">Jewelry Box and Silver polish cloth is attached.</span></p></div><div class=\"detailmodule_image\"><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S82d6cb302d7c4d9ea9b242529f2010f09.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sb8cb0db8a2d642f6838d023892bb05dc3.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S06acad873388449cbdb177d273456e110.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S810f3b45d46a4ddda75b1e924b685e74u.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S0d97fd3b30ff4bb18b44b26c2cfe4a1dk.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S03e451fe554749be869ebed34a3054130.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sf2f86e5551f8476795b5d568b6b0f24dH.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Se2173b85e4214087b670226c1b634990B.jpg\" slate-data-type=\"image\"/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S6aa9272fa6d34cd0a705316ea36e9c27H.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_image\"><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S56cef0d021b040e5a1dc81ecd8c1500b9.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"http://ae01.alicdn.com/kf/UTB8WtIsfKvJXKJkSajhq6A7aFXaR.jpg\" slate-data-type=\"image\"/></div><br/>"
+      },
+      "has_whole_sale": false,
+      "ae_item_properties": {
+        "ae_item_property": [
+          {
+            "attr_name_id": 2,
+            "attr_value_id": 203452557,
+            "attr_name": "Brand Name",
+            "attr_value": "bolaijewelry"
+          },
+          {
+            "attr_name_id": 100005859,
+            "attr_value_id": 347,
+            "attr_name": "Metals Type",
+            "attr_value": "Silver"
+          },
+          {
+            "attr_name_id": 200000086,
+            "attr_value_id": 200000167,
+            "attr_name": "Metal Stamp",
+            "attr_value": "925,Sterling"
+          },
+          {
+            "attr_name_id": 219,
+            "attr_value_id": 9441741844,
+            "attr_name": "Origin",
+            "attr_value": "Mainland China"
+          },
+          {
+            "attr_name_id": 920,
+            "attr_value_id": 2468,
+            "attr_name": "Certificate",
+            "attr_value": "Yes"
+          },
+          {
+            "attr_name_id": 200000085,
+            "attr_value_id": 202378806,
+            "attr_name": "Certificate Type",
+            "attr_value": "GTC"
+          },
+          {
+            "attr_name_id": 20252,
+            "attr_value_id": 1563,
+            "attr_name": "Main Stone",
+            "attr_value": "Kyanite"
+          },
+          {
+            "attr_name_id": 400000603,
+            "attr_value_id": 23399591357,
+            "attr_name": "Hign-concerned Chemical",
+            "attr_value": "None"
+          },
+          {
+            "attr_name_id": 326,
+            "attr_value_id": 100013307,
+            "attr_name": "Style",
+            "attr_value": "Classic"
+          },
+          {
+            "attr_name_id": 200000784,
+            "attr_value_id": 200001255,
+            "attr_name": "Shape\\pattern",
+            "attr_value": "Geometric"
+          },
+          {
+            "attr_name_id": 200000785,
+            "attr_value_id": 200003777,
+            "attr_name": "Fine or Fashion",
+            "attr_value": "Fine"
+          },
+          {
+            "attr_name_id": 284,
+            "attr_value_id": 100006040,
+            "attr_name": "Gender",
+            "attr_value": "Women"
+          },
+          {
+            "attr_name_id": 200000170,
+            "attr_value_id": 202115863,
+            "attr_name": "Jewelry Sets Type",
+            "attr_value": "Necklace/Earrings/Ring"
+          },
+          {
+            "attr_name_id": 200000137,
+            "attr_value_id": 200000870,
+            "attr_name": "Item Type",
+            "attr_value": "jewelry sets"
+          },
+          {
+            "attr_name_id": 3,
+            "attr_value_id": -1,
+            "attr_name": "Model Number",
+            "attr_value": "BL-SET00180kyanite"
+          },
+          {
+            "attr_name_id": 200103261,
+            "attr_value_id": 201877807,
+            "attr_name": "Side Stone",
+            "attr_value": "Other Artificial material"
+          },
+          {
+            "attr_name_id": 1186,
+            "attr_value_id": 200000162,
+            "attr_name": "Occasion",
+            "attr_value": "Anniversary"
+          },
+          {
+            "attr_name_id": 200000195,
+            "attr_value_id": -1,
+            "attr_name": "Item Weight",
+            "attr_value": "11.03g"
+          },
+          {
+            "attr_name_id": 200000631,
+            "attr_value_id": 349906,
+            "attr_name": "is_customized",
+            "attr_value": "No"
+          }
+        ]
+      },
+      "ae_store_info": {
+        "store_id": 4305044,
+        "shipping_speed_rating": "4.9",
+        "communication_rating": "4.9",
+        "store_name": "bolaijewelry Store",
+        "store_country_code": "CN",
+        "item_as_described_rating": "4.9"
+      }
+    },
+    "rsp_code": 200,
+    "rsp_msg": "Call succeeds",
+    "request_id": "214130bd17581126793562320",
+    "_trace_id_": "2102f32217581126793551782ecdbe"
+  }
+}

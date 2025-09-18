@@ -745,4 +745,34 @@ def run_product_filtering(max_price_eur: float = None, max_delivery_days: int = 
     logger.info("Product filtering completed")
     logger.info(f"Statistics: {stats}")
     
+    # Run image ingestion for filtered products (unless dry run)
+    if not dry_run and stats.get('products_passed_filter', 0) > 0:
+        logger.info("Starting image ingestion for filtered products")
+        try:
+            from src.ingestion.image_ingestion import ImageIngestionEngine
+            
+            image_engine = ImageIngestionEngine()
+            image_stats = image_engine.ingest_all_images()
+            
+            logger.info("Image ingestion completed")
+            logger.info(f"Image statistics: {image_stats}")
+            
+            # Add image stats to the main stats
+            stats.update({
+                'images_extracted': image_stats.get('images_extracted', 0),
+                'hero_images': image_stats.get('hero_images', 0),
+                'gallery_images': image_stats.get('gallery_images', 0),
+                'variant_images': image_stats.get('variant_images', 0),
+                'image_errors': image_stats.get('errors', 0)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error during image ingestion: {e}")
+            stats['image_errors'] = 1
+    else:
+        if dry_run:
+            logger.info("Skipping image ingestion (dry run mode)")
+        else:
+            logger.info("Skipping image ingestion (no products passed filter)")
+    
     return stats
