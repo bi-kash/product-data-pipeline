@@ -96,19 +96,60 @@ The application automatically creates the required tables when first run. The da
   - `status`: Product status
   - `first_seen_at`: Timestamp when first discovered (UTC)
   - `last_seen_at`: Timestamp when last seen (UTC)
-  - `raw_json`: Raw data from the API
+  - `raw_json_search`: Raw search result data from the API
+  - `raw_json_detail`: Raw detailed product data from the API
+
+- **filtered_products:** Store products that pass business rule filtering
 
   - `id`: Auto-incrementing primary key
   - `product_id`: Foreign key to products table
-  - `category_id`: Category ID from AliExpress
-  - `category_name`: Name of the category
-  - `search_page`: Page number where the product was found
-  - `position_in_results`: Position in search results
-  - `search_timestamp`: When the association was created
+  - `shop_id`: Foreign key to sellers table
+  - `filtered_price_eur`: Final filtered price in EUR (variant + shipping)
+  - `min_delivery_days`: Minimum delivery time in days
+  - `max_delivery_days`: Maximum delivery time in days
+  - `created_at`: Timestamp when product was filtered
+
+- **shipping_info:** Store shipping details for product variants
+
+  - `id`: Auto-incrementing primary key
+  - `product_id`: Foreign key to products table
+  - `sku_id`: SKU identifier for the specific variant
+  - `shipping_method`: Name of shipping method
+  - `shipping_cost_eur`: Shipping cost in EUR
+  - `delivery_days`: Estimated delivery time in days
+  - `created_at`: Timestamp when shipping info was retrieved
+
+- **product_images:** Store categorized product images
+
+  - `id`: Auto-incrementing primary key
+  - `product_id`: Foreign key to products table
+  - `image_url`: URL to the image
+  - `image_role`: Type of image ("hero", "gallery", "variant")
+  - `property_value`: Property value for variant images (e.g., "Red")
+  - `property_name`: Property name for variant images (e.g., "Color")
+  - `property_value_definition_name`: Display name for the property value
+  - `sort_index`: Order of images within the product
+  - `width`: Image width in pixels (when available)
+  - `height`: Image height in pixels (when available)
+  - `is_primary`: Boolean indicating if this is the primary image
+
+- **sessions:** Store AliExpress API session credentials
+
+  - `id`: Auto-incrementing primary key
+  - `code`: Authorization code used to create the session
+  - `access_token`: Current access token for API calls
+  - `refresh_token`: Token used to refresh the access token
+  - `token_type`: Type of token (usually "Bearer")
+  - `expires_in`: Token expiration time in seconds
+  - `user_nick`: AliExpress user nickname
+  - `account`: Associated account information
+  - `is_active`: Boolean indicating if session is currently active
+  - `created_at`: When the session was created
+  - `updated_at`: When the session was last updated
 
 - **job_runs:** Log information about script executions
   - `id`: Auto-incrementing primary key
-  - `job_type`: Type of job (e.g., "HARVEST_INIT", "HARVEST_DELTA")
+  - `job_type`: Type of job (e.g., "HARVEST_INIT", "FILTER_PRODUCTS")
   - `start_time`: When the job started (UTC)
   - `end_time`: When the job completed (UTC)
   - `duration_seconds`: Job duration in seconds
@@ -117,6 +158,8 @@ The application automatically creates the required tables when first run. The da
   - `skipped_count`: Number of items skipped
   - `error_count`: Number of errors encountered
   - `details`: Additional job details as JSON
+  - `keywords`: Keywords used in the job (for search jobs)
+  - `categories`: Categories used in the job (for search jobs)
 
 The database is managed using SQLAlchemy ORM for better code organization and type safety.
 
@@ -158,8 +201,75 @@ This displays:
 
 - Seller counts by approval status
 - Recent job runs with statistics
-
 - Useful SQL queries for analysis
+
+### Product Filtering
+
+**Filter products from whitelisted sellers:**
+
+```bash
+python main.py filter:products
+```
+
+Options:
+
+- `--max-price PRICE`: Maximum total price in EUR (variant + shipping)
+- `--max-delivery DAYS`: Maximum delivery time in days
+- `--limit N`: Process only the first N products
+- `--dry-run`: Simulate without writing to database
+
+This command:
+
+- Processes products from WHITELIST approved sellers
+- Enriches products with shipping information and delivery estimates
+- Applies business rules for price and delivery time filtering
+- Stores qualifying products in the `filtered_products` table
+- Automatically triggers image ingestion for processed products
+
+### Session Management
+
+The pipeline requires valid AliExpress API sessions for accessing product details and shipping information.
+
+**Create a new session:**
+
+```bash
+python main.py create_session --code YOUR_AUTHORIZATION_CODE
+```
+
+This command:
+
+- Creates a new API session using an authorization code from AliExpress
+- Stores session credentials in the database
+- Returns session details including access token
+
+**Refresh an existing session:**
+
+```bash
+python main.py refresh_session
+```
+
+Options:
+
+- `--token TOKEN`: Specific access token to refresh
+- `--refresh-token REFRESH_TOKEN`: Specific refresh token to use
+
+This command:
+
+- Automatically uses stored session credentials from database (preferred)
+- Can manually refresh using provided tokens
+- Updates database with new session credentials
+
+**List all sessions:**
+
+```bash
+python main.py list_sessions
+```
+
+This displays:
+
+- All stored sessions with their status
+- Session metadata (user, account, dates)
+- Active vs inactive session indicators
 
 ### Merchant Review Workflow
 
@@ -263,14 +373,36 @@ The pipeline is configured via:
 
 ## Complete Workflow
 
-The product data pipeline follows this workflow:
+The product data pipeline follows this enhanced workflow:
 
-1. **Initial Data Collection** - Run `harvest:init` to collect initial merchant and product data
-2. **Regular Updates** - Run `harvest:delta` periodically to update and add new data
-3. **Export for Review** - Use `review:export-pending` to create a CSV file for expert reviewers
-4. **Expert Review** - Reviewers update approval statuses in the CSV file (WHITELIST or BLACKLIST)
-5. **Import Results** - Use `review:import-results` to update the database with reviewer decisions
-6. **Monitor & Analyze** - Use `harvest:status` and `export:tables` to track pipeline performance
+### Phase 1: Data Collection
+
+1. **Session Setup** - Run `create_session` to establish API credentials for detailed product data access
+2. **Initial Data Collection** - Run `harvest:init` to collect initial merchant and product data
+3. **Regular Updates** - Run `harvest:delta` periodically to update and add new data
+
+### Phase 2: Merchant Review
+
+4. **Export for Review** - Use `review:export-pending` to create a CSV file for expert reviewers
+5. **Expert Review** - Reviewers update approval statuses in the CSV file (WHITELIST or BLACKLIST)
+6. **Import Results** - Use `review:import-results` to update the database with reviewer decisions
+
+### Phase 3: Product Processing
+
+7. **Product Filtering** - Run `filter:products` to process products from whitelisted sellers
+8. **Image Ingestion** - Automatically triggered during filtering to categorize and store product images
+9. **Session Maintenance** - Run `refresh_session` as needed to maintain API access
+
+### Phase 4: Monitoring
+
+10. **Monitor & Analyze** - Use `harvest:status` and `list_sessions` to track pipeline performance
+
+**Key Features:**
+
+- **Automated Image Processing**: Products are automatically processed for hero, gallery, and variant images
+- **Shipping Cost Integration**: Real shipping costs and delivery times are calculated and stored
+- **Business Rule Filtering**: Products are filtered based on total cost (product + shipping) and delivery time
+- **Session Management**: Robust API session handling with automatic refresh capabilities
 
 For a detailed explanation of each step, expected outcomes, and troubleshooting guidance, refer to the [Quality Assurance Guide](./QA.md).
 
