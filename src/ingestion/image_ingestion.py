@@ -128,20 +128,20 @@ class ImageIngestionEngine:
             # Track sort index across all image types
             current_sort_index = 0
 
-            # Extract hero image (main product image)
-            hero_extracted, current_sort_index = self._extract_hero_image(product, variant_context, current_sort_index, db)
+            # Extract hero image (first image from image_urls)
+            hero_extracted, current_sort_index = self._extract_hero_image(result, product.product_id, variant_context, current_sort_index, db)
             stats['hero'] += hero_extracted
             stats['total'] += hero_extracted
 
-            # Extract gallery images
-            gallery_extracted, current_sort_index = self._extract_gallery_images(result, product.product_id, variant_context, current_sort_index, db)
-            stats['gallery'] += gallery_extracted
-            stats['total'] += gallery_extracted
-
-            # Extract variant images (if any)
+            # Extract variant images (images found in ae_sku_property_d_t_o)
             variant_extracted, current_sort_index = self._extract_variant_images(result, product.product_id, variant_context, current_sort_index, db)
             stats['variant'] += variant_extracted
             stats['total'] += variant_extracted
+
+            # Extract gallery images (remaining images from image_urls, excluding hero and variant images)
+            gallery_extracted, current_sort_index = self._extract_gallery_images(result, product.product_id, variant_context, current_sort_index, db)
+            stats['gallery'] += gallery_extracted
+            stats['total'] += gallery_extracted
 
             logger.debug(f"Extracted images for product {product.product_id}: {stats}")
 
@@ -207,12 +207,13 @@ class ImageIngestionEngine:
 
         return variant_context
 
-    def _extract_hero_image(self, product: Product, variant_context: Dict, start_sort_index: int, db) -> tuple[int, int]:
+    def _extract_hero_image(self, result_data: Dict, product_id: str, variant_context: Dict, start_sort_index: int, db) -> tuple[int, int]:
         """
-        Extract the main/hero image for a product.
+        Extract the hero/main image for a product (first image from image_urls).
         
         Args:
-            product: Product object
+            result_data: Product result data from API
+            product_id: Product ID
             variant_context: Variant context information
             start_sort_index: Starting sort index for this image type
             db: Database session
@@ -220,33 +221,40 @@ class ImageIngestionEngine:
         Returns:
             Tuple of (number of hero images extracted, next available sort index)
         """
-        if not product.product_main_image_url:
-            logger.debug(f"No main image URL for product {product.product_id}")
-            return 0, start_sort_index
-
         try:
+            # Get multimedia info
+            multimedia_info = result_data.get('ae_multimedia_info_dto', {})
+            image_urls_str = multimedia_info.get('image_urls', '')
+
+            if not image_urls_str:
+                logger.debug(f"No image URLs found for product {product_id}")
+                return 0, start_sort_index
+
+            # Split the semicolon-separated URLs and get the first one as hero
+            all_image_urls = [url.strip() for url in image_urls_str.split(';') if url.strip()]
+            
+            if not all_image_urls:
+                logger.debug(f"No valid image URLs found for product {product_id}")
+                return 0, start_sort_index
+
+            hero_image_url = all_image_urls[0]
+
             # Determine property details for hero image
             property_value = None
             property_name = None
             property_value_definition_name = None
             
-            # Check if this hero image matches a specific property
-            if product.product_main_image_url in variant_context.get('image_to_property_map', {}):
-                prop_details = variant_context['image_to_property_map'][product.product_main_image_url]
+            # Only set property details if this hero image is also a variant image
+            if hero_image_url in variant_context.get('image_to_property_map', {}):
+                prop_details = variant_context['image_to_property_map'][hero_image_url]
                 property_value = prop_details['property_value']
                 property_name = prop_details['property_name']
                 property_value_definition_name = prop_details['property_value_definition_name']
-            else:
-                # Use primary property if available
-                primary_prop = variant_context.get('primary_property')
-                if primary_prop:
-                    property_value = primary_prop['property_value']
-                    property_name = primary_prop['property_name']
-                    property_value_definition_name = primary_prop['property_value_definition_name']
+            # If not in variant map, keep all property fields as None
 
             hero_image = ProductImage(
-                product_id=product.product_id,
-                image_url=product.product_main_image_url,
+                product_id=product_id,
+                image_url=hero_image_url,
                 image_role='hero',
                 property_value=property_value,
                 property_name=property_name,
@@ -256,16 +264,19 @@ class ImageIngestionEngine:
             )
             
             db.add(hero_image)
-            logger.debug(f"Added hero image for product {product.product_id} with property: {property_value}")
+            logger.debug(f"Added hero image for product {product_id} with property: {property_value}")
             return 1, start_sort_index + 1
 
         except Exception as e:
-            logger.error(f"Error adding hero image for product {product.product_id}: {e}")
+            logger.error(f"Error adding hero image for product {product_id}: {e}")
             return 0, start_sort_index
 
     def _extract_gallery_images(self, result_data: Dict, product_id: str, variant_context: Dict, start_sort_index: int, db) -> tuple[int, int]:
         """
         Extract gallery images from the multimedia info.
+        Gallery images are all images from image_urls EXCEPT:
+        - The first image (hero image)
+        - Any images that are variant images (found in ae_sku_property_d_t_o)
         
         Args:
             result_data: Product result data from API
@@ -287,7 +298,24 @@ class ImageIngestionEngine:
                 return 0, start_sort_index
 
             # Split the semicolon-separated URLs
-            gallery_urls = [url.strip() for url in image_urls_str.split(';') if url.strip()]
+            all_image_urls = [url.strip() for url in image_urls_str.split(';') if url.strip()]
+            
+            if len(all_image_urls) <= 1:
+                logger.debug(f"Only hero image available for product {product_id}, no gallery images")
+                return 0, start_sort_index
+
+            # Exclude the first image (hero) and any variant images
+            gallery_urls = all_image_urls[1:]  # Skip first image (hero)
+            
+            # Get all variant image URLs to exclude them from gallery
+            variant_image_urls = set(variant_context.get('image_to_property_map', {}).keys())
+            
+            # Filter out variant images from gallery
+            gallery_urls = [url for url in gallery_urls if url not in variant_image_urls]
+            
+            if not gallery_urls:
+                logger.debug(f"No gallery images remaining after filtering for product {product_id}")
+                return 0, start_sort_index
             
             images_added = 0
             current_sort_index = start_sort_index
@@ -299,19 +327,9 @@ class ImageIngestionEngine:
                     property_name = None
                     property_value_definition_name = None
                     
-                    # Check if this gallery image matches a specific property
-                    if image_url in variant_context.get('image_to_property_map', {}):
-                        prop_details = variant_context['image_to_property_map'][image_url]
-                        property_value = prop_details['property_value']
-                        property_name = prop_details['property_name']
-                        property_value_definition_name = prop_details['property_value_definition_name']
-                    else:
-                        # Use primary property if available
-                        primary_prop = variant_context.get('primary_property')
-                        if primary_prop:
-                            property_value = primary_prop['property_value']
-                            property_name = primary_prop['property_name']
-                            property_value_definition_name = primary_prop['property_value_definition_name']
+                    # Gallery images from image_urls don't have properties unless they're also variant images
+                    # (but we already filtered out variant images, so they should all be None)
+                    # Keep all property fields as None for gallery images
 
                     gallery_image = ProductImage(
                         product_id=product_id,

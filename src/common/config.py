@@ -57,11 +57,11 @@ def get_search_keywords():
     return [k.strip() for k in env_val.split(",") if k.strip()]
 
 
-def get_search_categories():
+def get_search_category():
     """
-    Get list of category IDs from the CATEGORIES environment variable (comma-separated).
+    Get single category ID from the CATEGORY environment variable.
 
-    These categories are used for:
+    This category is used for:
     1. Category-only search when USE_KEYWORDS=false
     2. Additional category search when USE_KEYWORDS=true
 
@@ -70,6 +70,28 @@ def get_search_categories():
     - 1509: Fashion Jewelry
     - 201239108: Customized Jewelry
     - 200370154: Smart Jewelry
+    - 36: Jewelry & Accessories (parent category)
+
+    Returns:
+        str: Single category ID as string, or None if not set
+
+    Example:
+        With CATEGORY=36 in .env
+        Returns: '36'
+    """
+    env_val = os.getenv("CATEGORY", "")
+    # Remove any inline comments (anything after a # symbol)
+    if "#" in env_val:
+        env_val = env_val.split("#")[0]
+    return env_val.strip() if env_val.strip() else None
+
+
+def get_ignore_categories():
+    """
+    Get list of category IDs to ignore from the IGNORE_CATEGORIES environment variable.
+
+    Products that have any category ID matching any of these will be completely
+    ignored during harvest and not stored in the database.
 
     Categories to avoid (primarily contain supplies):
     - 200001479: Jewelry Packaging & Display
@@ -77,17 +99,34 @@ def get_search_categories():
     - 201238105: Jewelry Making
 
     Returns:
-        list: List of category IDs as strings
+        list: List of category IDs as strings to ignore
 
     Example:
-        With CATEGORIES=200001680,1509 in .env
-        Returns: ['200001680', '1509']
+        With IGNORE_CATEGORIES=201238105,200001478,200001479 in .env
+        Returns: ['201238105', '200001478', '200001479']
     """
-    env_val = os.getenv("CATEGORIES", "")
+    env_val = os.getenv("IGNORE_CATEGORIES", "")
     # Remove any inline comments (anything after a # symbol)
     if "#" in env_val:
         env_val = env_val.split("#")[0]
     return [c.strip() for c in env_val.split(",") if c.strip()]
+
+
+def get_minimum_pagination_pages():
+    """
+    Get the minimum number of consecutive pages with all products below threshold 
+    before stopping pagination.
+    
+    Returns:
+        int: Minimum number of consecutive pages to check (default: 4)
+    """
+    try:
+        return int(os.getenv("MIN_CONSECUTIVE_BELOW_THRESHOLD_PAGES", "4"))
+    except (ValueError, TypeError):
+        return 4
+
+
+
 
 
 def create_example_env_file():
@@ -124,6 +163,7 @@ MAX_RETRIES=3
 TIMEOUT=30
 USE_MOCK_DATA=false
 API_PAGE_SIZE=50  # Maximum number of products per page for API requests
+MIN_PAGINATION_PAGES=4  # Minimum pages to check before stopping due to price threshold
 """
             )
 

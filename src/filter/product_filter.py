@@ -499,9 +499,11 @@ class ProductFilterEngine:
             last_seen_at=product.last_seen_at,
             raw_json_detail=product.raw_json_detail,
             
-            # Add the three extra fields specific to filtered products
+            # Add the extra fields specific to filtered products
             ship_to_country=filter_result.get('ship_to_country'),
             delivery_time=filter_result.get('delivery_time'),
+            min_delivery_days=None,  # Will be updated after freight queries
+            max_delivery_days=None,  # Will be updated after freight queries
             max_variant_price=filter_result.get('max_variant_price'),
             min_shipping_price=None  # Will be updated after freight queries
         )
@@ -674,14 +676,17 @@ class ProductFilterEngine:
                     # Add shipping info to database
                     db.add(shipping_info)
                     
-                    # Update filtered_products with minimum shipping price
+                    # Update filtered_products with minimum shipping price and delivery days
                     filtered_product = db.query(FilteredProduct).filter(
                         FilteredProduct.product_id == product.product_id
                     ).first()
                     
                     if filtered_product:
                         filtered_product.min_shipping_price = min_shipping_price
+                        filtered_product.min_delivery_days = self._parse_int(best_option.get('min_delivery_days'))
+                        filtered_product.max_delivery_days = self._parse_int(best_option.get('max_delivery_days'))
                         logger.info(f"Updated product {product.product_id} with min shipping price: {min_shipping_price}")
+                        logger.info(f"Updated product {product.product_id} with delivery days: {filtered_product.min_delivery_days}-{filtered_product.max_delivery_days}")
                     
                     logger.info(f"Stored cheapest valid shipping option for product {product.product_id}, min shipping price: {min_shipping_price}")
                         

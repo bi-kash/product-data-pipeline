@@ -204,6 +204,8 @@ class FilteredProduct(Base):
     # Additional fields specific to filtered products
     ship_to_country = Column(String(10), nullable=True)  # Country code (e.g., "US", "DE")
     delivery_time = Column(Integer, nullable=True)  # Estimated delivery time in days
+    min_delivery_days = Column(Integer, nullable=True)  # Minimum delivery time in days
+    max_delivery_days = Column(Integer, nullable=True)  # Maximum delivery time in days
     max_variant_price = Column(Float, nullable=True)  # Highest variant price found
     min_shipping_price = Column(Float, nullable=True)  # Cheapest shipping price among all SKU variants
     
@@ -215,7 +217,7 @@ class FilteredProduct(Base):
     seller = relationship("Seller", backref="filtered_products")
 
     def __repr__(self):
-        return f"<FilteredProduct(product_id='{self.product_id}', delivery_time={self.delivery_time}, max_variant_price={self.max_variant_price})>"
+        return f"<FilteredProduct(product_id='{self.product_id}', delivery_time={self.delivery_time}, min_days={self.min_delivery_days}, max_days={self.max_delivery_days}, max_variant_price={self.max_variant_price})>"
 
 
 class ShippingInfo(Base):
