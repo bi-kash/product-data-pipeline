@@ -261,6 +261,24 @@ class ShippingInfo(Base):
     # Relationships
     filtered_product = relationship("FilteredProduct", backref="shipping_options")
 
+    def get_related_product_images(self, db_session):
+        """
+        Get product images that share the same SKU ID.
+        
+        Args:
+            db_session: Database session
+            
+        Returns:
+            List of ProductImage objects with matching sku_id
+        """
+        if not self.sku_id:
+            return []
+            
+        return db_session.query(ProductImage).filter(
+            ProductImage.product_id == self.product_id,
+            ProductImage.sku_id == self.sku_id
+        ).all()
+
     def __repr__(self):
         return f"<ShippingInfo(product_id='{self.product_id}', sku_id='{self.sku_id}', company='{self.company}', fee={self.shipping_fee}, days={self.min_delivery_days}-{self.max_delivery_days})>"
 
@@ -281,9 +299,14 @@ class ProductImage(Base):
     image_url = Column(Text, nullable=False)  # Full image URL
     image_role = Column(String(20), nullable=False)  # 'hero', 'gallery', 'variant'
     
+    # SKU and variant details
+    sku_id = Column(String(255), nullable=True)  # SKU ID from ae_item_sku_info_d_t_o
+    variant_key = Column(String(300), nullable=True)  # property_name:property_value format
+    
     # Property details (replaces variant_key)
     property_value = Column(String(100), nullable=True)  # The property value (e.g., "Red", "Blue")
     property_name = Column(String(100), nullable=True)  # The property name (e.g., "Color", "Size")
+    property_id = Column(String(100), nullable=True)  # The property ID from sku_property_id
     property_value_definition_name = Column(String(200), nullable=True)  # Full definition name (e.g., "Cherry Wood Color")
     
     sort_index = Column(Integer, nullable=False, default=0)  # For ordering images
@@ -295,11 +318,34 @@ class ProductImage(Base):
     # Metadata
     is_primary = Column(Boolean, default=False)  # Mark primary/hero image
     
+    # Image download and analysis
+    local_file_path = Column(String(500), nullable=True)  # Local file path after download
+    phash = Column(String(64), nullable=True)  # Perceptual hash for deduplication
+    download_status = Column(String(20), nullable=True)  # 'pending', 'downloaded', 'failed'
+    
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=func.now())
     
     # Relationships
     filtered_product = relationship("FilteredProduct", backref="product_images")
+
+    def get_related_shipping_info(self, db_session):
+        """
+        Get shipping information that shares the same SKU ID.
+        
+        Args:
+            db_session: Database session
+            
+        Returns:
+            List of ShippingInfo objects with matching sku_id
+        """
+        if not self.sku_id:
+            return []
+            
+        return db_session.query(ShippingInfo).filter(
+            ShippingInfo.product_id == self.product_id,
+            ShippingInfo.sku_id == self.sku_id
+        ).all()
 
     def __repr__(self):
         return f"<ProductImage(product_id='{self.product_id}', role='{self.image_role}', property='{self.property_value}', url='{self.image_url[:50]}...')>"

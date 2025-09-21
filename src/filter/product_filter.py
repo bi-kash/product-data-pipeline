@@ -752,11 +752,12 @@ def run_product_filtering(max_price_eur: float = None, max_delivery_days: int = 
     
     # Run image ingestion for filtered products (unless dry run)
     if not dry_run and stats.get('products_passed_filter', 0) > 0:
-        logger.info("Starting image ingestion for filtered products")
+        logger.info("Starting image ingestion for filtered products (with automatic download)")
         try:
             from src.ingestion.image_ingestion import ImageIngestionEngine
             
-            image_engine = ImageIngestionEngine()
+            # Enable automatic image downloads and pHash calculation
+            image_engine = ImageIngestionEngine(download_images=True)
             image_stats = image_engine.ingest_all_images()
             
             logger.info("Image ingestion completed")
