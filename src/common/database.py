@@ -351,6 +351,42 @@ class ProductImage(Base):
         return f"<ProductImage(product_id='{self.product_id}', role='{self.image_role}', property='{self.property_value}', url='{self.image_url[:50]}...')>"
 
 
+class ProductStatus(Base):
+    """
+    Model for tracking duplicate detection results and product status.
+    
+    Each product in the database will be marked as UNIQUE, MASTER, DUPLICATE, or REVIEW_SUSPECT
+    based on the duplicate detection analysis.
+    """
+
+    __tablename__ = "product_status"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False, unique=True)
+    
+    # Status tracking
+    status = Column(String(50), nullable=False)  # 'UNIQUE', 'MASTER', 'DUPLICATE', 'REVIEW_SUSPECT'
+    duplicate_master_id = Column(String(255), nullable=True)  # Points to the master product if this is a duplicate
+    
+    # Cost calculation for master selection
+    total_landed_cost = Column(Float, nullable=True)  # item_price_eur + shipping_cost_eur
+    
+    # Detection metadata
+    detection_method = Column(String(50), nullable=True)  # 'PHASH', 'CLIP', 'MANUAL'
+    phash_difference = Column(Integer, nullable=True)  # pHash difference value (lower = more similar)
+    clip_similarity = Column(Float, nullable=True)  # CLIP similarity score (higher = more similar)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="product_status")
+    
+    def __repr__(self):
+        return f"<ProductStatus(product_id='{self.product_id}', status='{self.status}', master='{self.duplicate_master_id}', cost={self.total_landed_cost})>"
+
+
 def create_tables_if_not_exist():
     """
     Create the necessary tables if they don't exist.
