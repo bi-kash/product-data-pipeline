@@ -42,6 +42,14 @@ The Product Data Pipeline offers several command-line operations to manage the e
 | `review:export-pending` | Export merchants for review | Creates a CSV file with all pending merchants that need review. This file will be shared with expert reviewers. |
 | `review:import-results` | Import review results       | Reads the reviewed CSV file where experts have updated approval statuses and updates the database accordingly.  |
 
+### Module C: Duplicate Detection Commands
+
+| Command                  | Description                      | What It Does                                                                                                                                                                                                                |
+| ------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `detect:duplicates`      | Run duplicate detection analysis | Analyzes all filtered products for duplicates using pHash and CLIP image analysis. Uses intelligent cascade: pHash for fast screening, CLIP for ambiguous cases. Groups duplicates and selects master based on lowest cost. |
+| `detect:status`          | Show duplicate detection status  | Displays statistics about duplicate detection results, including counts by status (UNIQUE/DUPLICATE/MASTER/REVIEW_SUSPECT), detection methods used, average similarity scores, and confidence levels.                       |
+| `detect:export-suspects` | Export suspect cases for review  | Creates a CSV file with all REVIEW_SUSPECT cases that need manual verification. Includes product details, similarity scores, and image information for expert review of edge cases.                                         |
+
 ## 2. Complete Workflow
 
 The complete product data pipeline consists of the following enhanced workflow:
@@ -114,15 +122,36 @@ The complete product data pipeline consists of the following enhanced workflow:
    - The system can automatically refresh using stored credentials
    - Manual token refresh is available if needed
 
-### Phase 4: Monitoring and Analysis
+### Phase 4: Duplicate Detection (Module C)
 
-10. **Monitor and Analyze**
+10. **Run Duplicate Detection**
+
+    - Run `detect:duplicates` to analyze filtered products for duplicates
+    - Uses intelligent cascade analysis (pHash → CLIP for ambiguous cases)
+    - Automatically groups duplicates and selects the best master product
+    - Updates product_status table with detection results
+
+11. **Review Detection Results**
+
+    - Run `detect:status` to view duplicate detection statistics
+    - Check counts of UNIQUE, DUPLICATE, MASTER, and REVIEW_SUSPECT products
+    - Monitor detection method usage and confidence scores
+
+12. **Handle Edge Cases**
+    - Run `detect:export-suspects` to export uncertain cases for manual review
+    - Expert reviewers can verify ambiguous duplicate classifications
+    - Import results back into the system after manual verification
+
+### Phase 5: Monitoring and Analysis
+
+13. **Monitor and Analyze**
     - Run `harvest:status` regularly to check:
       - Job history and performance
       - Current approval status counts
       - Product and category statistics
     - Run `list_sessions` to monitor API session health
-    - Use database queries to analyze filtered products and images
+    - Run `detect:status` to monitor duplicate detection performance
+    - Use database queries to analyze filtered products, images, and duplicates
 
 ## 3. Step-by-Step Testing
 
@@ -423,9 +452,160 @@ with get_db_session() as db:
 "
 ```
 
-### 3.5 Advanced Testing
+### 3.5 Module C: Duplicate Detection Testing
 
-#### 3.5.1 End-to-End Workflow Test
+#### 3.5.1 Duplicate Detection Test
+
+```bash
+# Run duplicate detection on filtered products
+python main.py detect:duplicates --limit 10
+```
+
+**What Happens:**
+
+- Analyzes filtered products for duplicates using pHash and CLIP
+- Uses intelligent cascade: pHash first, then CLIP for ambiguous cases
+- Groups similar products and selects the master (lowest total cost)
+- Updates product_status table with results
+
+**Expected Results:**
+
+- Console output shows progress of pHash and CLIP analysis
+- Products are classified as UNIQUE, DUPLICATE, MASTER, or REVIEW_SUSPECT
+- Database contains new records in product_status table
+
+**Verification Queries:**
+
+```sql
+-- Check duplicate detection results
+SELECT status, COUNT(*) as count FROM product_status GROUP BY status;
+
+-- View detection details
+SELECT product_id, status, duplicate_master_id, detection_method,
+       phash_difference, clip_similarity, total_landed_cost
+FROM product_status LIMIT 10;
+
+-- Check duplicate groups
+SELECT duplicate_master_id, COUNT(*) as group_size
+FROM product_status
+WHERE duplicate_master_id IS NOT NULL
+GROUP BY duplicate_master_id
+ORDER BY group_size DESC;
+```
+
+#### 3.5.2 Detection Status Test
+
+```bash
+# Show duplicate detection statistics
+python main.py detect:status
+```
+
+**What Happens:**
+
+- Displays counts by status (UNIQUE, DUPLICATE, MASTER, REVIEW_SUSPECT)
+- Shows detection method statistics (pHash vs CLIP usage)
+- Reports average similarity scores and confidence levels
+- Lists recent detection job performance
+
+**Expected Output:**
+
+```
+Duplicate Detection Status:
+=========================
+Product Status Counts:
+- UNIQUE: 45 products
+- DUPLICATE: 12 products
+- MASTER: 8 products
+- REVIEW_SUSPECT: 3 products
+
+Detection Method Usage:
+- pHash Only: 53 products (77.9%)
+- pHash + CLIP: 15 products (22.1%)
+
+Average Scores:
+- pHash Difference: 12.4 (out of 64)
+- CLIP Similarity: 0.82 (out of 1.0)
+- Confidence Score: 0.91 (out of 1.0)
+```
+
+#### 3.5.3 Export Suspects Test
+
+```bash
+# Export suspicious duplicate cases for review
+python main.py detect:export-suspects --output data/review_suspects.csv
+```
+
+**What Happens:**
+
+- Exports all REVIEW_SUSPECT products to CSV
+- Includes product details, similarity scores, and image paths
+- Creates file for manual expert review
+
+**Expected Results:**
+
+- CSV file created at specified location
+- File contains products with ambiguous duplicate classification
+- Columns include product_id, similarity scores, image information
+
+**Sample CSV Content:**
+
+```csv
+product_id,status,duplicate_master_id,detection_method,phash_difference,clip_similarity,confidence_score,product_title,target_sale_price
+1005009123456,REVIEW_SUSPECT,,CLIP,15,0.84,0.75,"Silver Ring Set",89.99
+1005009789012,REVIEW_SUSPECT,,CLIP,12,0.87,0.78,"Sterling Silver Band",92.50
+```
+
+#### 3.5.4 Configuration Testing
+
+```bash
+# Test with different thresholds (modify .env first)
+python main.py detect:duplicates --force --limit 5
+```
+
+**Configuration Variables to Test:**
+
+```bash
+# Stricter pHash detection (lower threshold)
+PHASH_DUPLICATE_THRESHOLD=1
+PHASH_AMBIGUOUS_THRESHOLD=10
+
+# More lenient CLIP detection
+CLIP_DUPLICATE_THRESHOLD=0.85
+
+# Different CLIP model
+CLIP_MODEL=ViT-B/16  # More accurate but slower
+CLIP_DEVICE=cpu      # Force CPU usage
+```
+
+**What to Verify:**
+
+- Different thresholds produce different classification results
+- Stricter thresholds create fewer duplicates (higher precision)
+- Lenient thresholds create more duplicates (higher recall)
+- CPU vs GPU performance differences
+
+#### 3.5.5 Image Comparison Script Test
+
+```bash
+# Test the standalone image comparison script
+python compare_product_images.py 1005009917334390 1005009919988717 --show-all 5 --verbose
+```
+
+**What Happens:**
+
+- Compares pHash values between all images of two products
+- Finds the SKU ID pair with smallest Hamming distance
+- Shows detailed similarity statistics and image metadata
+
+**Expected Output:**
+
+- Best match with SKU IDs and similarity percentage
+- Statistics breakdown (exact matches, similar, different)
+- Top N comparisons with detailed image information
+
+### 3.6 Advanced Testing
+
+#### 3.6.1 End-to-End Workflow Test
 
 ```bash
 # Complete workflow test
@@ -781,3 +961,162 @@ print(f'Ignore categories: {get_ignore_categories()}')
 1. **Add Indexes:** Critical indexes should already exist, but verify with database tools
 2. **Database Size:** Consider archiving old data if database grows very large
 3. **Connection Pooling:** For high-volume usage, consider PostgreSQL over SQLite
+
+### 4.7 Module C: Duplicate Detection Issues
+
+#### 4.7.1 CLIP Model Loading Fails
+
+**Problem:** `detect:duplicates` fails with CLIP model error
+
+**Solutions:**
+
+1. **Install Required Packages:**
+
+   ```bash
+   pip install torch torchvision clip-by-openai
+   ```
+
+2. **Check Device Configuration:**
+
+   ```bash
+   # Force CPU usage if GPU issues
+   CLIP_DEVICE=cpu
+   ```
+
+3. **Try Different Model:**
+   ```bash
+   # Use smaller, more compatible model
+   CLIP_MODEL=ViT-B/32
+   ```
+
+#### 4.7.2 No Duplicates Found
+
+**Problem:** `detect:duplicates` completes but finds no duplicates
+
+**Possible Causes & Solutions:**
+
+1. **Thresholds Too Strict:**
+
+   ```bash
+   # Try more lenient thresholds
+   PHASH_DUPLICATE_THRESHOLD=5
+   PHASH_AMBIGUOUS_THRESHOLD=25
+   CLIP_DUPLICATE_THRESHOLD=0.80
+   ```
+
+2. **Insufficient Images:**
+
+   ```bash
+   # Check if products have processed images
+   SELECT COUNT(*) FROM product_images WHERE phash IS NOT NULL;
+   ```
+
+3. **Products Not Filtered:**
+   ```bash
+   # Ensure products are in filtered_products table
+   SELECT COUNT(*) FROM filtered_products;
+   ```
+
+#### 4.7.3 Too Many Duplicates Detected
+
+**Problem:** Most products are marked as duplicates incorrectly
+
+**Solutions:**
+
+1. **Tighten Thresholds:**
+
+   ```bash
+   # More strict detection
+   PHASH_DUPLICATE_THRESHOLD=1
+   PHASH_AMBIGUOUS_THRESHOLD=8
+   CLIP_DUPLICATE_THRESHOLD=0.95
+   ```
+
+2. **Check Image Quality:**
+   ```bash
+   # Verify images are properly downloaded and processed
+   SELECT product_id, COUNT(*) FROM product_images
+   WHERE phash IS NOT NULL AND local_file_path IS NOT NULL
+   GROUP BY product_id LIMIT 10;
+   ```
+
+#### 4.7.4 CLIP Analysis Too Slow
+
+**Problem:** Duplicate detection takes very long due to CLIP analysis
+
+**Solutions:**
+
+1. **Reduce Image Limits:**
+
+   ```bash
+   CLIP_MAX_IMAGES_PER_PRODUCT=3
+   CLIP_IMAGE_ROLES=hero  # Only analyze hero images
+   ```
+
+2. **Optimize pHash Thresholds:**
+
+   ```bash
+   # Reduce ambiguous range to minimize CLIP usage
+   PHASH_DUPLICATE_THRESHOLD=3
+   PHASH_AMBIGUOUS_THRESHOLD=12
+   ```
+
+3. **Use GPU if Available:**
+   ```bash
+   CLIP_DEVICE=cuda  # If NVIDIA GPU available
+   ```
+
+#### 4.7.5 Memory Issues During Detection
+
+**Problem:** Process runs out of memory during duplicate detection
+
+**Solutions:**
+
+1. **Process in Batches:**
+
+   ```bash
+   python main.py detect:duplicates --limit 50
+   ```
+
+2. **Reduce CLIP Image Limits:**
+
+   ```bash
+   CLIP_MAX_IMAGES_PER_PRODUCT=2
+   ```
+
+3. **Use Lighter CLIP Model:**
+   ```bash
+   CLIP_MODEL=ViT-B/32  # Smaller than ViT-B/16
+   ```
+
+#### 4.7.6 Verification Commands
+
+**Check Detection Status:**
+
+```bash
+# View current detection results
+python main.py detect:status
+
+# Check specific product status
+sqlite3 test.db "SELECT * FROM product_status WHERE product_id = 'YOUR_PRODUCT_ID';"
+
+# Find largest duplicate groups
+sqlite3 test.db "
+SELECT duplicate_master_id, COUNT(*) as group_size
+FROM product_status
+WHERE duplicate_master_id IS NOT NULL
+GROUP BY duplicate_master_id
+ORDER BY group_size DESC
+LIMIT 10;
+"
+```
+
+**Reset Detection Results:**
+
+```bash
+# Clear all detection results to start over
+sqlite3 test.db "DELETE FROM product_status;"
+
+# Re-run detection with new settings
+python main.py detect:duplicates
+```

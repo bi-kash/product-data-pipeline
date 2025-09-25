@@ -11,7 +11,7 @@ from src.review.merchant_review import export_pending_merchants, import_review_r
 from src.harvester.merchant_harvester import init_harvest as original_init_harvest
 from src.harvester.merchant_harvester import delta_harvest as original_delta_harvest
 from src.harvester.merchant_harvester import harvest_status as original_harvest_status
-from src.session.session_manager import create_session, refresh_session_token, auto_refresh_session, list_sessions
+from src.session.session_manager import create_session, refresh_session_token, auto_refresh_session, list_sessions, force_unlock_database
 from src.filter.product_filter import run_product_filtering
 from src.duplicate_detection.duplicate_detector import DuplicateDetector
 from src.common.database import get_db_session
@@ -264,6 +264,8 @@ def main():
     )
 
     subparsers.add_parser("list_sessions", help="List all sessions")
+    
+    subparsers.add_parser("unlock_database", help="Force unlock database if it's stuck")
 
     # Duplicate detection commands (Module C)
     detect_duplicates_parser = subparsers.add_parser(
@@ -380,6 +382,18 @@ def main():
                 print(f"  Updated: {session['updated_at']}")
         else:
             print("No sessions found.")
+    
+    elif args.command == "unlock_database":
+        print("🔓 Attempting to force unlock database...")
+        success = force_unlock_database()
+        if success:
+            print("✅ Database unlocked successfully!")
+        else:
+            print("❌ Could not unlock database. You may need to:")
+            print("   1. Check if another process is using the database")
+            print("   2. Restart the application")
+            print("   3. Manually delete and recreate the database file")
+    
     elif args.command == "detect:duplicates":
         detect_duplicates(
             limit=args.limit,

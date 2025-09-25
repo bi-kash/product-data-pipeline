@@ -39,50 +39,31 @@ class CascadeConfig:
     
     # Image quality thresholds
     min_image_size: int = 64
-    skip_low_quality: bool = True
     
-    # pHash cascade thresholds
-    phash_exact_duplicate: int = 0
-    phash_near_duplicate_max: int = 8
-    phash_ambiguous_min: int = 9
-    phash_ambiguous_max: int = 18
-    phash_different_min: int = 19
+    # pHash cascade thresholds (simplified)
+    phash_duplicate_threshold: int = 8      # ≤8: Duplicate, no CLIP needed
+    phash_ambiguous_threshold: int = 18     # 9-18: Ambiguous, send to CLIP
+                                           # >18: Different, no CLIP needed
     
-    # CLIP thresholds
-    clip_duplicate_min: float = 0.85
-    clip_review_min: float = 0.75
-    clip_different_max: float = 0.74
-    
-    # Metadata shortcuts
-    skip_identical_sku: bool = True
-    use_filename_check: bool = True
-    use_title_similarity: bool = True
+    # CLIP thresholds (simplified)
+    clip_duplicate_threshold: float = 0.85  # ≥0.85: Confirmed duplicate
+                                           # <0.85: Different products
     
     # Processing limits
     max_images_per_product: int = 5
-    
+
     @classmethod
     def from_env(cls) -> 'CascadeConfig':
         """Load configuration from environment variables."""
         return cls(
             min_image_size=int(os.getenv('MIN_IMAGE_SIZE', '64')),
-            skip_low_quality=os.getenv('SKIP_LOW_QUALITY', 'true').lower() == 'true',
             
-            phash_exact_duplicate=int(os.getenv('PHASH_EXACT_DUPLICATE', '0')),
-            phash_near_duplicate_max=int(os.getenv('PHASH_NEAR_DUPLICATE_MAX', '8')),
-            phash_ambiguous_min=int(os.getenv('PHASH_AMBIGUOUS_MIN', '9')),
-            phash_ambiguous_max=int(os.getenv('PHASH_AMBIGUOUS_MAX', '18')),
-            phash_different_min=int(os.getenv('PHASH_DIFFERENT_MIN', '19')),
+            phash_duplicate_threshold=int(os.getenv('PHASH_DUPLICATE_THRESHOLD', '8')),
+            phash_ambiguous_threshold=int(os.getenv('PHASH_AMBIGUOUS_THRESHOLD', '18')),
             
-            clip_duplicate_min=float(os.getenv('CLIP_DUPLICATE_MIN', '0.85')),
-            clip_review_min=float(os.getenv('CLIP_REVIEW_MIN', '0.75')),
-            clip_different_max=float(os.getenv('CLIP_DIFFERENT_MAX', '0.74')),
+            clip_duplicate_threshold=float(os.getenv('CLIP_DUPLICATE_THRESHOLD', '0.85')),
             
-            skip_identical_sku=os.getenv('SKIP_IDENTICAL_SKU', 'true').lower() == 'true',
-            use_filename_check=os.getenv('USE_FILENAME_CHECK', 'true').lower() == 'true',
-            use_title_similarity=os.getenv('USE_TITLE_SIMILARITY', 'true').lower() == 'true',
-            
-            max_images_per_product=int(os.getenv('MAX_IMAGES_PER_PRODUCT', '5'))
+            max_images_per_product=int(os.getenv('CLIP_MAX_IMAGES_PER_PRODUCT', '5'))
         )
 
 
@@ -124,69 +105,41 @@ class IntelligentCascadeAnalyzer:
         except Exception as e:
             logger.warning(f"CLIP unavailable, using pHash-only mode: {e}")
         
-        logger.info(f"Cascade config: pHash exact={self.config.phash_exact_duplicate}, "
-                   f"near≤{self.config.phash_near_duplicate_max}, "
-                   f"ambiguous={self.config.phash_ambiguous_min}-{self.config.phash_ambiguous_max}, "
-                   f"CLIP duplicate≥{self.config.clip_duplicate_min}")
+        logger.info(f"Cascade config: pHash duplicate≤{self.config.phash_duplicate_threshold}, "
+                   f"ambiguous={self.config.phash_duplicate_threshold+1}-{self.config.phash_ambiguous_threshold}, "
+                   f"different>{self.config.phash_ambiguous_threshold}, "
+                   f"CLIP duplicate≥{self.config.clip_duplicate_threshold}")
     
     def _check_image_quality(self, image: ProductImage) -> bool:
         """
-        Check if image meets quality thresholds.
+        Check if image meets minimum size requirements.
         
         Args:
             image: ProductImage to check
             
         Returns:
-            True if image quality is acceptable
+            True if image size is acceptable
         """
-        if not self.config.skip_low_quality:
-            return True
-            
-        # Check image dimensions
+        # Check minimum image dimensions only
         if image.width and image.height:
             if image.width < self.config.min_image_size or image.height < self.config.min_image_size:
-                logger.debug(f"Rejecting low quality image {image.id}: {image.width}x{image.height}")
+                logger.debug(f"Rejecting small image {image.id}: {image.width}x{image.height}")
                 return False
         
         return True
     
     def _check_metadata_shortcuts(self, product1: FilteredProduct, product2: FilteredProduct) -> Optional[CascadeDecision]:
         """
-        Check for metadata-based shortcuts to avoid heavy analysis.
+        Simplified cascade - no metadata shortcuts, go straight to pHash analysis.
         
         Args:
             product1: First product
             product2: Second product
             
         Returns:
-            CascadeDecision if shortcut applies, None otherwise
+            None - always proceed to pHash analysis for simplicity
         """
-        # Skip identical SKUs
-        if self.config.skip_identical_sku and product1.product_id == product2.product_id:
-            return CascadeDecision(
-                product1_id=product1.product_id,
-                product2_id=product2.product_id,
-                is_duplicate=True,
-                confidence=1.0,
-                decision_stage='METADATA',
-                reason='Identical SKU/product_id',
-                skipped_clip=True
-            )
-        
-        # Check title similarity
-        if self.config.use_title_similarity and product1.product_title and product2.product_title:
-            title_similarity = SequenceMatcher(None, product1.product_title, product2.product_title).ratio()
-            if title_similarity > 0.9:  # Very similar titles
-                return CascadeDecision(
-                    product1_id=product1.product_id,
-                    product2_id=product2.product_id,
-                    is_duplicate=True,
-                    confidence=title_similarity,
-                    decision_stage='METADATA',
-                    reason=f'High title similarity: {title_similarity:.3f}',
-                    skipped_clip=True
-                )
-        
+        # Simplified approach: skip all metadata shortcuts, use only pHash -> CLIP cascade
         return None
     
     def _analyze_phash_cascade(self, product1_id: str, product2_id: str, db: Session) -> CascadeDecision:
@@ -250,38 +203,25 @@ class IntelligentCascadeAnalyzer:
                 skipped_clip=True
             )
         
-        # Apply cascade decision logic
+        # Apply simplified cascade decision logic
         phash_diff = int(best_phash_diff)
         
-        if phash_diff == self.config.phash_exact_duplicate:
-            # Exact duplicate
-            return CascadeDecision(
-                product1_id=product1_id,
-                product2_id=product2_id,
-                is_duplicate=True,
-                confidence=1.0,
-                decision_stage='PHASH_EXACT',
-                phash_difference=phash_diff,
-                reason='Exact pHash match',
-                skipped_clip=True
-            )
-        
-        elif phash_diff <= self.config.phash_near_duplicate_max:
-            # Near duplicate - high confidence, skip CLIP
-            confidence = 1.0 - (phash_diff / self.config.phash_near_duplicate_max * 0.2)  # 0.8-1.0 range
+        if phash_diff <= self.config.phash_duplicate_threshold:
+            # Definitely duplicate - skip CLIP analysis
+            confidence = 1.0 - (phash_diff / self.config.phash_duplicate_threshold * 0.2)  # 0.8-1.0 range
             return CascadeDecision(
                 product1_id=product1_id,
                 product2_id=product2_id,
                 is_duplicate=True,
                 confidence=confidence,
-                decision_stage='PHASH_NEAR',
+                decision_stage='PHASH_DUPLICATE',
                 phash_difference=phash_diff,
-                reason=f'Near duplicate (pHash diff: {phash_diff})',
+                reason=f'pHash duplicate (diff: {phash_diff} ≤ {self.config.phash_duplicate_threshold})',
                 skipped_clip=True
             )
         
-        elif phash_diff >= self.config.phash_different_min:
-            # Likely different - skip CLIP
+        elif phash_diff > self.config.phash_ambiguous_threshold:
+            # Definitely different - skip CLIP analysis
             return CascadeDecision(
                 product1_id=product1_id,
                 product2_id=product2_id,
@@ -289,12 +229,12 @@ class IntelligentCascadeAnalyzer:
                 confidence=0.9,  # High confidence they're different
                 decision_stage='PHASH_DIFFERENT',
                 phash_difference=phash_diff,
-                reason=f'Likely different (pHash diff: {phash_diff})',
+                reason=f'pHash different (diff: {phash_diff} > {self.config.phash_ambiguous_threshold})',
                 skipped_clip=True
             )
         
         else:
-            # Ambiguous zone - needs CLIP analysis
+            # Ambiguous zone (between duplicate and different thresholds) - needs CLIP analysis
             return CascadeDecision(
                 product1_id=product1_id,
                 product2_id=product2_id,
@@ -302,7 +242,7 @@ class IntelligentCascadeAnalyzer:
                 confidence=0.5,  # Uncertain
                 decision_stage='PHASH_AMBIGUOUS',
                 phash_difference=phash_diff,
-                reason=f'Ambiguous (pHash diff: {phash_diff}) - needs CLIP',
+                reason=f'pHash ambiguous (diff: {phash_diff}, {self.config.phash_duplicate_threshold+1}-{self.config.phash_ambiguous_threshold}) - needs CLIP',
                 skipped_clip=False
             )
     
@@ -322,22 +262,12 @@ class IntelligentCascadeAnalyzer:
             decision.reason += " (CLIP unavailable)"
             decision.skipped_clip = True
             return decision
-        
-        # Get CLIP similarity for the product pair
+
+        # Get CLIP similarity for the product pair using dedicated pairwise comparison
         try:
-            # This is a simplified approach - in practice you'd want to integrate 
-            # with the existing CLIP analyzer or extend it for pairwise comparison
-            clip_results = self.clip_analyzer.analyze_candidates(
-                db, [decision.product1_id, decision.product2_id], ['hero', 'variant']
+            clip_similarity = self._calculate_clip_similarity_for_pair(
+                decision.product1_id, decision.product2_id, db
             )
-            
-            # Find similarity for this specific pair
-            clip_similarity = None
-            for pair in clip_results.get('similar_pairs', []):
-                if ((pair['product1_id'] == decision.product1_id and pair['product2_id'] == decision.product2_id) or
-                    (pair['product1_id'] == decision.product2_id and pair['product2_id'] == decision.product1_id)):
-                    clip_similarity = pair['clip_similarity']
-                    break
             
             if clip_similarity is None:
                 # No CLIP similarity found - treat as different
@@ -347,24 +277,21 @@ class IntelligentCascadeAnalyzer:
                 decision.reason = 'No CLIP similarity found'
                 return decision
             
-            # Apply CLIP decision thresholds
+            # Apply simplified CLIP decision threshold
             decision.clip_similarity = clip_similarity
             
-            if clip_similarity >= self.config.clip_duplicate_min:
+            if clip_similarity >= self.config.clip_duplicate_threshold:
+                # CLIP confirmed duplicate
                 decision.is_duplicate = True
                 decision.confidence = clip_similarity
                 decision.decision_stage = 'CLIP_DUPLICATE'
-                decision.reason = f'CLIP confirmed duplicate (sim: {clip_similarity:.3f})'
-            elif clip_similarity >= self.config.clip_review_min:
-                decision.is_duplicate = True  # Mark as duplicate but lower confidence
-                decision.confidence = clip_similarity * 0.8  # Reduce confidence
-                decision.decision_stage = 'CLIP_REVIEW'
-                decision.reason = f'CLIP suggests review (sim: {clip_similarity:.3f})'
+                decision.reason = f'CLIP confirmed duplicate (sim: {clip_similarity:.3f} ≥ {self.config.clip_duplicate_threshold})'
             else:
+                # CLIP says different
                 decision.is_duplicate = False
                 decision.confidence = 1.0 - clip_similarity
                 decision.decision_stage = 'CLIP_DIFFERENT'
-                decision.reason = f'CLIP confirmed different (sim: {clip_similarity:.3f})'
+                decision.reason = f'CLIP confirmed different (sim: {clip_similarity:.3f} < {self.config.clip_duplicate_threshold})'
             
         except Exception as e:
             logger.error(f"CLIP analysis failed for {decision.product1_id} vs {decision.product2_id}: {e}")
@@ -372,6 +299,80 @@ class IntelligentCascadeAnalyzer:
             decision.skipped_clip = True
         
         return decision
+
+    def _calculate_clip_similarity_for_pair(self, product1_id: str, product2_id: str, db: Session) -> Optional[float]:
+        """
+        Calculate CLIP similarity for a specific product pair only.
+        
+        This is a lightweight method that only processes the two specific products,
+        unlike analyze_candidates which processes all combinations.
+        
+        Args:
+            product1_id: First product ID
+            product2_id: Second product ID
+            db: Database session
+            
+        Returns:
+            CLIP similarity score (0-1) or None if comparison failed
+        """
+        try:
+            # Get images for both products
+            images1 = db.query(ProductImage).filter(
+                ProductImage.product_id == product1_id,
+                ProductImage.local_file_path.isnot(None),
+                ProductImage.image_role.in_(['hero', 'variant'])
+            ).limit(self.config.max_images_per_product).all()
+            
+            images2 = db.query(ProductImage).filter(
+                ProductImage.product_id == product2_id,
+                ProductImage.local_file_path.isnot(None),
+                ProductImage.image_role.in_(['hero', 'variant'])
+            ).limit(self.config.max_images_per_product).all()
+            
+            # Filter by quality
+            images1 = [img for img in images1 if self._check_image_quality(img)]
+            images2 = [img for img in images2 if self._check_image_quality(img)]
+            
+            if not images1 or not images2:
+                logger.debug(f"Insufficient images for CLIP comparison: {product1_id} ({len(images1)} imgs) vs {product2_id} ({len(images2)} imgs)")
+                return None
+            
+            # Extract embeddings for both products
+            embeddings1 = []
+            embeddings2 = []
+            
+            for img in images1:
+                if img.local_file_path:
+                    embedding = self.clip_analyzer.extract_image_embedding(img.local_file_path, img.id)
+                    if embedding is not None:
+                        embeddings1.append(embedding)
+            
+            for img in images2:
+                if img.local_file_path:
+                    embedding = self.clip_analyzer.extract_image_embedding(img.local_file_path, img.id)
+                    if embedding is not None:
+                        embeddings2.append(embedding)
+            
+            if not embeddings1 or not embeddings2:
+                logger.debug(f"Failed to extract embeddings: {product1_id} ({len(embeddings1)}) vs {product2_id} ({len(embeddings2)})")
+                return None
+            
+            # Calculate maximum similarity between any pair of embeddings
+            import numpy as np
+            max_similarity = 0.0
+            
+            for emb1 in embeddings1:
+                for emb2 in embeddings2:
+                    # Cosine similarity
+                    similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
+                    max_similarity = max(max_similarity, similarity)
+            
+            logger.debug(f"CLIP similarity for {product1_id} vs {product2_id}: {max_similarity:.3f}")
+            return float(max_similarity)
+            
+        except Exception as e:
+            logger.error(f"Error calculating CLIP similarity for {product1_id} vs {product2_id}: {e}")
+            return None
     
     def analyze_product_pair(self, product1_id: str, product2_id: str, db: Session) -> CascadeDecision:
         """
@@ -410,7 +411,10 @@ class IntelligentCascadeAnalyzer:
         
         # Stage 3: CLIP analysis if needed
         if not phash_decision.skipped_clip:
+            logger.debug(f"Escalating to CLIP: {product1_id} vs {product2_id} (pHash: {phash_decision.phash_difference})")
             return self._analyze_clip_decision(phash_decision, db)
+        else:
+            logger.debug(f"Skipping CLIP: {product1_id} vs {product2_id} (pHash: {phash_decision.phash_difference}, stage: {phash_decision.decision_stage})")
         
         return phash_decision
     

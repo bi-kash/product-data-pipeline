@@ -4,7 +4,20 @@ A modular data pipeline for harvesting and processing jewelry product data from 
 
 ## Overview
 
-This project implements a modular pipeline to identify jewelry products from AliExpress, qualify them based on rules, and prepare them for processing by virtual assistants.
+This project implements a modular pipe- **product_status:** Store duplicate detection results (Module C)
+
+- `id`: Auto-incrementing primary key
+- `product_id`: Foreign key to filtered_products table (unique)
+- `status`: Product status ("UNIQUE", "MASTER", "DUPLICATE", "REVIEW_SUSPECT")
+- `duplicate_master_id`: Points to master product if this is a duplicate
+- `total_landed_cost`: Item price + shipping cost for master selection
+- `detection_method`: How duplicates were identified ("PHASH", "CLIP", "MANUAL")
+- `phash_difference`: Hamming distance between pHash values (0-64)
+- `clip_similarity`: CLIP similarity score (0.0-1.0)
+- `created_at`: When the analysis was performed
+- `updated_at`: When the record was last updated
+
+*Note: Database may contain additional legacy columns from previous versions.*tify jewelry products from AliExpress, qualify them based on rules, and prepare them for processing by virtual assistants.
 
 The current implementation (Module 1) focuses on merchant harvesting and verification:
 
@@ -82,72 +95,121 @@ The application automatically creates the required tables when first run. The da
   - `approval_status`: One of ["PENDING", "WHITELIST", "BLACKLIST"]
   - `first_seen_at`: Timestamp when first discovered (UTC)
   - `last_seen_at`: Timestamp when last seen (UTC)
-  - `raw_json`: Raw data from the API
+  - `raw_json`: Raw data from the API (JSON)
   - `note`: Optional note for review
 
-- **products:** Store product information
+- **products:** Store product information from AliExpress search
 
   - `product_id`: Primary key, unique identifier from AliExpress
   - `shop_id`: Foreign key to sellers table
   - `product_title`: Title of the product
   - `product_detail_url`: URL to the product detail page
   - `product_main_image_url`: URL to the main product image
-  - Various price fields (original_price, target_sale_price, etc.)
-  - `status`: Product status
+  - `original_price`: Original price (Float)
+  - `target_sale_price`: Sale price (Float)
+  - `original_price_currency`: Currency for original price
+  - `target_sale_price_currency`: Currency for sale price
+  - `discount`: Discount percentage
+  - `evaluate_rate`: Product rating
+  - `category_id`: Comma-separated category IDs
   - `first_seen_at`: Timestamp when first discovered (UTC)
   - `last_seen_at`: Timestamp when last seen (UTC)
-  - `raw_json_search`: Raw search result data from the API
-  - `raw_json_detail`: Raw detailed product data from the API
+  - `raw_json_search`: Raw search result data from the API (JSON)
+  - `raw_json_detail`: Raw detailed product data from the API (JSON)
 
 - **filtered_products:** Store products that pass business rule filtering
 
-  - `id`: Auto-incrementing primary key
-  - `product_id`: Foreign key to products table
+  - `product_id`: Primary key, foreign key to products table
   - `shop_id`: Foreign key to sellers table
-  - `filtered_price_eur`: Final filtered price in EUR (variant + shipping)
+  - All product fields mirrored from products table
+  - `ship_to_country`: Destination country for shipping
+  - `delivery_time`: Estimated delivery time in days
   - `min_delivery_days`: Minimum delivery time in days
   - `max_delivery_days`: Maximum delivery time in days
-  - `created_at`: Timestamp when product was filtered
+  - `max_variant_price`: Highest variant price found
+  - `min_shipping_price`: Cheapest shipping price among all SKU variants
+  - `filtered_at`: Timestamp when product was filtered
 
-- **shipping_info:** Store shipping details for product variants
+- **shipping_info:** Store detailed shipping options for products
 
   - `id`: Auto-incrementing primary key
-  - `product_id`: Foreign key to products table
+  - `product_id`: Foreign key to filtered_products table
   - `sku_id`: SKU identifier for the specific variant
-  - `shipping_method`: Name of shipping method
-  - `shipping_cost_eur`: Shipping cost in EUR
-  - `delivery_days`: Estimated delivery time in days
+  - `code`: Shipping method code (e.g., "CAINIAO_FULFILLMENT_STD")
+  - `company`: Shipping company name (e.g., "AliExpress Selection Standard")
+  - `shipping_fee`: Numeric shipping fee (Float)
+  - `shipping_fee_currency`: Currency for shipping fee
+  - `free_shipping`: Boolean indicating free shipping
+  - `min_delivery_days`: Minimum delivery days for this option
+  - `max_delivery_days`: Maximum delivery days for this option
+  - `guaranteed_delivery_days`: Guaranteed delivery days
+  - `ship_from_country`: Origin country code
+  - `tracking`: Boolean indicating tracking availability
+  - `raw_freight_response`: Full API response (JSON)
   - `created_at`: Timestamp when shipping info was retrieved
 
-- **product_images:** Store categorized product images
+- **product_images:** Store categorized product images with analysis data
 
   - `id`: Auto-incrementing primary key
-  - `product_id`: Foreign key to products table
-  - `image_url`: URL to the image
+  - `product_id`: Foreign key to filtered_products table
+  - `image_url`: Full image URL (unique constraint)
   - `image_role`: Type of image ("hero", "gallery", "variant")
-  - `property_value`: Property value for variant images (e.g., "Red")
-  - `property_name`: Property name for variant images (e.g., "Color")
-  - `property_value_definition_name`: Display name for the property value
+  - `sku_id`: SKU ID from ae_item_sku_info_d_t_o
+  - `variant_key`: Property name:value format
+  - `property_value`: Property value (e.g., "Red", "Blue")
+  - `property_name`: Property name (e.g., "Color", "Size")
+  - `property_id`: Property ID from sku_property_id
+  - `property_value_definition_name`: Full definition name
   - `sort_index`: Order of images within the product
-  - `width`: Image width in pixels (when available)
-  - `height`: Image height in pixels (when available)
-  - `is_primary`: Boolean indicating if this is the primary image
+  - `width`: Image width in pixels
+  - `height`: Image height in pixels
+  - `is_primary`: Boolean indicating primary/hero image
+  - `local_file_path`: Local file path after download (relative path)
+  - `phash`: Perceptual hash for duplicate detection (64-character hex string)
+  - `download_status`: Download status ("pending", "downloaded", "failed")
+  - `created_at`: Timestamp when image was processed
 
-- **sessions:** Store AliExpress API session credentials
+- **session_codes:** Store AliExpress API session credentials
 
   - `id`: Auto-incrementing primary key
-  - `code`: Authorization code used to create the session
+  - `code`: Authorization code used to create the session (unique)
   - `access_token`: Current access token for API calls
   - `refresh_token`: Token used to refresh the access token
-  - `token_type`: Type of token (usually "Bearer")
-  - `expires_in`: Token expiration time in seconds
+  - `expire_time`: Access token expiration time (milliseconds string)
+  - `refresh_token_valid_time`: Refresh token expiration time
+  - `expires_in`: Token lifetime in seconds (string)
+  - `refresh_expires_in`: Refresh token lifetime in seconds
+  - `havana_id`: Havana ID from AliExpress
+  - `locale`: User locale setting
   - `user_nick`: AliExpress user nickname
+  - `account_id`: Account identifier
+  - `user_id`: User identifier
+  - `account_platform`: Account platform
+  - `sp`: SP parameter
+  - `request_id`: API request identifier
+  - `seller_id`: Seller identifier
   - `account`: Associated account information
+  - `token_type`: Token type ('original' or 'refreshed')
   - `is_active`: Boolean indicating if session is currently active
+  - `response_json`: Full API response (JSON)
   - `created_at`: When the session was created
   - `updated_at`: When the session was last updated
 
+- **product_status:** Store duplicate detection results (Module C)
+
+  - `id`: Auto-incrementing primary key
+  - `product_id`: Foreign key to filtered_products table (unique)
+  - `status`: Product status ("UNIQUE", "MASTER", "DUPLICATE", "REVIEW_SUSPECT")
+  - `duplicate_master_id`: Points to master product if this is a duplicate
+  - `total_landed_cost`: Item price + shipping cost for master selection
+  - `detection_method`: How duplicates were identified ("PHASH", "CLIP", "MANUAL")
+  - `phash_difference`: Hamming distance between pHash values (0-64)
+  - `clip_similarity`: CLIP similarity score (0.0-1.0)
+  - `created_at`: When the analysis was performed
+  - `updated_at`: When the record was last updated
+
 - **job_runs:** Log information about script executions
+
   - `id`: Auto-incrementing primary key
   - `job_type`: Type of job (e.g., "HARVEST_INIT", "FILTER_PRODUCTS")
   - `start_time`: When the job started (UTC)
@@ -157,9 +219,9 @@ The application automatically creates the required tables when first run. The da
   - `new_count`: Number of new items added
   - `skipped_count`: Number of items skipped
   - `error_count`: Number of errors encountered
+  - `keywords`: Comma-separated or JSON string of keywords used
+  - `categories`: Comma-separated or JSON string of categories used
   - `details`: Additional job details as JSON
-  - `keywords`: Keywords used in the job (for search jobs)
-  - `categories`: Categories used in the job (for search jobs)
 
 The database is managed using SQLAlchemy ORM for better code organization and type safety.
 
@@ -403,8 +465,139 @@ The product data pipeline follows this enhanced workflow:
 - **Shipping Cost Integration**: Real shipping costs and delivery times are calculated and stored
 - **Business Rule Filtering**: Products are filtered based on total cost (product + shipping) and delivery time
 - **Session Management**: Robust API session handling with automatic refresh capabilities
+- **Intelligent Duplicate Detection**: Advanced image-based duplicate detection using pHash and CLIP analysis
 
 For a detailed explanation of each step, expected outcomes, and troubleshooting guidance, refer to the [Quality Assurance Guide](./QA.md).
+
+## Module C: Duplicate Detection & Selection
+
+Module C provides intelligent duplicate detection capabilities using advanced image analysis techniques. It identifies duplicate products based on image similarity and selects the best representative from each duplicate group.
+
+### Overview
+
+The duplicate detection system uses a two-stage cascade approach:
+
+1. **pHash Analysis**: Fast perceptual hashing to identify potential duplicates
+2. **CLIP Analysis**: Deep learning-based semantic image analysis for ambiguous cases
+3. **Master Selection**: Intelligent selection of the best product from each duplicate group
+
+### Database Schema
+
+Module C extends the database with:
+
+- **product_status:** Track duplicate detection results
+  - `id`: Auto-incrementing primary key
+  - `product_id`: Foreign key to filtered_products table (unique)
+  - `status`: One of ["UNIQUE", "DUPLICATE", "MASTER", "REVIEW_SUSPECT"]
+  - `duplicate_master_id`: Points to the master product in duplicate groups
+  - `total_landed_cost`: Total cost including shipping (for master selection)
+  - `detection_method`: How duplicates were identified ("PHASH", "CLIP", "MANUAL")
+  - `phash_difference`: Hamming distance between pHash values (0-64)
+  - `clip_similarity`: CLIP similarity score (0.0-1.0)
+  - `created_at`: When the analysis was performed
+  - `updated_at`: When the record was last updated
+
+### Duplicate Detection Commands
+
+**Run duplicate detection:**
+
+```bash
+python main.py detect:duplicates
+```
+
+Options:
+
+- `--limit N`: Process only the first N products
+- `--force`: Reprocess products that already have status
+
+This command:
+
+- Analyzes all filtered products for duplicates using pHash and CLIP
+- Uses intelligent cascade: pHash for fast screening, CLIP for ambiguous cases
+- Groups duplicates and selects the master (lowest total landed cost)
+- Updates the product_status table with results
+
+**Show detection status:**
+
+```bash
+python main.py detect:status
+```
+
+This displays:
+
+- Count of products by status (UNIQUE, DUPLICATE, MASTER, REVIEW_SUSPECT)
+- Detection method statistics (pHash vs CLIP)
+- Average similarity scores and confidence levels
+- Recent detection job statistics
+
+**Export suspects for review:**
+
+```bash
+python main.py detect:export-suspects
+```
+
+Options:
+
+- `--output PATH`: Specify output CSV file path (default: data/review_suspects.csv)
+
+This command:
+
+- Exports all REVIEW_SUSPECT cases to CSV for manual review
+- Includes product details, similarity scores, and image information
+- Allows manual verification of edge cases
+
+### Configuration
+
+Duplicate detection is configured via `.env` variables:
+
+```bash
+# pHash thresholds (Hamming distance, 0-64)
+PHASH_DUPLICATE_THRESHOLD=2       # ≤2: Definitely duplicate
+PHASH_AMBIGUOUS_THRESHOLD=18      # 3-18: Send to CLIP analysis
+                                  # >18: Definitely not duplicate
+
+# CLIP threshold (similarity score, 0.0-1.0)
+CLIP_DUPLICATE_THRESHOLD=0.95     # ≥0.95: Confirmed duplicate
+
+# CLIP model configuration
+CLIP_MODEL=ViT-B/32              # Model type (CPU-friendly)
+CLIP_DEVICE=auto                 # Device: 'auto', 'cpu', or 'cuda'
+CLIP_IMAGE_ROLES=hero,variant    # Image types to analyze
+CLIP_MAX_IMAGES_PER_PRODUCT=5    # Limit for efficiency
+```
+
+### Detection Logic
+
+1. **pHash Stage**:
+
+   - Compare perceptual hashes of all product image pairs
+   - If distance ≤ `PHASH_DUPLICATE_THRESHOLD`: Mark as duplicate (skip CLIP)
+   - If distance ≤ `PHASH_AMBIGUOUS_THRESHOLD`: Send to CLIP analysis
+   - If distance > `PHASH_AMBIGUOUS_THRESHOLD`: Mark as unique
+
+2. **CLIP Stage** (for ambiguous cases):
+
+   - Generate semantic embeddings for hero and variant images
+   - Calculate cosine similarity between embeddings
+   - If similarity ≥ `CLIP_DUPLICATE_THRESHOLD`: Mark as duplicate
+   - Otherwise: Mark as unique
+
+3. **Master Selection**:
+   - Group all duplicates together
+   - Select the product with the lowest `total_landed_cost` as master
+   - Mark master as "MASTER", others as "DUPLICATE"
+   - Store detection metadata (method, scores, confidence)
+
+### Integration with Pipeline
+
+Module C integrates seamlessly with the existing pipeline:
+
+- Runs after product filtering and image ingestion
+- Uses existing `filtered_products` and `product_images` tables
+- Maintains referential integrity with foreign keys
+- Provides clear status tracking for downstream processes
+
+For detailed testing procedures and troubleshooting, see the [Quality Assurance Guide](./QA.md).
 
 ## Documentation
 

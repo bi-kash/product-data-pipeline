@@ -308,32 +308,32 @@ class MasterSelector:
             
             # Duplicate product assignments
             for duplicate_id in result['duplicate_ids']:
-                # Find the best similarity scores for this duplicate across ALL products in the group
+                # Find the single best pair (lowest pHash) and use both pHash and CLIP from that same pair
                 best_phash_difference = None
                 best_clip_similarity = None
+                best_pair_other_product = None
                 
-                # Compare with all other products in the group to find best similarity
+                # Compare with all other products in the group to find best pair
                 all_products_in_group = [master_id] + result['duplicate_ids']
                 
                 for other_product_id in all_products_in_group:
                     if other_product_id == duplicate_id:
                         continue
                     
-                    # Check pHash similarity
+                    # Check if this pair exists in pHash data
                     phash_pair = phash_data.get((duplicate_id, other_product_id))
                     if phash_pair:
                         phash_diff = phash_pair['phash_difference']
                         # Lower pHash difference is better (more similar)
                         if best_phash_difference is None or phash_diff < best_phash_difference:
                             best_phash_difference = phash_diff
-                    
-                    # Check CLIP similarity
-                    clip_pair = clip_data.get((duplicate_id, other_product_id))
+                            best_pair_other_product = other_product_id
+                
+                # Now get CLIP similarity from the SAME pair that provided the best pHash
+                if best_pair_other_product:
+                    clip_pair = clip_data.get((duplicate_id, best_pair_other_product))
                     if clip_pair:
-                        clip_sim = clip_pair['clip_similarity']
-                        # Higher CLIP similarity is better (more similar)
-                        if best_clip_similarity is None or clip_sim > best_clip_similarity:
-                            best_clip_similarity = clip_sim
+                        best_clip_similarity = clip_pair['clip_similarity']
                 
                 status_assignments.append({
                     'product_id': duplicate_id,

@@ -54,10 +54,10 @@ class DuplicateDetector:
         
         # Log the actual configuration values used
         config = self.cascade_analyzer.config
-        logger.info(f"Cascade config: pHash exact={config.phash_exact_duplicate}, "
-                   f"near≤{config.phash_near_duplicate_max}, "
-                   f"ambiguous={config.phash_ambiguous_min}-{config.phash_ambiguous_max}, "
-                   f"CLIP duplicate≥{config.clip_duplicate_min}, "
+        logger.info(f"Cascade config: pHash duplicate≤{config.phash_duplicate_threshold}, "
+                   f"ambiguous={config.phash_duplicate_threshold+1}-{config.phash_ambiguous_threshold}, "
+                   f"different>{config.phash_ambiguous_threshold}, "
+                   f"CLIP duplicate≥{config.clip_duplicate_threshold}, "
                    f"max_images={config.max_images_per_product}")
 
     def ensure_tables_exist(self):
@@ -199,15 +199,15 @@ class DuplicateDetector:
                     stage = decision.decision_stage.lower()
                     if 'metadata' in stage:
                         cascade_stats['metadata_shortcuts'] += 1
-                    elif 'phash_exact' in stage:
+                    elif stage == 'phash_duplicate':
                         cascade_stats['phash_exact'] += 1
-                    elif 'phash_near' in stage:
-                        cascade_stats['phash_near'] += 1
-                    elif 'phash_different' in stage:
+                    elif stage == 'phash_different':
                         cascade_stats['phash_different'] += 1
-                    elif 'phash_ambiguous' in stage:
+                    elif stage == 'phash_ambiguous':
                         cascade_stats['phash_ambiguous'] += 1
                     elif 'clip' in stage:
+                        # Count as both ambiguous (went to CLIP) and CLIP analyzed
+                        cascade_stats['phash_ambiguous'] += 1
                         cascade_stats['clip_analyzed'] += 1
                         if decision.is_duplicate:
                             cascade_stats['clip_confirmed'] += 1

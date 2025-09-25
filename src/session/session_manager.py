@@ -31,6 +31,117 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def cleanup_database_connections():
+    """
+    Clean up any lingering database connections that might cause locks.
+    This is a safety measure to prevent database lock issues.
+    """
+    try:
+        from src.common.database import engine
+        import gc
+        
+        # Force garbage collection to clean up any lingering objects
+        gc.collect()
+        
+        # Dispose of all connections in the pool
+        if hasattr(engine, 'dispose'):
+            engine.dispose()
+            logger.info("Database connection pool disposed")
+            
+        # Additional cleanup - close any remaining connections
+        if hasattr(engine.pool, 'dispose'):
+            engine.pool.dispose()
+            
+        # Wait a moment for cleanup to complete
+        import time
+        time.sleep(0.1)
+        
+        logger.info("Database connections cleaned up successfully")
+    except Exception as e:
+        logger.warning(f"Could not clean up database connections: {e}")
+        # This is not critical, so we continue
+
+
+def check_database_lock():
+    """
+    Check if database is currently locked and attempt to resolve it.
+    
+    Returns:
+        bool: True if database is accessible, False if locked
+    """
+    try:
+        from src.common.database import get_db_session
+        db = None
+        try:
+            db = get_db_session()
+            # Try a simple query to test if database is accessible
+            from sqlalchemy import text
+            db.execute(text("SELECT 1")).fetchone()
+            return True
+        except Exception as e:
+            if 'locked' in str(e).lower():
+                logger.warning("Database is locked, attempting cleanup...")
+                return False
+            else:
+                # Other database error, re-raise
+                raise e
+        finally:
+            if db:
+                try:
+                    db.close()
+                except:
+                    pass
+    except Exception as e:
+        logger.error(f"Error checking database lock: {e}")
+        return False
+
+
+def force_unlock_database():
+    """
+    Aggressively attempt to unlock the database by cleaning up all connections.
+    This is a last resort function for persistent lock issues.
+    """
+    logger.info("🔓 Attempting to force unlock database...")
+    
+    try:
+        import gc
+        import time
+        from src.common.database import engine
+        
+        # Multiple cleanup attempts
+        for attempt in range(3):
+            logger.info(f"Cleanup attempt {attempt + 1}/3...")
+            
+            # Force garbage collection
+            gc.collect()
+            
+            # Dispose of engine and all connections
+            if hasattr(engine, 'dispose'):
+                engine.dispose()
+            
+            # Additional pool cleanup
+            if hasattr(engine, 'pool') and hasattr(engine.pool, 'dispose'):
+                engine.pool.dispose()
+            
+            # Clear any connection pool
+            if hasattr(engine, '_pool') and engine._pool:
+                engine._pool.dispose()
+            
+            time.sleep(0.5)
+        
+        # Test if unlock was successful
+        if check_database_lock():
+            logger.info("✅ Database successfully unlocked!")
+            return True
+        else:
+            logger.warning("⚠️ Database may still be locked")
+            return False
+            
+    except Exception as e:
+        logger.error(f"❌ Error during force unlock: {e}")
+        return False
+
+
 def get_oauth_authorization_url():
     """
     Generate OAuth authorization URL for AliExpress using app credentials from .env
@@ -63,6 +174,9 @@ def create_session(code):
         dict: Result with success status, message, and session data
     """
     try:
+        # Clean up any lingering database connections first
+        cleanup_database_connections()
+        
         # Ensure tables exist
         create_tables_if_not_exist()
         
@@ -164,8 +278,50 @@ def create_session(code):
                 'oauth_url': oauth_url if 'invalid' in error_msg.lower() or 'expired' in error_msg.lower() else None
             }
         
-        # Save session to database
-        session_obj = create_session_code(code, response.body, token_type='original')
+        # Save session to database with retry mechanism for lock issues
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                # Check if database is accessible before attempting to save
+                if not check_database_lock():
+                    logger.info(f"Database locked, attempt {retry_count + 1}/{max_retries} - cleaning up connections...")
+                    cleanup_database_connections()
+                    import time
+                    time.sleep(0.5 * (retry_count + 1))  # Progressive delay
+                    retry_count += 1
+                    continue
+                
+                # Attempt to save session
+                session_obj = create_session_code(code, response.body, token_type='original')
+                break  # Success - exit retry loop
+                
+            except Exception as db_error:
+                if 'locked' in str(db_error).lower() and retry_count < max_retries - 1:
+                    logger.warning(f"Database locked on attempt {retry_count + 1}/{max_retries}, retrying after cleanup...")
+                    cleanup_database_connections()
+                    import time
+                    time.sleep(1.0 * (retry_count + 1))  # Progressive delay
+                    retry_count += 1
+                    continue
+                else:
+                    # Final attempt failed or non-lock error
+                    logger.error(f"Database error while saving session: {db_error}")
+                    cleanup_database_connections()
+                    return {
+                        'success': False,
+                        'message': f"Failed to save session to database after {retry_count + 1} attempts: {db_error}",
+                        'code': code
+                    }
+        else:
+            # All retries exhausted
+            cleanup_database_connections()
+            return {
+                'success': False,
+                'message': f"Database remains locked after {max_retries} attempts. Please check if another process is using the database.",
+                'code': code
+            }
         
         logger.info(f"Created new session for code '{code}' with token '{response.body.get('access_token', '')[:16]}...'")
         
@@ -180,6 +336,8 @@ def create_session(code):
         
     except Exception as e:
         logger.error(f"Error creating session: {str(e)}")
+        # Clean up database connections in case of any error
+        cleanup_database_connections()
         return {
             'success': False,
             'message': f"Error creating session: {str(e)}",
