@@ -20,10 +20,6 @@ from .master_selector import MasterSelector
 # Load environment variables
 load_dotenv()
 
-def get_env(key: str, default: str) -> str:
-    """Get environment variable with fallback."""
-    return os.getenv(key, default)
-
 logger = logging.getLogger(__name__)
 
 
@@ -182,7 +178,11 @@ class DuplicateDetector:
                 'phash_ambiguous': 0,
                 'clip_analyzed': 0,
                 'clip_confirmed': 0,
-                'total_pairs': 0
+                'total_pairs': 0,
+                'total_products_analyzed': len(all_product_ids),  # All products get pHash analysis
+                'products_passed_to_clip': set(),  # Track unique products that had CLIP analysis
+                'total_images_phash': 0,
+                'total_images_clip': 0
             }
             
             total_pairs = len(all_product_ids) * (len(all_product_ids) - 1) // 2
@@ -200,7 +200,11 @@ class DuplicateDetector:
                     if 'metadata' in stage:
                         cascade_stats['metadata_shortcuts'] += 1
                     elif stage == 'phash_duplicate':
-                        cascade_stats['phash_exact'] += 1
+                        # Further categorize by exact vs near duplicates
+                        if decision.phash_difference == 0:
+                            cascade_stats['phash_exact'] += 1
+                        else:
+                            cascade_stats['phash_near'] += 1
                     elif stage == 'phash_different':
                         cascade_stats['phash_different'] += 1
                     elif stage == 'phash_ambiguous':
@@ -209,8 +213,20 @@ class DuplicateDetector:
                         # Count as both ambiguous (went to CLIP) and CLIP analyzed
                         cascade_stats['phash_ambiguous'] += 1
                         cascade_stats['clip_analyzed'] += 1
+                        # Track unique products that had CLIP analysis
+                        cascade_stats['products_passed_to_clip'].add(decision.product1_id)
+                        cascade_stats['products_passed_to_clip'].add(decision.product2_id)
                         if decision.is_duplicate:
                             cascade_stats['clip_confirmed'] += 1
+                    
+                    # Count images analyzed in this pair
+                    if decision.phash_difference is not None:
+                        # This pair had pHash analysis, so images were processed
+                        cascade_stats['total_images_phash'] += 2  # Approximate, could be more
+                    
+                    if decision.clip_similarity is not None:
+                        # This pair had CLIP analysis
+                        cascade_stats['total_images_clip'] += 2  # Approximate, could be more
                     
                     # Collect duplicate pairs for grouping
                     if decision.is_duplicate:
@@ -224,6 +240,9 @@ class DuplicateDetector:
                         })
             
             logger.info(f"Cascade analysis complete: {len(duplicate_pairs)} duplicate pairs found")
+            logger.info(f"📊 Products analyzed: {cascade_stats['total_products_analyzed']} total products (all via pHash)")
+            logger.info(f"📊 Products passed to CLIP: {len(cascade_stats['products_passed_to_clip'])} products")
+            logger.info(f"🖼️ Images analyzed: ~{cascade_stats['total_images_phash']} via pHash, ~{cascade_stats['total_images_clip']} via CLIP")
             logger.info(f"Stage breakdown: metadata={cascade_stats['metadata_shortcuts']}, "
                        f"pHash_exact={cascade_stats['phash_exact']}, "
                        f"pHash_near={cascade_stats['phash_near']}, "
@@ -313,7 +332,12 @@ class DuplicateDetector:
                 'stage': 'ERROR',
                 'total_time': time.time() - start_time,
                 'error': str(e),
-                'cascade_stats': cascade_stats if 'cascade_stats' in locals() else {},
+                'cascade_stats': cascade_stats if 'cascade_stats' in locals() else {
+                    'total_products_analyzed': 0,
+                    'products_passed_to_clip': 0,
+                    'total_images_phash': 0,
+                    'total_images_clip': 0
+                },
                 'master_results': [],
                 'duplicate_pairs': [],
                 'final_stats': {
@@ -399,17 +423,26 @@ class DuplicateDetector:
         total_duplicates = sum(len(result['duplicate_ids']) for result in master_results)
         total_unique = len(all_product_ids) - total_masters - total_duplicates
         
+        # Convert set to count for JSON serialization
+        products_passed_to_clip_count = len(cascade_stats.get('products_passed_to_clip', set()))
+        cascade_stats_serializable = cascade_stats.copy()
+        cascade_stats_serializable['products_passed_to_clip'] = products_passed_to_clip_count
+        
         return {
             'stage': 'COMPLETE',
             'total_time': time.time() - start_time,
-            'cascade_stats': cascade_stats,
+            'cascade_stats': cascade_stats_serializable,
             'master_results': master_results,
             'duplicate_pairs': duplicate_pairs,
             'final_stats': {
                 'total_analyzed': len(all_product_ids),
                 'unique_products': total_unique,
                 'master_products': total_masters,
-                'duplicate_products': total_duplicates
+                'duplicate_products': total_duplicates,
+                'products_analyzed_phash': cascade_stats.get('total_products_analyzed', len(all_product_ids)),
+                'products_analyzed_clip': products_passed_to_clip_count,
+                'images_analyzed_phash': cascade_stats.get('total_images_phash', 0),
+                'images_analyzed_clip': cascade_stats.get('total_images_clip', 0)
             }
         }
 

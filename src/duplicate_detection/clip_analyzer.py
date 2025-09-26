@@ -165,57 +165,7 @@ class CLIPAnalyzer:
             logger.error(f"Failed to calculate similarity: {e}")
             return 0.0
 
-    def get_product_images_for_clip(self, db: Session, product_ids: List[str], 
-                                   image_roles: List[str] = None) -> Dict[str, List[Dict]]:
-        """
-        Get images for CLIP analysis for specified products.
-        
-        Args:
-            db: Database session
-            product_ids: List of product IDs to analyze
-            image_roles: List of image roles to include (default: ['hero', 'variant'])
-            
-        Returns:
-            Dict mapping product_id to list of image data
-        """
-        if image_roles is None:
-            # Default to hero and variant images as specified in requirements
-            image_roles = ['hero', 'variant']
-        
-        logger.info(f"Fetching images for {len(product_ids)} products (roles: {image_roles})")
-        
-        images = db.query(ProductImage).filter(
-            ProductImage.product_id.in_(product_ids),
-            ProductImage.image_role.in_(image_roles),
-            ProductImage.local_file_path.isnot(None),
-            ProductImage.local_file_path != ''
-        ).all()
-        
-        # Group by product_id
-        products_images = {}
-        for image in images:
-            if image.product_id not in products_images:
-                products_images[image.product_id] = []
-            
-            # Convert relative path to absolute if needed
-            image_path = image.local_file_path
-            if not os.path.isabs(image_path):
-                # Assuming relative to project root
-                project_root = Path(__file__).parent.parent.parent
-                image_path = str(project_root / image_path)
-            
-            products_images[image.product_id].append({
-                'id': image.id,
-                'image_url': image.image_url,
-                'image_role': image.image_role,
-                'local_file_path': image_path,
-                'variant_key': image.variant_key,
-                'is_primary': image.is_primary
-            })
-        
-        total_images = sum(len(imgs) for imgs in products_images.values())
-        logger.info(f"Found {len(products_images)} products with {total_images} images for CLIP analysis")
-        return products_images
+    
 
     def extract_embeddings_for_products(self, products_images: Dict[str, List[Dict]]) -> Dict[str, List[Dict]]:
         """
