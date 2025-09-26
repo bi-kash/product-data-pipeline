@@ -45,9 +45,10 @@ class CascadeConfig:
     phash_ambiguous_threshold: int = 18     # 9-18: Ambiguous, send to CLIP
                                            # >18: Different, no CLIP needed
     
-    # CLIP thresholds (simplified)
-    clip_duplicate_threshold: float = 0.85  # ≥0.85: Confirmed duplicate
-                                           # <0.85: Different products
+    # CLIP thresholds (three-tier system)
+    clip_duplicate_threshold: float = 0.96  # ≥0.96: Confirmed duplicate
+    clip_ambiguous_threshold: float = 0.94  # 0.94-0.96: Ambiguous, needs review
+                                           # <0.94: Different products
     
     # Processing limits
     max_images_per_product: int = 5
@@ -61,7 +62,8 @@ class CascadeConfig:
             phash_duplicate_threshold=int(os.getenv('PHASH_DUPLICATE_THRESHOLD', '8')),
             phash_ambiguous_threshold=int(os.getenv('PHASH_AMBIGUOUS_THRESHOLD', '18')),
             
-            clip_duplicate_threshold=float(os.getenv('CLIP_DUPLICATE_THRESHOLD', '0.85')),
+            clip_duplicate_threshold=float(os.getenv('CLIP_DUPLICATE_THRESHOLD', '0.96')),
+            clip_ambiguous_threshold=float(os.getenv('CLIP_AMBIGUOUS_THRESHOLD', '0.94')),
             
             max_images_per_product=int(os.getenv('CLIP_MAX_IMAGES_PER_PRODUCT', '5'))
         )
@@ -108,7 +110,9 @@ class IntelligentCascadeAnalyzer:
         logger.info(f"Cascade config: pHash duplicate≤{self.config.phash_duplicate_threshold}, "
                    f"ambiguous={self.config.phash_duplicate_threshold+1}-{self.config.phash_ambiguous_threshold}, "
                    f"different>{self.config.phash_ambiguous_threshold}, "
-                   f"CLIP duplicate≥{self.config.clip_duplicate_threshold}")
+                   f"CLIP duplicate≥{self.config.clip_duplicate_threshold}, "
+                   f"ambiguous={self.config.clip_ambiguous_threshold}-{self.config.clip_duplicate_threshold}, "
+                   f"different<{self.config.clip_ambiguous_threshold}")
     
     def _check_image_quality(self, image: ProductImage) -> bool:
         """
@@ -277,21 +281,27 @@ class IntelligentCascadeAnalyzer:
                 decision.reason = 'No CLIP similarity found'
                 return decision
             
-            # Apply simplified CLIP decision threshold
+            # Apply three-tier CLIP decision system
             decision.clip_similarity = clip_similarity
             
             if clip_similarity >= self.config.clip_duplicate_threshold:
-                # CLIP confirmed duplicate
+                # CLIP confirmed duplicate (≥0.96)
                 decision.is_duplicate = True
                 decision.confidence = clip_similarity
                 decision.decision_stage = 'CLIP_DUPLICATE'
                 decision.reason = f'CLIP confirmed duplicate (sim: {clip_similarity:.3f} ≥ {self.config.clip_duplicate_threshold})'
+            elif clip_similarity >= self.config.clip_ambiguous_threshold:
+                # CLIP ambiguous - needs human review (0.94-0.96)
+                decision.is_duplicate = False  # Don't mark as duplicate, but flag for review
+                decision.confidence = 0.5  # Uncertain
+                decision.decision_stage = 'CLIP_REVIEW_SUSPECT'
+                decision.reason = f'CLIP ambiguous - needs review (sim: {clip_similarity:.3f} in range {self.config.clip_ambiguous_threshold}-{self.config.clip_duplicate_threshold})'
             else:
-                # CLIP says different
+                # CLIP confirmed different (<0.94)
                 decision.is_duplicate = False
                 decision.confidence = 1.0 - clip_similarity
                 decision.decision_stage = 'CLIP_DIFFERENT'
-                decision.reason = f'CLIP confirmed different (sim: {clip_similarity:.3f} < {self.config.clip_duplicate_threshold})'
+                decision.reason = f'CLIP confirmed different (sim: {clip_similarity:.3f} < {self.config.clip_ambiguous_threshold})'
             
         except Exception as e:
             logger.error(f"CLIP analysis failed for {decision.product1_id} vs {decision.product2_id}: {e}")

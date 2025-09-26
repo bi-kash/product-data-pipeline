@@ -35,16 +35,16 @@ logger = logging.getLogger(__name__)
 class ProductFilterEngine:
     """Main engine for filtering products based on business rules."""
     
-    def __init__(self, max_price_eur: float = None, max_delivery_days: int = None):
+    def __init__(self):
         """
         Initialize the filter engine.
         
-        Args:
-            max_price_eur: Maximum total cost in EUR (variant + shipping)
-            max_delivery_days: Maximum delivery time in days
+        Configuration values are read from environment variables:
+        - TOTAL_MAX_PRICE: Maximum total cost in EUR (variant + shipping)
+        - MAX_DELIVERY_DAYS: Maximum delivery time in days
         """
-        self.max_price_eur = max_price_eur or float(get_env("TOTAL_MAX_PRICE", "100"))
-        self.max_delivery_days = max_delivery_days or int(get_env("MAX_DELIVERY_DAYS", "8"))
+        self.max_price_eur = float(get_env("TOTAL_MAX_PRICE", "100"))
+        self.max_delivery_days = int(get_env("MAX_DELIVERY_DAYS", "8"))
         
         # Initialize API client for enrichment
         try:
@@ -728,14 +728,11 @@ class ProductFilterEngine:
         return None
 
 
-def run_product_filtering(max_price_eur: float = None, max_delivery_days: int = None, 
-                         limit: int = None, dry_run: bool = False) -> Dict[str, int]:
+def run_product_filtering(limit: int = None, dry_run: bool = False) -> Dict[str, int]:
     """
     Main function to run product filtering.
     
     Args:
-        max_price_eur: Maximum total price in EUR
-        max_delivery_days: Maximum delivery time in days  
         limit: Maximum products to process
         dry_run: Don't save to database
         
@@ -744,7 +741,7 @@ def run_product_filtering(max_price_eur: float = None, max_delivery_days: int = 
     """
     logger.info("Starting product filtering process")
     
-    filter_engine = ProductFilterEngine(max_price_eur, max_delivery_days)
+    filter_engine = ProductFilterEngine()
     stats = filter_engine.process_whitelisted_products(limit, dry_run)
     
     logger.info("Product filtering completed")

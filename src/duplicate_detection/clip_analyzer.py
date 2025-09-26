@@ -85,9 +85,11 @@ class CLIPAnalyzer:
         
         logger.info(f"CLIPAnalyzer initialized (device: {self.device}, threshold: {similarity_threshold})")
 
-    def get_embedding_path(self, image_id: int) -> Path:
-        """Get the file path for storing an image's embedding."""
-        return self.embeddings_dir / f"image_{image_id}.pkl"
+    def get_embedding_path(self, image_path: str) -> Path:
+        """Get the file path for storing an image's embedding based on filename."""
+        # Extract filename without path and extension, then add .pkl
+        image_filename = os.path.splitext(os.path.basename(image_path))[0]
+        return self.embeddings_dir / f"{image_filename}.pkl"
 
     def extract_image_embedding(self, image_path: str, image_id: int = None) -> Optional[np.ndarray]:
         """
@@ -100,17 +102,16 @@ class CLIPAnalyzer:
         Returns:
             Numpy array of the embedding, or None if extraction fails
         """
-        # Check if embedding is already cached
-        if image_id:
-            embedding_path = self.get_embedding_path(image_id)
-            if embedding_path.exists():
-                try:
-                    with open(embedding_path, 'rb') as f:
-                        embedding = pickle.load(f)
-                    logger.debug(f"Loaded cached embedding for image {image_id}")
-                    return embedding
-                except Exception as e:
-                    logger.warning(f"Failed to load cached embedding for image {image_id}: {e}")
+        # Check if embedding is already cached (use filename-based caching)
+        embedding_path = self.get_embedding_path(image_path)
+        if embedding_path.exists():
+            try:
+                with open(embedding_path, 'rb') as f:
+                    embedding = pickle.load(f)
+                logger.debug(f"Loaded cached embedding for {os.path.basename(image_path)}")
+                return embedding
+            except Exception as e:
+                logger.warning(f"Failed to load cached embedding for {os.path.basename(image_path)}: {e}")
         
         try:
             # Load and preprocess image
@@ -129,14 +130,13 @@ class CLIPAnalyzer:
                 # Normalize embedding
                 embedding = embedding / np.linalg.norm(embedding)
             
-            # Cache embedding if image_id provided
-            if image_id:
-                try:
-                    with open(embedding_path, 'wb') as f:
-                        pickle.dump(embedding, f)
-                    logger.debug(f"Cached embedding for image {image_id}")
-                except Exception as e:
-                    logger.warning(f"Failed to cache embedding for image {image_id}: {e}")
+            # Cache embedding using filename-based key
+            try:
+                with open(embedding_path, 'wb') as f:
+                    pickle.dump(embedding, f)
+                logger.debug(f"Cached embedding for {os.path.basename(image_path)}")
+            except Exception as e:
+                logger.warning(f"Failed to cache embedding for {os.path.basename(image_path)}: {e}")
             
             return embedding
             
@@ -153,13 +153,15 @@ class CLIPAnalyzer:
             embedding2: Second embedding
             
         Returns:
-            Cosine similarity score (0-1)
+            Cosine similarity score (0-1), clamped to valid range to handle floating-point precision
         """
         try:
             # Calculate cosine similarity
             similarity = np.dot(embedding1, embedding2) / (
                 np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
             )
+            # Clamp to valid range [-1, 1] to handle floating-point precision errors
+            similarity = np.clip(similarity, -1.0, 1.0)
             return float(similarity)
         except Exception as e:
             logger.error(f"Failed to calculate similarity: {e}")

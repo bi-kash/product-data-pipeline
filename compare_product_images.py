@@ -17,16 +17,20 @@ import argparse
 import logging
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+from dotenv import load_dotenv
 
 # Add src to path for imports
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from common.database import get_db_session, ProductImage
+from src.common.database import get_db_session, ProductImage
 
 # Import pHash analyzer directly - we'll implement hamming distance calculation here
 import imagehash
 from PIL import Image
+
+# Load environment variables for cascade configuration
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +38,21 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Cascade configuration from environment
+PHASH_DUPLICATE_THRESHOLD = int(os.getenv('PHASH_DUPLICATE_THRESHOLD', '2'))
+PHASH_AMBIGUOUS_THRESHOLD = int(os.getenv('PHASH_AMBIGUOUS_THRESHOLD', '18'))
+CLIP_DUPLICATE_THRESHOLD = float(os.getenv('CLIP_DUPLICATE_THRESHOLD', '0.95'))
+
+# Try to import CLIP analyzer
+CLIP_AVAILABLE = False
+try:
+    from src.duplicate_detection.clip_analyzer import CLIPAnalyzer
+    CLIP_AVAILABLE = True
+    logger.info("CLIP analyzer available for cascade comparisons")
+except ImportError as e:
+    logger.warning(f"CLIP analyzer not available: {e}")
+    logger.info("Will use pHash-only comparisons")
 
 
 @dataclass
@@ -57,14 +76,30 @@ class ComparisonResult:
     image2: ImageInfo
     hamming_distance: int
     similarity_percentage: float
+    cascade_decision: str = "PHASH_ONLY"  # PHASH_DUPLICATE, PHASH_DIFFERENT, PHASH_AMBIGUOUS, CLIP_DUPLICATE, CLIP_DIFFERENT
+    clip_similarity: Optional[float] = None
+    is_duplicate_by_cascade: bool = False
 
 
 class ProductImageComparer:
-    """Compares pHash values between images of two products."""
+    """Compares pHash values between images of two products with intelligent cascade."""
     
     def __init__(self):
         """Initialize the comparer."""
-        logger.info("ProductImageComparer initialized")
+        self.clip_analyzer = None
+        if CLIP_AVAILABLE:
+            try:
+                self.clip_analyzer = CLIPAnalyzer()
+                logger.info("ProductImageComparer initialized with CLIP support")
+            except Exception as e:
+                logger.warning(f"Failed to initialize CLIP analyzer: {e}")
+                logger.info("Using pHash-only mode")
+        else:
+            logger.info("ProductImageComparer initialized in pHash-only mode")
+        
+        logger.info(f"Cascade thresholds: pHash duplicate≤{PHASH_DUPLICATE_THRESHOLD}, "
+                   f"ambiguous {PHASH_DUPLICATE_THRESHOLD+1}-{PHASH_AMBIGUOUS_THRESHOLD}, "
+                   f"different>{PHASH_AMBIGUOUS_THRESHOLD}, CLIP duplicate≥{CLIP_DUPLICATE_THRESHOLD}")
     
     def calculate_hamming_distance(self, hash1: str, hash2: str) -> int:
         """
@@ -126,14 +161,14 @@ class ProductImageComparer:
     
     def compare_images(self, image1: ImageInfo, image2: ImageInfo) -> ComparisonResult:
         """
-        Compare pHash between two images.
+        Compare images using intelligent cascade: pHash first, then CLIP if ambiguous.
         
         Args:
             image1: First image
             image2: Second image
             
         Returns:
-            ComparisonResult with hamming distance and similarity
+            ComparisonResult with cascade decision and similarity scores
         """
         hamming_distance = self.calculate_hamming_distance(
             image1.phash, image2.phash
@@ -142,12 +177,72 @@ class ProductImageComparer:
         # Calculate similarity percentage (64 is max hamming distance for pHash)
         similarity_percentage = (64 - hamming_distance) / 64 * 100
         
-        return ComparisonResult(
-            image1=image1,
-            image2=image2,
-            hamming_distance=hamming_distance,
-            similarity_percentage=similarity_percentage
-        )
+        # Apply cascade decision logic
+        if hamming_distance <= PHASH_DUPLICATE_THRESHOLD:
+            # Definitely duplicate - skip CLIP
+            return ComparisonResult(
+                image1=image1,
+                image2=image2,
+                hamming_distance=hamming_distance,
+                similarity_percentage=similarity_percentage,
+                cascade_decision="PHASH_DUPLICATE",
+                is_duplicate_by_cascade=True
+            )
+        
+        elif hamming_distance > PHASH_AMBIGUOUS_THRESHOLD:
+            # Definitely different - skip CLIP
+            return ComparisonResult(
+                image1=image1,
+                image2=image2,
+                hamming_distance=hamming_distance,
+                similarity_percentage=similarity_percentage,
+                cascade_decision="PHASH_DIFFERENT",
+                is_duplicate_by_cascade=False
+            )
+        
+        else:
+            # Ambiguous zone - use CLIP analysis if available
+            clip_similarity = None
+            cascade_decision = "PHASH_AMBIGUOUS"
+            is_duplicate_by_cascade = False
+            
+            if self.clip_analyzer and image1.local_file_path and image2.local_file_path:
+                try:
+                    # Extract embeddings for both images
+                    embedding1 = self.clip_analyzer.extract_image_embedding(image1.local_file_path, image1.id)
+                    embedding2 = self.clip_analyzer.extract_image_embedding(image2.local_file_path, image2.id)
+                    
+                    if embedding1 is not None and embedding2 is not None:
+                        # Calculate similarity using embeddings
+                        clip_similarity = self.clip_analyzer.calculate_similarity(embedding1, embedding2)
+                        
+                        if clip_similarity >= CLIP_DUPLICATE_THRESHOLD:
+                            cascade_decision = "CLIP_DUPLICATE"
+                            is_duplicate_by_cascade = True
+                        else:
+                            cascade_decision = "CLIP_DIFFERENT" 
+                            is_duplicate_by_cascade = False
+                            
+                        logger.debug(f"CLIP analysis: similarity={clip_similarity:.3f}, decision={cascade_decision}")
+                    else:
+                        logger.warning("Failed to extract embeddings for CLIP analysis")
+                        cascade_decision = "PHASH_AMBIGUOUS"
+                    
+                except Exception as e:
+                    logger.warning(f"CLIP analysis failed: {e}")
+                    cascade_decision = "PHASH_AMBIGUOUS"
+            else:
+                logger.debug("CLIP analysis not available for ambiguous case")
+            
+            return ComparisonResult(
+                image1=image1,
+                image2=image2,
+                hamming_distance=hamming_distance,
+                similarity_percentage=similarity_percentage,
+                cascade_decision=cascade_decision,
+                clip_similarity=clip_similarity,
+                is_duplicate_by_cascade=is_duplicate_by_cascade
+            )
     
     def compare_products(self, product1_id: str, product2_id: str) -> Dict:
         """
@@ -205,6 +300,16 @@ class ProductImageComparer:
             similar = [c for c in all_comparisons if 5 < c.hamming_distance <= 15]
             different = [c for c in all_comparisons if c.hamming_distance > 15]
             
+            # Group by cascade decisions
+            phash_duplicates = [c for c in all_comparisons if c.cascade_decision == "PHASH_DUPLICATE"]
+            phash_different = [c for c in all_comparisons if c.cascade_decision == "PHASH_DIFFERENT"]
+            phash_ambiguous = [c for c in all_comparisons if c.cascade_decision == "PHASH_AMBIGUOUS"]
+            clip_duplicates = [c for c in all_comparisons if c.cascade_decision == "CLIP_DUPLICATE"]
+            clip_different = [c for c in all_comparisons if c.cascade_decision == "CLIP_DIFFERENT"]
+            
+            # Count duplicates by cascade
+            duplicates_by_cascade = [c for c in all_comparisons if c.is_duplicate_by_cascade]
+            
             return {
                 'product1_id': product1_id,
                 'product2_id': product2_id,
@@ -219,6 +324,14 @@ class ProductImageComparer:
                     'very_similar': len(very_similar),
                     'similar': len(similar),
                     'different': len(different)
+                },
+                'cascade_statistics': {
+                    'phash_duplicates': len(phash_duplicates),
+                    'phash_different': len(phash_different), 
+                    'phash_ambiguous': len(phash_ambiguous),
+                    'clip_duplicates': len(clip_duplicates),
+                    'clip_different': len(clip_different),
+                    'total_duplicates_by_cascade': len(duplicates_by_cascade)
                 },
                 'all_comparisons': all_comparisons
             }
@@ -243,6 +356,10 @@ def print_comparison_results(results: Dict):
     print(f"  🎯 SKU ID 2: {best.image2.sku_id}")
     print(f"  📏 Hamming Distance: {best.hamming_distance}")
     print(f"  📊 Similarity: {best.similarity_percentage:.1f}%")
+    print(f"  🤖 Cascade Decision: {best.cascade_decision}")
+    if best.clip_similarity is not None:
+        print(f"  🧠 CLIP Similarity: {best.clip_similarity:.3f}")
+    print(f"  ✅ Is Duplicate: {best.is_duplicate_by_cascade}")
     print(f"  🖼️  Image 1: ID={best.image1.id}, Role={best.image1.image_role}")
     print(f"      📁 Path: {best.image1.local_file_path}")
     print(f"      📐 Size: {best.image1.width}x{best.image1.height}")
@@ -257,6 +374,23 @@ def print_comparison_results(results: Dict):
     print(f"  🎯 Very similar (distance=1-5): {stats['very_similar']}")
     print(f"  📸 Similar (distance=6-15): {stats['similar']}")
     print(f"  ❌ Different (distance>15): {stats['different']}")
+    
+    # Add cascade statistics if available
+    if 'cascade_statistics' in results:
+        cascade_stats = results['cascade_statistics']
+        print(f"\n🤖 Intelligent Cascade Analysis:")
+        print(f"  📏 pHash Duplicates (≤{PHASH_DUPLICATE_THRESHOLD}): {cascade_stats['phash_duplicates']}")
+        print(f"  🔍 pHash Ambiguous ({PHASH_DUPLICATE_THRESHOLD+1}-{PHASH_AMBIGUOUS_THRESHOLD}): {cascade_stats['phash_ambiguous']}")
+        print(f"  📏 pHash Different (>{PHASH_AMBIGUOUS_THRESHOLD}): {cascade_stats['phash_different']}")
+        if cascade_stats['clip_duplicates'] > 0 or cascade_stats['clip_different'] > 0:
+            print(f"  🧠 CLIP Duplicates (≥{CLIP_DUPLICATE_THRESHOLD:.2f}): {cascade_stats['clip_duplicates']}")
+            print(f"  🧠 CLIP Different (<{CLIP_DUPLICATE_THRESHOLD:.2f}): {cascade_stats['clip_different']}")
+        print(f"  ✅ Total Duplicates by Cascade: {cascade_stats['total_duplicates_by_cascade']}")
+        
+        # Show CLIP usage efficiency
+        clip_analyzed = cascade_stats['clip_duplicates'] + cascade_stats['clip_different']
+        efficiency = (results['total_comparisons'] - clip_analyzed) / results['total_comparisons'] * 100
+        print(f"  ⚡ Efficiency: {efficiency:.1f}% (avoided CLIP on {results['total_comparisons'] - clip_analyzed}/{results['total_comparisons']} comparisons)")
 
 
 def print_all_comparisons(results: Dict, limit: int = 10):
@@ -268,13 +402,16 @@ def print_all_comparisons(results: Dict, limit: int = 10):
     sorted_comparisons = sorted(comparisons, key=lambda x: x.hamming_distance)
     
     print(f"\n📋 All Comparisons (showing top {min(limit, len(sorted_comparisons))}):")
-    print(f"{'Rank':<4} {'SKU1':<15} {'SKU2':<15} {'Distance':<8} {'Similarity':<10} {'Role1':<8} {'Role2':<8}")
-    print("-" * 80)
+    print(f"{'Rank':<4} {'SKU1':<15} {'SKU2':<15} {'pDist':<6} {'Sim%':<6} {'Cascade':<12} {'CLIP':<7} {'Dup':<4} {'Role1':<6} {'Role2':<6}")
+    print("-" * 95)
     
     for i, comp in enumerate(sorted_comparisons[:limit], 1):
+        clip_str = f"{comp.clip_similarity:.3f}" if comp.clip_similarity is not None else "N/A"
+        dup_str = "✅" if comp.is_duplicate_by_cascade else "❌"
         print(f"{i:<4} {comp.image1.sku_id:<15} {comp.image2.sku_id:<15} "
-              f"{comp.hamming_distance:<8} {comp.similarity_percentage:<8.1f}% "
-              f"{comp.image1.image_role:<8} {comp.image2.image_role:<8}")
+              f"{comp.hamming_distance:<6} {comp.similarity_percentage:<5.1f} "
+              f"{comp.cascade_decision:<12} {clip_str:<7} {dup_str:<4} "
+              f"{comp.image1.image_role:<6} {comp.image2.image_role:<6}")
 
 
 def main():

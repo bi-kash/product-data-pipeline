@@ -105,12 +105,150 @@ class DuplicateDetector:
                 product_id=product_id,
                 status='UNIQUE',
                 duplicate_master_id=None,
-                total_landed_cost=price,
-                detection_method='NO_DUPLICATES'
+                total_landed_cost=price
             )
             db.add(unique_status)
         
         db.commit()
+
+    def mark_review_suspect_products(self, db: Session, review_suspect_product_ids: Set[str], 
+                                   review_suspect_pairs: List[Dict] = None):
+        """
+        Mark products that need manual review as REVIEW_SUSPECT.
+        
+        Args:
+            db: Database session
+            review_suspect_product_ids: Set of product IDs that need manual review
+            review_suspect_pairs: List of review suspect pair dictionaries with CLIP similarity data
+        """
+        logger.info(f"Marking {len(review_suspect_product_ids)} products as REVIEW_SUSPECT")
+        
+        # Create lookups for CLIP similarity data and master relationships by product ID
+        clip_similarity_lookup = {}
+        phash_difference_lookup = {}
+        master_id_lookup = {}
+        
+        if review_suspect_pairs:
+            for pair in review_suspect_pairs:
+                product1_id = pair['product1_id']
+                product2_id = pair['product2_id'] 
+                clip_sim = pair.get('clip_similarity')
+                phash_diff = pair.get('phash_difference')
+                
+                # Store the best (highest) CLIP similarity for each product
+                if clip_sim is not None:
+                    if product1_id not in clip_similarity_lookup or clip_sim > clip_similarity_lookup[product1_id]:
+                        clip_similarity_lookup[product1_id] = clip_sim
+                    if product2_id not in clip_similarity_lookup or clip_sim > clip_similarity_lookup[product2_id]:
+                        clip_similarity_lookup[product2_id] = clip_sim
+                
+                # Store the best (lowest) pHash difference for each product
+                if phash_diff is not None:
+                    if product1_id not in phash_difference_lookup or phash_diff < phash_difference_lookup[product1_id]:
+                        phash_difference_lookup[product1_id] = phash_diff
+                    if product2_id not in phash_difference_lookup or phash_diff < phash_difference_lookup[product2_id]:
+                        phash_difference_lookup[product2_id] = phash_diff
+                
+                # Find existing masters for review suspect products
+                existing_master1 = self._find_existing_master_for_product(db, product1_id)
+                existing_master2 = self._find_existing_master_for_product(db, product2_id)
+                
+                if existing_master1:
+                    # Product1 should point to existing master
+                    master_id_lookup[product1_id] = existing_master1
+                if existing_master2:
+                    # Product2 should point to existing master  
+                    master_id_lookup[product2_id] = existing_master2
+                
+                # If neither has an existing master, create a temporary master relationship
+                if not existing_master1 and not existing_master2:
+                    # Choose the cheaper product as temporary master for both
+                    price1 = self.master_selector.calculate_lowest_price(db, product1_id)
+                    price2 = self.master_selector.calculate_lowest_price(db, product2_id)
+                    if price1 is not None and price2 is not None:
+                        if price1 <= price2:
+                            # Product1 is cheaper - product2 points to product1, product1 has no master (will get NULL)
+                            master_id_lookup[product2_id] = product1_id
+                        else:
+                            # Product2 is cheaper - product1 points to product2, product2 has no master (will get NULL)
+                            master_id_lookup[product1_id] = product2_id
+                    else:
+                        # If price comparison fails, use alphabetical order
+                        if product1_id < product2_id:
+                            master_id_lookup[product2_id] = product1_id
+                        else:
+                            master_id_lookup[product1_id] = product2_id
+        
+        for product_id in review_suspect_product_ids:
+            # Calculate total landed cost for review suspect products
+            price = self.master_selector.calculate_lowest_price(db, product_id)
+            
+            # Get master assignment, find cheapest existing master if not found (orphaned review suspect)
+            master_id = master_id_lookup.get(product_id)
+            if master_id is None:
+                # Find the cheapest existing master to point to
+                cheapest_master = self._find_cheapest_existing_master(db)
+                if cheapest_master:
+                    logger.warning(f"Orphaned REVIEW_SUSPECT product {product_id}, pointing to cheapest master {cheapest_master}")
+                    master_id = cheapest_master
+                else:
+                    logger.error(f"No existing masters found for orphaned REVIEW_SUSPECT product {product_id}, skipping")
+                    continue  # Skip this product if no masters exist
+            
+            review_status = ProductStatus(
+                product_id=product_id,
+                status='REVIEW_SUSPECT',
+                duplicate_master_id=master_id,
+                total_landed_cost=price,
+                phash_difference=phash_difference_lookup.get(product_id),
+                clip_similarity=clip_similarity_lookup.get(product_id)
+            )
+            db.add(review_status)
+        
+        db.commit()
+
+    def _find_existing_master_for_product(self, db: Session, product_id: str) -> Optional[str]:
+        """
+        Find if a product already has an existing master in the database.
+        Returns the master ID if found, None otherwise.
+        """
+        existing_status = db.query(ProductStatus).filter(
+            ProductStatus.product_id == product_id
+        ).first()
+        
+        if existing_status:
+            if existing_status.status == 'MASTER':
+                return product_id  # Product is already a master
+            elif existing_status.status == 'DUPLICATE' and existing_status.duplicate_master_id:
+                return existing_status.duplicate_master_id  # Product already has a master
+        
+        return None  # No existing master found
+
+    def _find_cheapest_existing_master(self, db: Session) -> Optional[str]:
+        """
+        Find the cheapest existing master in the database.
+        Returns the master ID if found, None if no masters exist.
+        """
+        # Get all existing masters
+        existing_masters = db.query(ProductStatus.product_id).filter(
+            ProductStatus.status == 'MASTER'
+        ).all()
+        
+        if not existing_masters:
+            return None
+        
+        # Find the cheapest master
+        cheapest_master_id = None
+        cheapest_price = float('inf')
+        
+        for master_row in existing_masters:
+            master_id = master_row.product_id
+            price = self.master_selector.calculate_lowest_price(db, master_id)
+            if price is not None and price < cheapest_price:
+                cheapest_price = price
+                cheapest_master_id = master_id
+        
+        return cheapest_master_id
 
     def save_status_assignments(self, db: Session, status_assignments: List[Dict]):
         """
@@ -168,6 +306,7 @@ class DuplicateDetector:
             logger.info("🧬 Running intelligent cascade analysis...")
             cascade_decisions = []
             duplicate_pairs = []
+            review_suspect_pairs = []  # New: track review suspect pairs
             
             # Track cascade stage statistics
             cascade_stats = {
@@ -178,6 +317,7 @@ class DuplicateDetector:
                 'phash_ambiguous': 0,
                 'clip_analyzed': 0,
                 'clip_confirmed': 0,
+                'clip_review_suspect': 0,  # New: track review suspect cases
                 'total_pairs': 0,
                 'total_products_analyzed': len(all_product_ids),  # All products get pHash analysis
                 'products_passed_to_clip': set(),  # Track unique products that had CLIP analysis
@@ -216,8 +356,12 @@ class DuplicateDetector:
                         # Track unique products that had CLIP analysis
                         cascade_stats['products_passed_to_clip'].add(decision.product1_id)
                         cascade_stats['products_passed_to_clip'].add(decision.product2_id)
-                        if decision.is_duplicate:
+                        
+                        # Count specific CLIP outcomes
+                        if decision.decision_stage == 'CLIP_DUPLICATE':
                             cascade_stats['clip_confirmed'] += 1
+                        elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
+                            cascade_stats['clip_review_suspect'] += 1
                     
                     # Count images analyzed in this pair
                     if decision.phash_difference is not None:
@@ -228,7 +372,7 @@ class DuplicateDetector:
                         # This pair had CLIP analysis
                         cascade_stats['total_images_clip'] += 2  # Approximate, could be more
                     
-                    # Collect duplicate pairs for grouping
+                    # Collect pairs for grouping and review
                     if decision.is_duplicate:
                         duplicate_pairs.append({
                             'product1_id': decision.product1_id,
@@ -238,8 +382,18 @@ class DuplicateDetector:
                             'confidence': decision.confidence,
                             'stage': decision.decision_stage
                         })
+                    elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
+                        # Collect review suspect pairs for manual review
+                        review_suspect_pairs.append({
+                            'product1_id': decision.product1_id,
+                            'product2_id': decision.product2_id,
+                            'phash_difference': decision.phash_difference,
+                            'clip_similarity': decision.clip_similarity,
+                            'confidence': decision.confidence,
+                            'stage': decision.decision_stage
+                        })
             
-            logger.info(f"Cascade analysis complete: {len(duplicate_pairs)} duplicate pairs found")
+            logger.info(f"Cascade analysis complete: {len(duplicate_pairs)} duplicate pairs, {len(review_suspect_pairs)} review suspect pairs found")
             logger.info(f"📊 Products analyzed: {cascade_stats['total_products_analyzed']} total products (all via pHash)")
             logger.info(f"📊 Products passed to CLIP: {len(cascade_stats['products_passed_to_clip'])} products")
             logger.info(f"🖼️ Images analyzed: ~{cascade_stats['total_images_phash']} via pHash, ~{cascade_stats['total_images_clip']} via CLIP")
@@ -247,20 +401,34 @@ class DuplicateDetector:
                        f"pHash_exact={cascade_stats['phash_exact']}, "
                        f"pHash_near={cascade_stats['phash_near']}, "
                        f"pHash_ambiguous={cascade_stats['phash_ambiguous']}, "
-                       f"CLIP_analyzed={cascade_stats['clip_analyzed']}")
+                       f"CLIP_analyzed={cascade_stats['clip_analyzed']}, "
+                       f"CLIP_confirmed={cascade_stats['clip_confirmed']}, "
+                       f"CLIP_review_suspect={cascade_stats['clip_review_suspect']}")
             
             # Group duplicate pairs into connected components
             duplicate_groups = self._group_duplicate_pairs(duplicate_pairs)
             logger.info(f"Found {len(duplicate_groups)} duplicate groups")
             
+            # Handle review suspect pairs - mark them for manual review
+            review_suspect_product_ids = set()
+            if review_suspect_pairs:
+                logger.info(f"🔍 Marking {len(review_suspect_pairs)} review suspect pairs for manual review...")
+                for pair in review_suspect_pairs:
+                    review_suspect_product_ids.add(pair['product1_id'])
+                    review_suspect_product_ids.add(pair['product2_id'])
+                logger.info(f"Total products marked for review: {len(review_suspect_product_ids)}")
+            
             if not duplicate_groups:
-                # No duplicates found - mark all as unique
+                # No duplicates found - mark all as unique (except review suspects)
                 if not dry_run:
                     if not limit:
                         self.clear_existing_status(db)
-                    self.mark_unique_products(db, set(all_product_ids), set())
+                    unique_product_ids = set(all_product_ids) - review_suspect_product_ids
+                    self.mark_unique_products(db, unique_product_ids, set())
+                    if review_suspect_product_ids:
+                        self.mark_review_suspect_products(db, review_suspect_product_ids, review_suspect_pairs)
                 
-                return self._create_results(start_time, cascade_stats, [], [], all_product_ids)
+                return self._create_results(start_time, cascade_stats, [], [], review_suspect_pairs, all_product_ids)
             
             # Master selection for duplicate groups
             logger.info("👑 Running master selection...")
@@ -317,14 +485,25 @@ class DuplicateDetector:
                         all_duplicate_products.add(result['master_id'])
                         all_duplicate_products.update(result['duplicate_ids'])
                 
-                unique_products = set(all_product_ids) - all_duplicate_products
+                # Mark remaining products as unique (excluding review suspects)
+                unique_products = set(all_product_ids) - all_duplicate_products - review_suspect_product_ids
                 if unique_products:
                     self.mark_unique_products(db, unique_products, all_duplicate_products)
+                
+                # Mark review suspect products (exclude products already assigned as duplicates)
+                remaining_review_suspects = review_suspect_product_ids - all_duplicate_products
+                if remaining_review_suspects:
+                    # Filter review suspect pairs to only include remaining suspects
+                    filtered_pairs = [
+                        pair for pair in review_suspect_pairs
+                        if pair['product1_id'] in remaining_review_suspects or pair['product2_id'] in remaining_review_suspects
+                    ]
+                    self.mark_review_suspect_products(db, remaining_review_suspects, filtered_pairs)
             
             total_time = time.time() - start_time
             logger.info(f"✅ Cascade detection complete in {total_time:.2f}s")
             
-            return self._create_results(start_time, cascade_stats, master_results, duplicate_pairs, all_product_ids)
+            return self._create_results(start_time, cascade_stats, master_results, duplicate_pairs, review_suspect_pairs, all_product_ids)
             
         except Exception as e:
             logger.error(f"Error during cascade duplicate detection: {e}")
@@ -340,11 +519,13 @@ class DuplicateDetector:
                 },
                 'master_results': [],
                 'duplicate_pairs': [],
+                'review_suspect_pairs': [],
                 'final_stats': {
                     'total_analyzed': len(all_product_ids) if 'all_product_ids' in locals() else 0,
                     'unique_products': 0,
                     'master_products': 0,
-                    'duplicate_products': 0
+                    'duplicate_products': 0,
+                    'review_suspect_products': 0
                 }
             }
     
@@ -403,25 +584,33 @@ class DuplicateDetector:
                 'phash_different': 0,
                 'phash_ambiguous': 0,
                 'clip_analyzed': 0,
-                'clip_confirmed': 0
+                'clip_confirmed': 0,
+                'clip_review_suspect': 0
             },
             'master_results': [],
             'duplicate_pairs': [],
+            'review_suspect_pairs': [],
             'final_stats': {
                 'total_analyzed': len(all_product_ids),
                 'unique_products': len(all_product_ids),
                 'master_products': 0,
-                'duplicate_products': 0
+                'duplicate_products': 0,
+                'review_suspect_products': 0
             }
         }
     
     def _create_results(self, start_time: float, cascade_stats: Dict, 
                        master_results: List[Dict], duplicate_pairs: List[Dict],
-                       all_product_ids: List[str]) -> Dict:
+                       review_suspect_pairs: List[Dict], all_product_ids: List[str]) -> Dict:
         """Create comprehensive results dictionary."""
         total_masters = len(master_results)
         total_duplicates = sum(len(result['duplicate_ids']) for result in master_results)
-        total_unique = len(all_product_ids) - total_masters - total_duplicates
+        total_review_suspect = len(set(
+            pair['product1_id'] for pair in review_suspect_pairs
+        ).union(set(
+            pair['product2_id'] for pair in review_suspect_pairs
+        )))
+        total_unique = len(all_product_ids) - total_masters - total_duplicates - total_review_suspect
         
         # Convert set to count for JSON serialization
         products_passed_to_clip_count = len(cascade_stats.get('products_passed_to_clip', set()))
@@ -434,11 +623,13 @@ class DuplicateDetector:
             'cascade_stats': cascade_stats_serializable,
             'master_results': master_results,
             'duplicate_pairs': duplicate_pairs,
+            'review_suspect_pairs': review_suspect_pairs,
             'final_stats': {
                 'total_analyzed': len(all_product_ids),
                 'unique_products': total_unique,
                 'master_products': total_masters,
                 'duplicate_products': total_duplicates,
+                'review_suspect_products': total_review_suspect,
                 'products_analyzed_phash': cascade_stats.get('total_products_analyzed', len(all_product_ids)),
                 'products_analyzed_clip': products_passed_to_clip_count,
                 'images_analyzed_phash': cascade_stats.get('total_images_phash', 0),
@@ -493,6 +684,7 @@ class DuplicateDetector:
         print(f"  ✅ Unique products: {results['final_stats']['unique_products']}")
         print(f"  👑 Master products: {results['final_stats']['master_products']}")
         print(f"  📄 Duplicate products: {results['final_stats']['duplicate_products']}")
+        print(f"  🔍 Review suspect products: {results['final_stats'].get('review_suspect_products', 0)}")
         
         if 'cascade_stats' in results:
             stats = results['cascade_stats']
@@ -505,6 +697,7 @@ class DuplicateDetector:
             print(f"  ❓ pHash ambiguous (sent to CLIP): {stats['phash_ambiguous']}")
             print(f"  🤖 CLIP analyzed: {stats['clip_analyzed']}")
             print(f"  ✅ CLIP confirmed duplicates: {stats['clip_confirmed']}")
+            print(f"  🔍 CLIP review suspect: {stats.get('clip_review_suspect', 0)}")
             
             # Calculate efficiency metrics
             clip_avoided = stats['metadata_shortcuts'] + stats['phash_exact'] + stats['phash_near'] + stats['phash_different']

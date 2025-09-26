@@ -48,7 +48,8 @@ The Product Data Pipeline offers several command-line operations to manage the e
 | ------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `detect:duplicates`      | Run duplicate detection analysis | Analyzes all filtered products for duplicates using pHash and CLIP image analysis. Uses intelligent cascade: pHash for fast screening, CLIP for ambiguous cases. Groups duplicates and selects master based on lowest cost. |
 | `detect:status`          | Show duplicate detection status  | Displays statistics about duplicate detection results, including counts by status (UNIQUE/DUPLICATE/MASTER/REVIEW_SUSPECT), detection methods used, average similarity scores, and confidence levels.                       |
-| `detect:export-suspects` | Export suspect cases for review  | Creates a CSV file with all REVIEW_SUSPECT cases that need manual verification. Includes product details, similarity scores, and image information for expert review of edge cases.                                         |
+| `detect:export-suspects` | Export suspect cases for review  | Creates a CSV file with all REVIEW_SUSPECT cases that need manual verification. Includes complete product details, similarity metrics, and URLs for comparison. Creates review_decision and notes columns for manual input.   |
+| `detect:import-reviewed` | Import manual review results    | Imports reviewed suspect duplicates from CSV and updates database. Handles DUPLICATE/UNIQUE/UNCERTAIN decisions. Automatically performs master reassignment when suspects should become new masters based on lower cost.     |
 
 ## 2. Complete Workflow
 
@@ -137,10 +138,20 @@ The complete product data pipeline consists of the following enhanced workflow:
     - Check counts of UNIQUE, DUPLICATE, MASTER, and REVIEW_SUSPECT products
     - Monitor detection method usage and confidence scores
 
-12. **Handle Edge Cases**
-    - Run `detect:export-suspects` to export uncertain cases for manual review
-    - Expert reviewers can verify ambiguous duplicate classifications
-    - Import results back into the system after manual verification
+12. **Manual Review Workflow**
+    - Run `detect:export-suspects --output data/review_cases.csv` to export REVIEW_SUSPECT cases
+    - Review the CSV file containing:
+      - Complete product details (titles, prices, costs, images, URLs)
+      - Similarity metrics (pHash difference, CLIP similarity)
+      - Master product information for comparison
+    - Make decisions by filling the review_decision column:
+      - `DUPLICATE`: Products are the same (will be merged)
+      - `UNIQUE`: Products are different (will remain separate)
+      - `UNCERTAIN`: Need further review (will stay as REVIEW_SUSPECT)
+    - Add explanatory notes in the notes column
+    - Test first with `detect:import-reviewed --input data/review_cases.csv --dry-run`
+    - Import decisions with `detect:import-reviewed --input data/review_cases.csv`
+    - System automatically handles master reassignment if cheaper products should become masters
 
 ### Phase 5: Monitoring and Analysis
 
@@ -603,6 +614,104 @@ python compare_product_images.py 1005009917334390 1005009919988717 --show-all 5 
 - Statistics breakdown (exact matches, similar, different)
 - Top N comparisons with detailed image information
 
+#### 3.5.6 Export/Import Review Workflow Test
+
+**Step 1: Export Review Suspects**
+
+```bash
+# Export REVIEW_SUSPECT cases for manual review
+python main.py detect:export-suspects --output data/test_review.csv
+```
+
+**What Happens:**
+- Creates CSV file with all REVIEW_SUSPECT products
+- Includes complete product details, similarity metrics, and URLs
+- Creates empty review_decision and notes columns
+
+**Expected CSV Columns:**
+```
+suspect_product_id,suspect_title,suspect_price,suspect_cost,suspect_image,suspect_product_url,
+master_product_id,master_title,master_price,master_image,master_product_url,
+phash_difference,clip_similarity,review_decision,notes
+```
+
+**Step 2: Manual Review Simulation**
+
+```bash
+# Create a test reviewed file
+cp data/test_review.csv data/test_reviewed.csv
+# Edit the CSV to add review decisions:
+# - Set review_decision to "DUPLICATE", "UNIQUE", or "UNCERTAIN"
+# - Add explanatory notes
+```
+
+**Step 3: Dry Run Import Test**
+
+```bash
+# Test the import without making changes
+python main.py detect:import-reviewed --input data/test_reviewed.csv --dry-run
+```
+
+**Expected Dry Run Output:**
+```
+🔄 Would update 1005009123456: REVIEW_SUSPECT -> DUPLICATE
+   Master ID: 1005009789012 -> 1005009789012
+🔄 Would also reassign master: 1005009789012 -> 1005009123456
+   📊 Would affect 3 products
+
+📊 Summary:
+   Updated: 0
+   Skipped: 0
+   Total processed: 2
+```
+
+**Step 4: Actual Import Test**
+
+```bash
+# Apply the review decisions
+python main.py detect:import-reviewed --input data/test_reviewed.csv
+```
+
+**Expected Results:**
+- Products marked as DUPLICATE are updated in database
+- Products marked as UNIQUE are updated in database
+- Products marked as UNCERTAIN remain as REVIEW_SUSPECT
+- Master reassignment occurs automatically when cheaper products become masters
+
+**Verification Queries:**
+
+```sql
+-- Check updated statuses
+SELECT product_id, status, duplicate_master_id 
+FROM product_status 
+WHERE product_id IN ('1005009123456', '1005009789012');
+
+-- Verify master reassignment worked
+SELECT ps.product_id, ps.status, ps.duplicate_master_id, fp.target_sale_price
+FROM product_status ps
+LEFT JOIN filtered_products fp ON ps.product_id = fp.product_id
+WHERE ps.duplicate_master_id IN (
+    SELECT product_id FROM product_status WHERE status = 'MASTER'
+)
+ORDER BY ps.duplicate_master_id, fp.target_sale_price;
+```
+
+**Step 5: Master Reassignment Test**
+
+To specifically test master reassignment:
+
+1. Create a test scenario where a cheaper REVIEW_SUSPECT should become master:
+
+```sql
+-- Temporarily lower the price of a review suspect
+UPDATE filtered_products 
+SET target_sale_price = 50.00 
+WHERE product_id = '1005009123456';
+```
+
+2. Mark it as DUPLICATE in the CSV and import
+3. Verify that it becomes the new master and all other duplicates point to it
+
 ### 3.6 Advanced Testing
 
 #### 3.6.1 End-to-End Workflow Test
@@ -889,6 +998,59 @@ with get_db_session() as db:
 1. **File Format Issues:** Ensure CSV uses proper encoding (UTF-8) and commas as delimiters
 2. **Missing Columns:** Verify the CSV has required columns: `shop_id`, `approval_status`, `note`
 3. **File Path Issues:** Ensure the file is saved as `data/reviewed_merchants.csv`
+
+#### 4.4.3 Duplicate Detection Export Issues
+
+**Problem:** `detect:export-suspects` creates empty CSV or fails
+
+**Possible Causes & Solutions:**
+
+1. **No REVIEW_SUSPECT products:** Check if duplicate detection found any ambiguous cases:
+   ```bash
+   python main.py detect:status
+   ```
+
+2. **Missing master products:** REVIEW_SUSPECT products need valid master assignments:
+   ```sql
+   SELECT product_id, status, duplicate_master_id 
+   FROM product_status 
+   WHERE status = 'REVIEW_SUSPECT' AND duplicate_master_id IS NULL;
+   ```
+
+3. **Directory creation issues:** Ensure the output directory exists or can be created
+
+#### 4.4.4 Import Review Results Issues
+
+**Problem:** `detect:import-reviewed` fails or produces unexpected results
+
+**Common Issues & Solutions:**
+
+1. **CSV Format Problems:**
+   - Ensure CSV has correct column headers (especially `suspect_product_id`, `review_decision`)
+   - Check for proper UTF-8 encoding
+   - Verify no extra commas or quotes in product titles
+
+2. **Invalid Review Decisions:**
+   - Only use: `DUPLICATE`, `UNIQUE`, `UNCERTAIN` (case-insensitive)
+   - Empty review_decision cells are ignored
+
+3. **Product Not Found Errors:**
+   - Verify product IDs in CSV match those in database
+   - Check if products were re-processed and IDs changed
+
+4. **Master Reassignment Issues:**
+   - If unexpected master changes occur, check product prices:
+   ```sql
+   SELECT product_id, target_sale_price 
+   FROM filtered_products 
+   WHERE product_id IN ('suspect_id', 'master_id');
+   ```
+
+**Debug with Dry Run:**
+```bash
+# Always test first with dry-run
+python main.py detect:import-reviewed --input your_file.csv --dry-run
+```
 
 ### 4.5 General Debugging Tips
 

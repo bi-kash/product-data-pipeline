@@ -6,6 +6,40 @@ This document provides a complete reference for all database tables and their re
 
 The database uses SQLAlchemy ORM with support for both SQLite (testing) and PostgreSQL (production). All tables use UTC timestamps and include proper foreign key relationships.
 
+## Session Management
+
+Session management is required before any harvest operations can begin, as the pipeline uses the official AliExpress Dropship API which requires authenticated sessions.
+
+### session_codes
+
+Stores AliExpress Dropship API session credentials.
+
+| Field                      | Type                    | Constraints                 | Description                     |
+| -------------------------- | ----------------------- | --------------------------- | ------------------------------- |
+| `id`                       | Integer                 | PRIMARY KEY, AUTO_INCREMENT | Unique identifier               |
+| `code`                     | String(255)             | UNIQUE, NOT NULL, INDEXED   | Authorization code              |
+| `access_token`             | Text                    | NOT NULL                    | Current access token            |
+| `refresh_token`            | Text                    | NOT NULL                    | Refresh token                   |
+| `expire_time`              | String(50)              | NOT NULL                    | Access token expiration (ms)    |
+| `refresh_token_valid_time` | String(50)              | NOT NULL                    | Refresh token expiration        |
+| `expires_in`               | String(10)              | NOT NULL                    | Token lifetime (seconds)        |
+| `refresh_expires_in`       | String(10)              | NOT NULL                    | Refresh lifetime (seconds)      |
+| `havana_id`                | String(50)              | NULL                        | Havana ID from AliExpress       |
+| `locale`                   | String(10)              | NULL                        | User locale                     |
+| `user_nick`                | String(255)             | NULL                        | AliExpress username             |
+| `account_id`               | String(50)              | NULL                        | Account identifier              |
+| `user_id`                  | String(50)              | NULL                        | User identifier                 |
+| `account_platform`         | String(50)              | NULL                        | Account platform                |
+| `sp`                       | String(10)              | NULL                        | SP parameter                    |
+| `request_id`               | String(255)             | NULL                        | API request identifier          |
+| `seller_id`                | String(50)              | NULL                        | Seller identifier               |
+| `account`                  | String(255)             | NULL                        | Account information             |
+| `token_type`               | String(20)              | DEFAULT 'original'          | Token type: original, refreshed |
+| `is_active`                | Boolean                 | DEFAULT TRUE                | Session status                  |
+| `response_json`            | JSON                    | NULL                        | Full API response               |
+| `created_at`               | DateTime(timezone=True) | DEFAULT now()               | Session creation time           |
+| `updated_at`               | DateTime(timezone=True) | DEFAULT now(), AUTO_UPDATE  | Last update time                |
+
 ## Core Tables
 
 ### sellers
@@ -140,38 +174,6 @@ Stores categorized product images with analysis data.
 - Many-to-one with `filtered_products`
 - Related to `shipping_info` via `sku_id`
 
-## Session Management
-
-### session_codes
-
-Stores AliExpress API session credentials.
-
-| Field                      | Type                    | Constraints                 | Description                     |
-| -------------------------- | ----------------------- | --------------------------- | ------------------------------- |
-| `id`                       | Integer                 | PRIMARY KEY, AUTO_INCREMENT | Unique identifier               |
-| `code`                     | String(255)             | UNIQUE, NOT NULL, INDEXED   | Authorization code              |
-| `access_token`             | Text                    | NOT NULL                    | Current access token            |
-| `refresh_token`            | Text                    | NOT NULL                    | Refresh token                   |
-| `expire_time`              | String(50)              | NOT NULL                    | Access token expiration (ms)    |
-| `refresh_token_valid_time` | String(50)              | NOT NULL                    | Refresh token expiration        |
-| `expires_in`               | String(10)              | NOT NULL                    | Token lifetime (seconds)        |
-| `refresh_expires_in`       | String(10)              | NOT NULL                    | Refresh lifetime (seconds)      |
-| `havana_id`                | String(50)              | NULL                        | Havana ID from AliExpress       |
-| `locale`                   | String(10)              | NULL                        | User locale                     |
-| `user_nick`                | String(255)             | NULL                        | AliExpress username             |
-| `account_id`               | String(50)              | NULL                        | Account identifier              |
-| `user_id`                  | String(50)              | NULL                        | User identifier                 |
-| `account_platform`         | String(50)              | NULL                        | Account platform                |
-| `sp`                       | String(10)              | NULL                        | SP parameter                    |
-| `request_id`               | String(255)             | NULL                        | API request identifier          |
-| `seller_id`                | String(50)              | NULL                        | Seller identifier               |
-| `account`                  | String(255)             | NULL                        | Account information             |
-| `token_type`               | String(20)              | DEFAULT 'original'          | Token type: original, refreshed |
-| `is_active`                | Boolean                 | DEFAULT TRUE                | Session status                  |
-| `response_json`            | JSON                    | NULL                        | Full API response               |
-| `created_at`               | DateTime(timezone=True) | DEFAULT now()               | Session creation time           |
-| `updated_at`               | DateTime(timezone=True) | DEFAULT now(), AUTO_UPDATE  | Last update time                |
-
 ## Module C: Duplicate Detection
 
 ### product_status
@@ -254,10 +256,10 @@ CREATE INDEX idx_job_runs_job_type ON job_runs(job_type);
 
 ## Data Flow
 
-1. **Harvest Phase**: `sellers` → `products` → `job_runs`
-2. **Filtering Phase**: `products` → `filtered_products` → `shipping_info` + `product_images`
-3. **Duplicate Detection**: `filtered_products` + `product_images` → `product_status`
-4. **Session Management**: `session_codes` (independent, used throughout)
+1. **Session Setup**: `session_codes` (required first for API authentication)
+2. **Harvest Phase**: `sellers` → `products` → `job_runs` (uses `session_codes`)
+3. **Filtering Phase**: `products` → `filtered_products` → `shipping_info` + `product_images` (uses `session_codes`)
+4. **Duplicate Detection**: `filtered_products` + `product_images` → `product_status`
 
 ## Configuration
 
@@ -266,3 +268,132 @@ CREATE INDEX idx_job_runs_job_type ON job_runs(job_type);
 - **Timezone**: All timestamps stored in UTC
 - **JSON Fields**: Native JSON support in both databases
 - **Character Encoding**: UTF-8 for all text fields
+
+## Useful SQL Queries
+
+### Session Management Queries
+
+```sql
+-- Check active sessions
+SELECT code, user_nick, created_at, is_active
+FROM session_codes
+WHERE is_active = true
+ORDER BY created_at DESC;
+
+-- Session expiration status
+SELECT code, user_nick,
+       CASE
+           WHEN CAST(expire_time AS BIGINT) > EXTRACT(EPOCH FROM NOW()) * 1000
+           THEN 'Valid'
+           ELSE 'Expired'
+       END as token_status
+FROM session_codes
+WHERE is_active = true;
+```
+
+### Harvest Analysis Queries
+
+```sql
+-- Seller approval status distribution
+SELECT approval_status, COUNT(*) as count
+FROM sellers
+GROUP BY approval_status
+ORDER BY count DESC;
+
+-- Recent harvest activity (last 24 hours)
+SELECT COUNT(*) as new_sellers
+FROM sellers
+WHERE first_seen_at >= NOW() - INTERVAL '24 hours';
+
+-- Product distribution by category
+SELECT category_id, COUNT(*) as product_count
+FROM products
+WHERE category_id IS NOT NULL
+GROUP BY category_id
+ORDER BY product_count DESC
+LIMIT 10;
+```
+
+### Product Processing Queries
+
+```sql
+-- Filtered products summary
+SELECT COUNT(*) as total_filtered,
+       AVG(target_sale_price) as avg_price,
+       AVG(min_delivery_days) as avg_min_delivery,
+       AVG(max_delivery_days) as avg_max_delivery
+FROM filtered_products;
+
+-- Image processing status
+SELECT download_status, COUNT(*) as count
+FROM product_images
+GROUP BY download_status;
+
+-- Products with shipping information
+SELECT fp.product_id, fp.product_title,
+       COUNT(si.id) as shipping_options,
+       MIN(si.shipping_fee) as min_shipping_cost,
+       MIN(si.min_delivery_days) as fastest_delivery
+FROM filtered_products fp
+LEFT JOIN shipping_info si ON fp.product_id = si.product_id
+GROUP BY fp.product_id, fp.product_title
+HAVING COUNT(si.id) > 0
+ORDER BY min_shipping_cost;
+```
+
+### Duplicate Detection Queries
+
+```sql
+-- Duplicate detection status summary
+SELECT status, COUNT(*) as count
+FROM product_status
+GROUP BY status
+ORDER BY count DESC;
+
+-- Master products with their duplicate counts
+SELECT ps_master.product_id as master_id,
+       fp.product_title,
+       ps_master.total_landed_cost,
+       COUNT(ps_duplicates.id) as duplicate_count
+FROM product_status ps_master
+JOIN filtered_products fp ON ps_master.product_id = fp.product_id
+LEFT JOIN product_status ps_duplicates ON ps_master.product_id = ps_duplicates.duplicate_master_id
+WHERE ps_master.status = 'MASTER'
+GROUP BY ps_master.product_id, fp.product_title, ps_master.total_landed_cost
+ORDER BY duplicate_count DESC;
+
+-- Detection method effectiveness
+SELECT detection_method,
+       COUNT(*) as total_detections,
+       AVG(phash_difference) as avg_phash_diff,
+       AVG(clip_similarity) as avg_clip_similarity
+FROM product_status
+WHERE detection_method IS NOT NULL
+GROUP BY detection_method;
+```
+
+### Job Performance Queries
+
+```sql
+-- Recent job execution summary
+SELECT job_type,
+       COUNT(*) as runs,
+       AVG(duration_seconds) as avg_duration,
+       SUM(found_count) as total_found,
+       SUM(new_count) as total_new,
+       MAX(start_time) as last_run
+FROM job_runs
+WHERE start_time >= NOW() - INTERVAL '7 days'
+GROUP BY job_type
+ORDER BY last_run DESC;
+
+-- Error analysis
+SELECT job_type,
+       SUM(error_count) as total_errors,
+       AVG(error_count::float / NULLIF(found_count, 0)) as error_rate
+FROM job_runs
+WHERE start_time >= NOW() - INTERVAL '30 days'
+GROUP BY job_type
+HAVING SUM(error_count) > 0
+ORDER BY total_errors DESC;
+```

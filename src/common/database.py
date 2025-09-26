@@ -372,7 +372,6 @@ class ProductStatus(Base):
     total_landed_cost = Column(Float, nullable=True)  # item_price_eur + shipping_cost_eur
     
     # Detection metadata
-    detection_method = Column(String(50), nullable=True)  # 'PHASH', 'CLIP', 'MANUAL'
     phash_difference = Column(Integer, nullable=True)  # pHash difference value (lower = more similar)
     clip_similarity = Column(Float, nullable=True)  # CLIP similarity score (higher = more similar)
     

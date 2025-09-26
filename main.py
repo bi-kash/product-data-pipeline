@@ -40,11 +40,9 @@ def harvest_status():
     original_harvest_status()
 
 
-def filter_products(max_price_eur=None, max_delivery_days=None, limit=None, dry_run=False):
+def filter_products(limit=None, dry_run=False):
     """Filter products from whitelisted sellers based on business rules."""
     run_product_filtering(
-        max_price_eur=max_price_eur,
-        max_delivery_days=max_delivery_days,
         limit=limit,
         dry_run=dry_run
     )
@@ -135,28 +133,243 @@ def detect_status():
         sys.exit(1)
 
 
+def import_reviewed_suspects(input_file, dry_run=False):
+    """Import reviewed suspect duplicates and update database."""
+    logger.info(f"Importing reviewed suspects from {input_file} (dry_run: {dry_run})")
+    
+    try:
+        import csv
+        from src.common.database import ProductStatus
+        
+        if not os.path.exists(input_file):
+            print(f"❌ File not found: {input_file}")
+            return
+        
+        # Read CSV file
+        updates = []
+        with open(input_file, 'r', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            
+            for row in reader:
+                product_id = row.get('suspect_product_id', '').strip()
+                decision = row.get('review_decision', '').strip().upper()
+                notes = row.get('notes', '').strip()
+                
+                if not product_id:
+                    continue
+                    
+                if decision in ['DUPLICATE', 'UNIQUE', 'UNCERTAIN']:
+                    updates.append({
+                        'product_id': product_id,
+                        'decision': decision,
+                        'notes': notes,
+                        'master_id': row.get('master_product_id', '').strip()
+                    })
+        
+        if not updates:
+            print("📝 No valid review decisions found in CSV")
+            return
+        
+        # Process updates
+        with get_db_session() as db:
+            updated_count = 0
+            skipped_count = 0
+            
+            for update in updates:
+                product_id = update['product_id']
+                decision = update['decision']
+                master_id = update['master_id']
+                
+                # Find the product in database
+                product_status = db.query(ProductStatus).filter(
+                    ProductStatus.product_id == product_id
+                ).first()
+                
+                if not product_status:
+                    print(f"⚠️  Product {product_id} not found in database")
+                    skipped_count += 1
+                    continue
+                
+                if product_status.status != 'REVIEW_SUSPECT':
+                    print(f"⚠️  Product {product_id} is not REVIEW_SUSPECT (current: {product_status.status})")
+                    skipped_count += 1
+                    continue
+                
+                # Determine new status based on decision
+                if decision == 'DUPLICATE':
+                    new_status = 'DUPLICATE'
+                    new_master_id = master_id if master_id else product_status.duplicate_master_id
+                elif decision == 'UNIQUE':
+                    new_status = 'UNIQUE'
+                    new_master_id = None
+                elif decision == 'UNCERTAIN':
+                    # Keep as REVIEW_SUSPECT but could add a flag or note
+                    print(f"ℹ️  Product {product_id} marked as UNCERTAIN, keeping as REVIEW_SUSPECT")
+                    skipped_count += 1
+                    continue
+                else:
+                    print(f"⚠️  Invalid decision '{decision}' for product {product_id}")
+                    skipped_count += 1
+                    continue
+                
+                if dry_run:
+                    print(f"🔄 Would update {product_id}: {product_status.status} -> {new_status}")
+                    if new_master_id:
+                        print(f"   Master ID: {product_status.duplicate_master_id} -> {new_master_id}")
+                    
+                    # Check if master reassignment would be needed
+                    if decision == 'DUPLICATE' and product_status.duplicate_master_id:
+                        from src.duplicate_detection.master_selector import MasterSelector
+                        selector = MasterSelector()
+                        reassign_result = selector.reassign_master_if_better(
+                            db, product_id, product_status.duplicate_master_id
+                        )
+                        if reassign_result['reassignment_needed']:
+                            print(f"   🔄 Would also reassign master: {reassign_result['old_master_id']} -> {reassign_result['new_master_id']}")
+                            print(f"   📊 Would affect {reassign_result['group_size']} products")
+                        else:
+                            print(f"   ℹ️  No master reassignment needed")
+                else:
+                    # Handle master reassignment for DUPLICATE decision
+                    if decision == 'DUPLICATE' and product_status.duplicate_master_id:
+                        from src.duplicate_detection.master_selector import MasterSelector
+                        selector = MasterSelector()
+                        reassign_result = selector.reassign_master_if_better(
+                            db, product_id, product_status.duplicate_master_id
+                        )
+                        
+                        if reassign_result['reassignment_needed']:
+                            print(f"🔄 Master reassigned: {reassign_result['old_master_id']} -> {reassign_result['new_master_id']}")
+                            print(f"📊 Updated {reassign_result['updated_count']} products in group")
+                            updated_count += reassign_result['updated_count']
+                        else:
+                            # No reassignment needed, just update this product
+                            product_status.status = new_status
+                            product_status.duplicate_master_id = new_master_id
+                            updated_count += 1
+                            print(f"✅ Updated {product_id}: REVIEW_SUSPECT -> {new_status}")
+                    else:
+                        # Simple status update (UNIQUE or no reassignment needed)
+                        product_status.status = new_status
+                        product_status.duplicate_master_id = new_master_id
+                        updated_count += 1
+                        print(f"✅ Updated {product_id}: REVIEW_SUSPECT -> {new_status}")
+            
+            if not dry_run and updated_count > 0:
+                db.commit()
+                print(f"💾 Committed {updated_count} updates to database")
+            
+            print(f"\n📊 Summary:")
+            print(f"   Updated: {updated_count}")
+            print(f"   Skipped: {skipped_count}")
+            print(f"   Total processed: {len(updates)}")
+            
+    except Exception as e:
+        logger.error(f"Error importing reviewed suspects: {e}")
+        print(f"❌ Error: {e}")
+        sys.exit(1)
+
+
 def export_suspect_duplicates(output_file):
-    """Export REVIEW_SUSPECT cases for manual review."""
+    """Export suspect duplicates to CSV for manual review."""
     logger.info(f"Exporting suspect duplicates to {output_file}")
     
     try:
-        from src.common.database import ProductStatus
+        import csv
+        from src.common.database import ProductStatus, FilteredProduct
         
         with get_db_session() as db:
-            suspects = db.query(ProductStatus).filter(
+            # Query suspects with their product details and potential masters
+            suspects_query = db.query(
+                ProductStatus.product_id,
+                ProductStatus.duplicate_master_id,
+                ProductStatus.phash_difference,
+                ProductStatus.clip_similarity,
+                ProductStatus.total_landed_cost,
+                FilteredProduct.product_title,
+                FilteredProduct.target_sale_price,
+                FilteredProduct.product_main_image_url,
+                FilteredProduct.product_detail_url
+            ).join(
+                FilteredProduct, ProductStatus.product_id == FilteredProduct.product_id
+            ).filter(
                 ProductStatus.status == 'REVIEW_SUSPECT'
             ).all()
             
-            if not suspects:
+            if not suspects_query:
                 print("📝 No suspect duplicates found")
                 return
             
-            # Create output directory if it doesn't exist
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            logger.info(f"Found {len(suspects_query)} suspect products")
             
-            # Export to CSV (implementation would go here)
-            print(f"📄 Would export {len(suspects)} suspect cases to {output_file}")
-            print("💡 This feature is ready for implementation when REVIEW_SUSPECT logic is added")
+            # Create output directory if it doesn't exist
+            output_dir = os.path.dirname(output_file)
+            if output_dir:  # Only create directory if there's a directory part
+                os.makedirs(output_dir, exist_ok=True)
+            
+            # Prepare CSV data
+            csv_data = []
+            for suspect in suspects_query:
+                # Get master product details if available
+                master_title = ""
+                master_price = ""
+                master_image = ""
+                master_url = ""
+                
+                if suspect.duplicate_master_id:
+                    master_query = db.query(
+                        FilteredProduct.product_title,
+                        FilteredProduct.target_sale_price,
+                        FilteredProduct.product_main_image_url,
+                        FilteredProduct.product_detail_url
+                    ).filter(
+                        FilteredProduct.product_id == suspect.duplicate_master_id
+                    ).first()
+                    
+                    if master_query:
+                        master_title = master_query.product_title or ""
+                        master_price = master_query.target_sale_price or ""
+                        master_image = master_query.product_main_image_url or ""
+                        master_url = master_query.product_detail_url or ""
+
+                
+                csv_data.append({
+                    'suspect_product_id': suspect.product_id,
+                    'suspect_title': suspect.product_title or "",
+                    'suspect_price': suspect.target_sale_price or "",
+                    'suspect_cost': suspect.total_landed_cost or "",
+                    'suspect_image': suspect.product_main_image_url or "",
+                    'suspect_product_url': suspect.product_detail_url or "",
+                    'master_product_id': suspect.duplicate_master_id or "",
+                    'master_title': master_title,
+                    'master_price': master_price,
+                    'master_image': master_image,
+                    'master_product_url': master_url,
+                    'phash_difference': suspect.phash_difference or "",
+                    'clip_similarity': f"{suspect.clip_similarity:.4f}" if suspect.clip_similarity else "",
+                    'review_decision': "",  # Empty column for manual input
+                    'notes': ""  # Empty column for manual input
+                })
+            
+            # Write to CSV
+            with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = [
+                    'suspect_product_id', 'suspect_title', 'suspect_price', 'suspect_cost', 'suspect_image', 'suspect_product_url',
+                    'master_product_id', 'master_title', 'master_price', 'master_image', 'master_product_url',
+                    'phash_difference', 'clip_similarity', 'review_decision', 'notes'
+                ]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                
+                writer.writeheader()
+                writer.writerows(csv_data)
+            
+            print(f"✅ Exported {len(csv_data)} suspect cases to {output_file}")
+            print(f"� Review workflow:")
+            print(f"   1. Open {output_file} in Excel or similar")
+            print(f"   2. Compare suspect vs master products")
+            print(f"   3. Fill 'review_decision' column with: DUPLICATE, UNIQUE, or UNCERTAIN")
+            print(f"   4. Add notes in 'notes' column if needed")
+            print(f"   5. Use the reviewed data to update product status")
             
     except Exception as e:
         logger.error(f"Error exporting suspect duplicates: {e}")
@@ -198,12 +411,6 @@ def main():
     # Filter commands
     filter_parser = subparsers.add_parser(
         "filter:products", help="Filter products from whitelisted sellers based on business rules"
-    )
-    filter_parser.add_argument(
-        "--max-price", type=float, help="Maximum total price in EUR (variant + shipping)"
-    )
-    filter_parser.add_argument(
-        "--max-delivery", type=int, help="Maximum delivery time in days"
     )
     filter_parser.add_argument(
         "--limit", type=int, help="Limit the number of products to process"
@@ -301,6 +508,21 @@ def main():
         help="Output CSV file path"
     )
 
+    detect_import_parser = subparsers.add_parser(
+        "detect:import-reviewed", help="Import reviewed suspect duplicates and update database"
+    )
+    detect_import_parser.add_argument(
+        "--input",
+        type=str,
+        default="data/suspect_duplicates.csv",
+        help="Input CSV file path with review decisions"
+    )
+    detect_import_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be updated without making changes"
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -313,8 +535,6 @@ def main():
         harvest_status()
     elif args.command == "filter:products":
         filter_products(
-            max_price_eur=args.max_price,
-            max_delivery_days=args.max_delivery,
             limit=args.limit,
             dry_run=args.dry_run
         )
@@ -404,6 +624,8 @@ def main():
         detect_status()
     elif args.command == "detect:export-suspects":
         export_suspect_duplicates(output_file=args.output)
+    elif args.command == "detect:import-reviewed":
+        import_reviewed_suspects(input_file=args.input, dry_run=args.dry_run)
     else:
         parser.print_help()
 

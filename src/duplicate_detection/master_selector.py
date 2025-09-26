@@ -301,7 +301,6 @@ class MasterSelector:
                 'status': 'MASTER',
                 'duplicate_master_id': None,  # Masters don't point to anyone
                 'total_landed_cost': result.get('master_price'),
-                'detection_method': 'PRICE_SELECTION',
                 'phash_difference': None,  # Masters don't have pHash difference
                 'clip_similarity': None,  # Masters don't have CLIP similarity
             })
@@ -340,7 +339,6 @@ class MasterSelector:
                     'status': 'DUPLICATE',
                     'duplicate_master_id': master_id,
                     'total_landed_cost': result['product_prices'].get(duplicate_id),
-                    'detection_method': 'PRICE_SELECTION',
                     'phash_difference': best_phash_difference,
                     'clip_similarity': best_clip_similarity,
                 })
@@ -348,9 +346,128 @@ class MasterSelector:
         logger.info(f"Generated {len(status_assignments)} status assignments")
         return status_assignments
 
+    def reassign_master_if_better(self, db: Session, new_candidate_id: str, current_master_id: str) -> Dict:
+        """
+        Check if a product should become the new master of its duplicate group.
+        If so, reassign the entire group to point to the new master.
+        
+        Args:
+            db: Database session
+            new_candidate_id: Product ID that might become the new master
+            current_master_id: Current master product ID
+            
+        Returns:
+            Dict with reassignment results
+        """
+        logger.info(f"Checking if {new_candidate_id} should replace master {current_master_id}")
+        
+        # Get all products that currently point to the current master
+        from src.common.database import ProductStatus
+        
+        current_group_products = db.query(ProductStatus.product_id).filter(
+            ProductStatus.duplicate_master_id == current_master_id
+        ).all()
+        
+        # Add the current master to the group
+        full_group = {current_master_id, new_candidate_id}
+        full_group.update([p.product_id for p in current_group_products])
+        
+        logger.info(f"Full duplicate group: {full_group} (size: {len(full_group)})")
+        
+        # Run master selection on the full group
+        selection_result = self.select_master_from_group(db, full_group)
+        new_master_id = selection_result['master_id']
+        
+        result = {
+            'reassignment_needed': new_master_id != current_master_id,
+            'old_master_id': current_master_id,
+            'new_master_id': new_master_id,
+            'group_size': len(full_group),
+            'selection_method': selection_result['selection_method'],
+            'affected_products': list(full_group),
+            'selection_details': selection_result
+        }
+        
+        if result['reassignment_needed']:
+            logger.info(f"Master reassignment needed: {current_master_id} -> {new_master_id}")
+            
+            # Perform the reassignment
+            updated_count = self._update_group_master_assignments(
+                db, full_group, current_master_id, new_master_id
+            )
+            result['updated_count'] = updated_count
+            
+        else:
+            logger.info(f"No reassignment needed, {current_master_id} remains master")
+            result['updated_count'] = 0
+        
+        return result
+    
+    def _update_group_master_assignments(self, db: Session, product_group: Set[str], 
+                                       old_master_id: str, new_master_id: str) -> int:
+        """
+        Update all products in a group to point to a new master.
+        
+        Args:
+            db: Database session  
+            product_group: Set of all product IDs in the group
+            old_master_id: Previous master ID
+            new_master_id: New master ID
+            
+        Returns:
+            Number of products updated
+        """
+        from src.common.database import ProductStatus
+        
+        updated_count = 0
+        
+        # Update or create status for new master
+        new_master_status = db.query(ProductStatus).filter(
+            ProductStatus.product_id == new_master_id
+        ).first()
+        
+        if new_master_status:
+            new_master_status.status = 'MASTER'
+            new_master_status.duplicate_master_id = None
+        else:
+            new_master_status = ProductStatus(
+                product_id=new_master_id,
+                status='MASTER',
+                duplicate_master_id=None
+            )
+            db.add(new_master_status)
+        updated_count += 1
+        
+        # Update old master to become duplicate
+        old_master_status = db.query(ProductStatus).filter(
+            ProductStatus.product_id == old_master_id
+        ).first()
+        
+        if old_master_status:
+            old_master_status.status = 'DUPLICATE'
+            old_master_status.duplicate_master_id = new_master_id
+            updated_count += 1
+        
+        # Update all other products to point to new master
+        for product_id in product_group:
+            if product_id in {new_master_id, old_master_id}:
+                continue
+                
+            product_status = db.query(ProductStatus).filter(
+                ProductStatus.product_id == product_id
+            ).first()
+            
+            if product_status:
+                product_status.status = 'DUPLICATE' 
+                product_status.duplicate_master_id = new_master_id
+                updated_count += 1
+        
+        logger.info(f"Updated {updated_count} products to point to new master {new_master_id}")
+        return updated_count
+
 
 def main():
-    """Test function for the master selector."""
+    """Test the master selector with command line arguments."""
     import sys
     
     # Configure logging

@@ -23,7 +23,9 @@ def export_pending_merchants(output_file="data/pending_merchants.csv"):
     pending_sellers = get_pending_sellers()
 
     # Create directories if they don't exist
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    output_dir = os.path.dirname(output_file)
+    if output_dir:  # Only create directory if there's actually a directory path
+        os.makedirs(output_dir, exist_ok=True)
 
     # Export to CSV
     with open(output_file, "w", newline="", encoding="utf-8") as f:
