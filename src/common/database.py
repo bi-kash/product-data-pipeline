@@ -209,6 +209,10 @@ class FilteredProduct(Base):
     max_variant_price = Column(Float, nullable=True)  # Highest variant price found
     min_shipping_price = Column(Float, nullable=True)  # Cheapest shipping price among all SKU variants
     
+    # Product status tracking
+    is_active = Column(Boolean, nullable=False, default=True)  # Whether product is currently active
+    replaced_product_id = Column(String(255), nullable=True)  # ID of product that replaced this one (for duplicates)
+    
     # Timestamps for filtering
     filtered_at = Column(DateTime(timezone=True), default=func.now())
     
@@ -217,7 +221,7 @@ class FilteredProduct(Base):
     seller = relationship("Seller", backref="filtered_products")
 
     def __repr__(self):
-        return f"<FilteredProduct(product_id='{self.product_id}', delivery_time={self.delivery_time}, min_days={self.min_delivery_days}, max_days={self.max_delivery_days}, max_variant_price={self.max_variant_price})>"
+        return f"<FilteredProduct(product_id='{self.product_id}', is_active={self.is_active}, replaced_product_id={self.replaced_product_id}, delivery_time={self.delivery_time})>"
 
 
 class ShippingInfo(Base):
