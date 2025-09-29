@@ -91,6 +91,16 @@ class OfficialAliExpressClient:
         token_result = get_latest_valid_tokens()
         
         if not token_result['success']:
+            # If circuit breaker is active or tokens are expired, provide helpful error
+            if token_result.get('circuit_breaker_active') or token_result.get('refresh_failed') or token_result.get('token_expired'):
+                logger.error("🔑 Token refresh failed - action required")
+                logger.error("=" * 60)
+                logger.error(token_result['message'])
+                logger.error("=" * 60)
+                
+                # Stop further processing to prevent repeated error messages
+                raise SystemExit(1)
+            
             raise Exception(f"Failed to get valid token: {token_result['message']}")
             
         if token_result['refreshed']:

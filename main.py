@@ -151,8 +151,9 @@ def import_reviewed_suspects(input_file, dry_run=False):
             reader = csv.DictReader(csvfile)
             
             for row in reader:
-                product_id = row.get('suspect_product_id', '').strip()
-                decision = row.get('review_decision', '').strip().upper()
+                # Support both old and new column formats
+                product_id = (row.get('duplicate_product_id', '') or row.get('suspect_product_id', '')).strip()
+                decision = (row.get('status', '') or row.get('review_decision', '')).strip().upper()
                 notes = row.get('notes', '').strip()
                 
                 if not product_id:
@@ -276,7 +277,7 @@ def export_suspect_duplicates(output_file):
     
     try:
         import csv
-        from src.common.database import ProductStatus, FilteredProduct
+        from src.common.database import ProductStatus, FilteredProduct, ProductImage
         
         with get_db_session() as db:
             # Query suspects with their product details and potential masters
@@ -287,9 +288,7 @@ def export_suspect_duplicates(output_file):
                 ProductStatus.clip_similarity,
                 ProductStatus.total_landed_cost,
                 FilteredProduct.product_title,
-                FilteredProduct.target_sale_price,
-                FilteredProduct.product_main_image_url,
-                FilteredProduct.product_detail_url
+                FilteredProduct.target_sale_price
             ).join(
                 FilteredProduct, ProductStatus.product_id == FilteredProduct.product_id
             ).filter(
@@ -313,15 +312,11 @@ def export_suspect_duplicates(output_file):
                 # Get master product details if available
                 master_title = ""
                 master_price = ""
-                master_image = ""
-                master_url = ""
                 
                 if suspect.duplicate_master_id:
                     master_query = db.query(
                         FilteredProduct.product_title,
-                        FilteredProduct.target_sale_price,
-                        FilteredProduct.product_main_image_url,
-                        FilteredProduct.product_detail_url
+                        FilteredProduct.target_sale_price
                     ).filter(
                         FilteredProduct.product_id == suspect.duplicate_master_id
                     ).first()
@@ -329,34 +324,89 @@ def export_suspect_duplicates(output_file):
                     if master_query:
                         master_title = master_query.product_title or ""
                         master_price = master_query.target_sale_price or ""
-                        master_image = master_query.product_main_image_url or ""
-                        master_url = master_query.product_detail_url or ""
 
                 
+                
+                # Get S3 image URLs for duplicate product
+                duplicate_images = db.query(ProductImage).filter(
+                    ProductImage.product_id == suspect.product_id,
+                    ProductImage.s3_url.isnot(None)
+                ).order_by(ProductImage.sort_index).all()
+                
+                # Get S3 image URLs for master product
+                master_images = []
+                if suspect.duplicate_master_id:
+                    master_images = db.query(ProductImage).filter(
+                        ProductImage.product_id == suspect.duplicate_master_id,
+                        ProductImage.s3_url.isnot(None)
+                    ).order_by(ProductImage.sort_index).all()
+                
+                # Find main images (hero or primary)
+                duplicate_main_image = ""
+                master_main_image = ""
+                
+                # Get main image for duplicate (prefer is_primary=True, then hero role, then first image)
+                for img in duplicate_images:
+                    if img.is_primary or img.image_role == 'hero':
+                        duplicate_main_image = img.s3_url
+                        break
+                if not duplicate_main_image and duplicate_images:
+                    duplicate_main_image = duplicate_images[0].s3_url
+                
+                # Get main image for master
+                for img in master_images:
+                    if img.is_primary or img.image_role == 'hero':
+                        master_main_image = img.s3_url
+                        break
+                if not master_main_image and master_images:
+                    master_main_image = master_images[0].s3_url
+                
+                # Find the closest matching images (highest CLIP similarity)
+                # For now, we'll use the main images as the closest match since we have CLIP similarity at product level
+                master_image = master_main_image  # This is the closest match from master
+                duplicate_image = duplicate_main_image  # This is the closest match from duplicate
+                
+                # Add CLIP similarity info to indicate this is the closest match
+                if suspect.clip_similarity:
+                    master_image = f"{master_main_image} (CLIP: {suspect.clip_similarity:.4f})" if master_main_image else f"No image (CLIP: {suspect.clip_similarity:.4f})"
+                    duplicate_image = f"{duplicate_main_image} (CLIP: {suspect.clip_similarity:.4f})" if duplicate_main_image else f"No image (CLIP: {suspect.clip_similarity:.4f})"
+                
+                # Get all other images (excluding the main ones)
+                master_other_images = [img.s3_url for img in master_images if img.s3_url != master_main_image]
+                duplicate_other_images = [img.s3_url for img in duplicate_images if img.s3_url != duplicate_main_image]
+                
+                # Format image lists as pipe-separated
+                master_images_list = " | ".join(master_other_images)
+                duplicate_images_list = " | ".join(duplicate_other_images)
+                
                 csv_data.append({
-                    'suspect_product_id': suspect.product_id,
-                    'suspect_title': suspect.product_title or "",
-                    'suspect_price': suspect.target_sale_price or "",
-                    'suspect_cost': suspect.total_landed_cost or "",
-                    'suspect_image': suspect.product_main_image_url or "",
-                    'suspect_product_url': suspect.product_detail_url or "",
                     'master_product_id': suspect.duplicate_master_id or "",
+                    'duplicate_product_id': suspect.product_id,
                     'master_title': master_title,
+                    'duplicate_title': suspect.product_title or "",
                     'master_price': master_price,
+                    'duplicate_price': suspect.target_sale_price or "",
+                    'duplicate_cost': suspect.total_landed_cost or "",
                     'master_image': master_image,
-                    'master_product_url': master_url,
+                    'duplicate_image': duplicate_image,
+                    'master_main_image': master_main_image,
+                    'duplicate_main_image': duplicate_main_image,
+                    'master_images': master_images_list,
+                    'duplicate_images': duplicate_images_list,
                     'phash_difference': suspect.phash_difference or "",
                     'clip_similarity': f"{suspect.clip_similarity:.4f}" if suspect.clip_similarity else "",
-                    'review_decision': "",  # Empty column for manual input
+                    'status': "",  # Empty column for review decisions (DUPLICATE, UNIQUE, UNCERTAIN)
                     'notes': ""  # Empty column for manual input
                 })
             
             # Write to CSV
             with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = [
-                    'suspect_product_id', 'suspect_title', 'suspect_price', 'suspect_cost', 'suspect_image', 'suspect_product_url',
-                    'master_product_id', 'master_title', 'master_price', 'master_image', 'master_product_url',
-                    'phash_difference', 'clip_similarity', 'review_decision', 'notes'
+                    'master_product_id', 'duplicate_product_id', 'master_title', 'duplicate_title',
+                    'master_price', 'duplicate_price', 'duplicate_cost',
+                    'master_image', 'duplicate_image', 'master_main_image', 'duplicate_main_image',
+                    'master_images', 'duplicate_images', 'phash_difference', 'clip_similarity',
+                    'status', 'notes'
                 ]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 
@@ -367,9 +417,9 @@ def export_suspect_duplicates(output_file):
             print(f"� Review workflow:")
             print(f"   1. Open {output_file} in Excel or similar")
             print(f"   2. Compare suspect vs master products")
-            print(f"   3. Fill 'review_decision' column with: DUPLICATE, UNIQUE, or UNCERTAIN")
-            print(f"   4. Add notes in 'notes' column if needed")
-            print(f"   5. Use the reviewed data to update product status")
+            print(f"   3. Fill 'status' column with: DUPLICATE, UNIQUE, or UNCERTAIN")
+            print(f"   4. Add explanatory notes in 'notes' column")
+            print(f"   5. Import decisions with: python main.py detect:import-reviewed --input {output_file}")
             
     except Exception as e:
         logger.error(f"Error exporting suspect duplicates: {e}")

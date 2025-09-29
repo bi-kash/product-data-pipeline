@@ -30,6 +30,11 @@ from src.common.config import get_env
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Circuit breaker for failed refresh attempts
+_refresh_failures = {}
+_max_failures = 3
+_failure_window = 300  # 5 minutes
+
 
 def cleanup_database_connections():
     """
@@ -325,6 +330,9 @@ def create_session(code):
         
         logger.info(f"Created new session for code '{code}' with token '{response.body.get('access_token', '')[:16]}...'")
         
+        # Clear circuit breaker on successful session creation
+        clear_refresh_circuit_breaker()
+        
         return {
             'success': True,
             'message': 'Session created successfully',
@@ -499,9 +507,10 @@ def refresh_with_tokens(access_token, refresh_token, existing_code=None):
             if 'IllegalRefreshToken' in error_msg or 'invalid' in error_msg.lower() or 'expired' in error_msg.lower():
                 return {
                     'success': False,
-                    'message': f"Refresh token is invalid or expired: {error_msg}\n\nGet a new authorization code from:\n{oauth_url}\n\nThen use: python main.py create_session --code YOUR_CODE",
+                    'message': f"Refresh token is invalid or expired.\n\nTo fix this issue:\n1. Get a new authorization code from:\n   {oauth_url}\n2. Create a new session:\n   python main.py create_session --code YOUR_CODE\n\nOriginal error: {error_msg}",
                     'oauth_url': oauth_url,
-                    'suggest_create': True
+                    'suggest_create': True,
+                    'token_expired': True
                 }
             
             return {
@@ -779,6 +788,21 @@ def get_latest_valid_tokens():
     from src.common.database import get_db_session, SessionCode
     import time
     
+    # Check circuit breaker - prevent repeated refresh attempts
+    current_time = time.time()
+    session_key = 'latest_session'
+    
+    if session_key in _refresh_failures:
+        last_failure_time, failure_count = _refresh_failures[session_key]
+        if current_time - last_failure_time < _failure_window and failure_count >= _max_failures:
+            oauth_url = get_oauth_authorization_url()
+            return {
+                'success': False,
+                'message': f'Token refresh has failed {failure_count} times. Your refresh token appears to be expired.\n\nPlease get a new authorization code from:\n{oauth_url}\n\nThen run: python main.py create_session --code YOUR_CODE',
+                'oauth_url': oauth_url,
+                'circuit_breaker_active': True
+            }
+    
     db = get_db_session()
     try:
         # Get the most recently updated active session
@@ -787,10 +811,11 @@ def get_latest_valid_tokens():
         ).order_by(SessionCode.updated_at.desc()).first()
         
         if not session:
+            oauth_url = get_oauth_authorization_url()
             return {
                 'success': False,
-                'message': 'No active sessions found',
-                'token': None
+                'message': f'No active sessions found.\n\nPlease get a new authorization code from:\n{oauth_url}\n\nThen run: python main.py create_session --code YOUR_CODE',
+                'oauth_url': oauth_url
             }
         
         # Check if token is still valid
@@ -800,7 +825,27 @@ def get_latest_valid_tokens():
         # If token expires within 1 hour, refresh it
         if expire_time - current_time_ms < 3600000:  # 1 hour in ms
             logger.info(f"Token expires soon, refreshing...")
-            return refresh_latest_session_token()
+            refresh_result = refresh_latest_session_token()
+            
+            if not refresh_result['success']:
+                # Track failure for circuit breaker
+                _refresh_failures[session_key] = (current_time, _refresh_failures.get(session_key, (0, 0))[1] + 1)
+                
+                # If refresh failed due to expired tokens, provide guidance
+                if 'expired' in refresh_result.get('message', '').lower() or 'invalid' in refresh_result.get('message', '').lower():
+                    oauth_url = get_oauth_authorization_url()
+                    return {
+                        'success': False,
+                        'message': f"Refresh token is expired or invalid.\n\nPlease get a new authorization code from:\n{oauth_url}\n\nThen run: python main.py create_session --code YOUR_CODE",
+                        'oauth_url': oauth_url,
+                        'refresh_failed': True
+                    }
+            else:
+                # Reset failure counter on success
+                if session_key in _refresh_failures:
+                    del _refresh_failures[session_key]
+            
+            return refresh_result
         
         return {
             'success': True,
@@ -811,6 +856,16 @@ def get_latest_valid_tokens():
         
     finally:
         db.close()
+
+
+def clear_refresh_circuit_breaker():
+    """
+    Clear the refresh circuit breaker to allow new refresh attempts.
+    Use this after creating a new session.
+    """
+    global _refresh_failures
+    _refresh_failures.clear()
+    logger.info("Circuit breaker cleared - refresh attempts can resume")
 
 
 def refresh_latest_session_token():
@@ -830,10 +885,11 @@ def refresh_latest_session_token():
         ).order_by(SessionCode.updated_at.desc()).first()
         
         if not session:
+            oauth_url = get_oauth_authorization_url()
             return {
                 'success': False,
-                'message': 'No active sessions found to refresh',
-                'token': None
+                'message': f'No active sessions found to refresh.\\n\\nPlease get a new authorization code from:\\n{oauth_url}\\n\\nThen run: python main.py create_session --code YOUR_CODE',
+                'oauth_url': oauth_url
             }
         
         # Use the existing refresh logic but with the latest session

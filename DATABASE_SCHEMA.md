@@ -167,6 +167,7 @@ Stores categorized product images with analysis data.
 | `local_file_path`                | String(500)             | NULL                                       | Local file path (relative)          |
 | `phash`                          | String(64)              | NULL                                       | Perceptual hash (hex string)        |
 | `download_status`                | String(20)              | NULL                                       | Status: pending, downloaded, failed |
+| `s3_url`                         | String(500)             | NULL                                       | Public S3 URL with UUID filename    |
 | `created_at`                     | DateTime(timezone=True) | DEFAULT now()                              | When image was processed            |
 
 **Relationships:**

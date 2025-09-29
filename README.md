@@ -137,6 +137,28 @@ This displays:
 - Session metadata (user, account, dates)
 - Active vs inactive session indicators
 
+### Troubleshooting Token Issues
+
+If you see repeated token refresh errors during operations:
+
+**Error Pattern:**
+```
+ERROR:src.session.session_manager:Failed to refresh token: The specified refresh token is invalid or expired
+ERROR:src.session.session_manager:Error refreshing token: (sqlite3.OperationalError) database is locked
+```
+
+**Solution:**
+The pipeline now includes intelligent error handling that will stop repeated attempts and provide clear guidance:
+
+1. **Circuit Breaker:** After 3 failed refresh attempts, the system will stop trying and display instructions
+2. **Clear Instructions:** Get a new authorization code and create a fresh session
+3. **Automatic Recovery:** Creating a new session clears the error state
+
+**Steps to Fix:**
+1. Get a new authorization code from [AliExpress Open Platform](https://open.aliexpress.com/oauth/authorize?response_type=code&force_auth=true&redirect_uri=urn:ietf:wg:oauth:2.0:oob&client_id=YOUR_APP_KEY)
+2. Create a new session: `python main.py create_session --code YOUR_NEW_CODE`
+3. Resume your operations
+
 ## Module A: Merchant Harvesting & Product Discovery
 
 This module handles initial data collection from AliExpress via category-based searches.
@@ -253,6 +275,51 @@ Module B automatically handles:
 - **Perceptual Hashing**: Calculates pHash for duplicate detection
 - **Dimension Extraction**: Determines image width and height
 - **Deduplication**: Prevents storing duplicate images
+- **S3 Upload**: Uploads images to AWS S3 with anonymized UUID filenames for public access
+
+### S3 Image Storage (Optional)
+
+The pipeline supports uploading downloaded images to AWS S3 for public access:
+
+**Configuration:**
+
+1. Add to your `.env` file:
+
+```bash
+# AWS S3 Configuration for Image Upload
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=your-product-images-bucket
+S3_IMAGES_PREFIX=product-images/    # Optional prefix for organizing images
+```
+
+2. Configure your S3 bucket for public read access:
+   - Go to S3 Console → Your Bucket → Permissions
+   - Configure "Block public access" settings as needed
+   - Add a bucket policy to allow public read access to uploaded images
+   - Run `python test_s3_setup.py` to get the exact policy for your configuration
+
+**Usage:**
+
+```bash
+# Download and upload images for all products
+python -m src.ingestion.image_ingestion ingest --download --s3
+
+# Download and upload images for a specific product
+python -m src.ingestion.image_ingestion product <product_id> --download --s3
+
+# Test S3 configuration and upload
+python test_s3_setup.py
+```
+
+**Features:**
+
+- **Anonymized Filenames**: Uses UUID-based filenames to protect privacy
+- **Public Access**: Uploaded images are publicly accessible via HTTPS URLs
+- **Metadata Preservation**: Stores original product ID and image role in S3 metadata
+- **Error Handling**: Gracefully handles upload failures and continues processing
+- **Original Extension Preservation**: Maintains original file extensions (.jpg, .png, etc.)
 
 ### Business Rules
 
@@ -322,11 +389,12 @@ Options:
 
 This command:
 
-- Exports all REVIEW_SUSPECT cases to CSV for manual review
-- Includes complete product details (titles, prices, costs, images, URLs)
-- Shows similarity metrics (pHash difference, CLIP similarity)
-- Provides master product information for comparison
-- Creates empty review_decision and notes columns for manual input
+- Exports all REVIEW_SUSPECT cases to CSV for manual review with S3 image URLs
+- Includes complete product details (titles, prices, costs) without AliExpress URLs
+- Shows CLIP similarity scores with closest matching images identified
+- Separates main/hero images from other product images for easy comparison
+- Provides direct S3 access to all images for instant browser viewing
+- Creates empty status and notes columns for manual input
 
 **Import reviewed suspects:**
 
@@ -361,22 +429,38 @@ python main.py detect:export-suspects --output data/review_cases.csv
 ```
 
 This creates a CSV file with the following columns:
-- **Suspect Product Details**: ID, title, price, cost, image URL, product URL
-- **Master Product Details**: ID, title, price, image URL, product URL  
-- **Similarity Metrics**: pHash difference, CLIP similarity score
-- **Review Fields**: `review_decision` (empty), `notes` (empty)
+
+**Product Information:**
+- `master_product_id`, `duplicate_product_id`: Product identifiers
+- `master_title`, `duplicate_title`: Product titles
+- `master_price`, `duplicate_price`, `duplicate_cost`: Pricing information
+
+**S3 Image URLs (Direct Browser Access):**
+- `master_image`, `duplicate_image`: **Closest matching images with CLIP similarity scores**
+- `master_main_image`, `duplicate_main_image`: Hero/primary images
+- `master_images`, `duplicate_images`: All other product images (pipe-separated)
+
+**Analysis Data:**
+- `phash_difference`, `clip_similarity`: Similarity metrics
+- `status` (empty), `notes` (empty): **Review decision fields**
 
 #### 2. Manual Review Process
 
 Open the CSV in Excel or similar spreadsheet application:
 
-1. **Compare Products**: Review suspect vs master product details
-2. **Check Images**: Use provided URLs to visually compare products
-3. **Make Decision**: Fill the `review_decision` column with:
-   - `DUPLICATE`: Products are the same (merge them)
-   - `UNIQUE`: Products are different (keep them separate) 
-   - `UNCERTAIN`: Need further review (keep as review suspect)
-4. **Add Notes**: Optional explanations in the `notes` column
+1. **Compare Product Details**: Review `master_title` vs `duplicate_title`, pricing differences
+2. **Examine Images**: Click S3 URLs to view images directly in browser:
+   - `master_image` vs `duplicate_image`: **Closest matching images** (includes CLIP similarity scores)
+   - `master_main_image` vs `duplicate_main_image`: Hero images comparison
+   - `master_images` vs `duplicate_images`: All product images (pipe-separated lists)
+3. **Analyze Similarity Metrics**: 
+   - **pHash difference**: Lower values indicate more similar images (0 = identical)
+   - **CLIP similarity**: Higher values indicate more similar content (1.0 = identical)
+4. **Make Decision**: Fill the `status` column with:
+   - `duplicate`: Products are the same (will be deleted)
+   - `keep`: Products are different (will be kept)
+   - `manual`: Need further review (keep as review suspect)
+5. **Add Notes**: Optional explanations in the `notes` column
 
 #### 3. Import Review Results
 
@@ -385,9 +469,12 @@ python main.py detect:import-reviewed --input data/review_cases.csv
 ```
 
 The import process will:
-- Update product statuses based on your decisions
-- Automatically handle master reassignment if needed
-- Provide detailed feedback on all changes made
+
+- **Process Review Decisions**: Handle `status` column values (`duplicate`, `keep`, `manual`)
+- **Backward Compatibility**: Also supports old format (`review_decision` column with `DUPLICATE`/`UNIQUE`)
+- **Update Product Status**: Apply decisions to database automatically
+- **Master Reassignment**: Handle duplicate product merging and status updates
+- **Detailed Feedback**: Show summary of all changes made during import
 
 #### 4. Master Reassignment Logic
 
@@ -399,9 +486,10 @@ When a REVIEW_SUSPECT is marked as DUPLICATE, the system checks if it should bec
 - **Group Consistency**: All duplicates point to the new master
 
 **Example Scenario:**
+
 ```
 Current State:  Master A (€120) ← Duplicate B, Suspect C (€100)
-Review Result:  C marked as DUPLICATE  
+Review Result:  C marked as DUPLICATE
 Final State:    Master C (€100) ← Duplicate A, Duplicate B
 ```
 
@@ -452,6 +540,7 @@ CLIP_MAX_IMAGES_PER_PRODUCT=5    # Limit for efficiency
    - Otherwise: Mark as unique
 
 3. **Master Selection & Review Assignment**:
+
    - Group confirmed duplicates together
    - Select the product with the lowest `total_landed_cost` as master
    - Mark master as "MASTER", others as "DUPLICATE"
@@ -502,7 +591,7 @@ The product data pipeline follows this modular workflow across all three modules
 ### Phase 3: Module C - Duplicate Detection & Master Selection
 
 9. **Duplicate Detection** - Run `detect:duplicates` using pHash and CLIP analysis
-10. **Master Selection** - Automatically selects best product from duplicate groups  
+10. **Master Selection** - Automatically selects best product from duplicate groups
 11. **Export Review Cases** - Run `detect:export-suspects` to get ambiguous cases
 12. **Manual Review** - Review CSV file and make DUPLICATE/UNIQUE decisions
 13. **Import Decisions** - Run `detect:import-reviewed` to apply manual decisions

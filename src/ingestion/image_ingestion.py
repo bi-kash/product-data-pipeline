@@ -6,10 +6,12 @@ This module processes raw product data to extract all available image URLs
 """
 
 import logging
+import os
 from typing import List, Dict, Optional
 from src.common.database import get_db_session, ProductImage, FilteredProduct, Product
 from src.common.config import get_env
 from src.ingestion.image_download import ImageDownloader
+from src.ingestion.s3_image_uploader import S3ImageUploader
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -20,22 +22,121 @@ class ImageIngestionEngine:
     Engine for extracting and storing product images from raw JSON data.
     """
 
-    def __init__(self, download_images: bool = False, download_dir: str = None):
+    def __init__(self, download_images: bool = False, download_dir: str = None, upload_to_s3: bool = None):
         """
         Initialize the image ingestion engine.
         
         Args:
             download_images: Whether to automatically download images
             download_dir: Directory to store downloaded images
+            upload_to_s3: Whether to upload downloaded images to S3 (None = auto-detect)
         """
         self.download_images = download_images
         self.image_downloader = ImageDownloader(download_dir) if download_images else None
-        logger.info(f"Image ingestion engine initialized (download_images: {download_images})")
+        
+        # Auto-detect S3 upload capability if not explicitly set
+        if upload_to_s3 is None:
+            upload_to_s3 = self._check_s3_credentials_available()
+            if upload_to_s3:
+                logger.info("S3 credentials detected - automatic S3 upload enabled")
+        
+        self.upload_to_s3 = upload_to_s3
+        
+        # Initialize S3 uploader if S3 upload is enabled
+        if self.upload_to_s3:
+            try:
+                self.s3_uploader = S3ImageUploader()
+                logger.info("S3 uploader initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize S3 uploader: {e}")
+                logger.warning("S3 upload will be disabled")
+                self.upload_to_s3 = False
+                self.s3_uploader = None
+        else:
+            self.s3_uploader = None
+            
+        logger.info(f"Image ingestion engine initialized (download_images: {download_images}, upload_to_s3: {self.upload_to_s3})")
+
+    def _check_s3_credentials_available(self) -> bool:
+        """
+        Check if S3 credentials are configured in environment.
+        
+        Returns:
+            True if S3 credentials are available, False otherwise
+        """
+        try:
+            aws_access_key = get_env('AWS_ACCESS_KEY_ID')
+            aws_secret_key = get_env('AWS_SECRET_ACCESS_KEY')
+            bucket_name = get_env('S3_BUCKET_NAME')
+            
+            return bool(aws_access_key and aws_secret_key and bucket_name)
+        except Exception:
+            return False
+
+    def _get_existing_s3_url(self, image_url: str) -> Optional[str]:
+        """
+        Check if this image URL already has an S3 URL in the database.
+        
+        Args:
+            image_url: The image URL to check
+            
+        Returns:
+            Existing S3 URL if found, None otherwise
+        """
+        try:
+            with get_db_session() as db:
+                existing_image = db.query(ProductImage).filter(
+                    ProductImage.image_url == image_url,
+                    ProductImage.s3_url.isnot(None)
+                ).first()
+                
+                if existing_image:
+                    return existing_image.s3_url
+        except Exception as e:
+            logger.debug(f"Error checking existing S3 URL: {e}")
+        
+        return None
+
+    def _get_existing_local_path(self, image_url: str, product_id: str) -> Optional[str]:
+        """
+        Check if this image already exists locally based on URL pattern.
+        
+        Args:
+            image_url: The image URL
+            product_id: Product ID for organizing files
+            
+        Returns:
+            Existing relative local path if found, None otherwise
+        """
+        try:
+            if not self.image_downloader:
+                return None
+                
+            # Extract filename from URL (same logic as image downloader)
+            filename = self.image_downloader.extract_filename_from_url(image_url)
+            
+            # Check in product directory first
+            product_dir = os.path.join(self.image_downloader.download_dir, product_id)
+            product_file_path = os.path.join(product_dir, filename)
+            
+            if os.path.exists(product_file_path):
+                return self.image_downloader._get_relative_path(product_file_path)
+                
+            # Check in root download directory
+            root_file_path = os.path.join(self.image_downloader.download_dir, filename)
+            if os.path.exists(root_file_path):
+                return self.image_downloader._get_relative_path(root_file_path)
+                
+        except Exception as e:
+            logger.debug(f"Error checking existing local path: {e}")
+        
+        return None
 
     def _process_image_url(self, image_url: str, product_id: str, sku_id: str = None, 
                           image_role: str = None) -> Dict:
         """
-        Process an image URL, optionally downloading it and calculating pHash and dimensions.
+        Process an image URL, optionally downloading it and uploading to S3.
+        Smart reuse: checks for existing local files and S3 URLs to avoid re-processing.
         
         Args:
             image_url: URL of the image
@@ -44,27 +145,79 @@ class ImageIngestionEngine:
             image_role: Image role (hero, gallery, variant)
             
         Returns:
-            Dict with local_file_path, phash, download_status, width, and height
+            Dict with local_file_path, phash, download_status, width, height, and s3_url
         """
+        result = {
+            'local_file_path': None,
+            'phash': None,
+            'download_status': 'pending',
+            'width': None,
+            'height': None,
+            's3_url': None
+        }
+        
+        # First check if this image already exists in the database with S3 URL
+        existing_s3_url = self._get_existing_s3_url(image_url)
+        if existing_s3_url:
+            logger.debug(f"Reusing existing S3 URL for {image_url}: {existing_s3_url}")
+            result['s3_url'] = existing_s3_url
+            result['download_status'] = 'reused'
+            # Still try to get local file info if available
+            if self.image_downloader:
+                existing_local_path = self._get_existing_local_path(image_url, product_id)
+                if existing_local_path:
+                    result['local_file_path'] = existing_local_path
+                    # Get metadata from existing file
+                    try:
+                        if os.path.exists(os.path.join(os.getcwd(), existing_local_path)):
+                            abs_path = os.path.join(os.getcwd(), existing_local_path)
+                            with open(abs_path, 'rb') as f:
+                                image_data = f.read()
+                            result['phash'] = self.image_downloader.calculate_phash(image_data)
+                            result['width'], result['height'] = self.image_downloader.get_image_dimensions(image_data)
+                    except Exception as e:
+                        logger.debug(f"Could not read metadata from existing file: {e}")
+            return result
+        
         if self.download_images and self.image_downloader:
             local_path, phash, status, width, height = self.image_downloader.download_image(
                 image_url, product_id, sku_id, image_role
             )
-            return {
+            
+            result.update({
                 'local_file_path': local_path,
                 'phash': phash,
                 'download_status': status,
                 'width': width,
                 'height': height
-            }
-        else:
-            return {
-                'local_file_path': None,
-                'phash': None,
-                'download_status': 'pending',
-                'width': None,
-                'height': None
-            }
+            })
+            
+            # Upload to S3 if enabled and download was successful
+            if (self.upload_to_s3 and self.s3_uploader and 
+                status == 'downloaded' and local_path):
+                
+                # Convert relative path to absolute for S3 upload
+                if not os.path.isabs(local_path):
+                    # Get project root and construct absolute path
+                    current_file = os.path.abspath(__file__)
+                    src_dir = os.path.dirname(os.path.dirname(current_file))
+                    project_root = os.path.dirname(src_dir)
+                    absolute_path = os.path.join(project_root, local_path)
+                else:
+                    absolute_path = local_path
+                
+                # Upload to S3
+                s3_url = self.s3_uploader.upload_image(
+                    absolute_path, product_id, image_role or 'unknown'
+                )
+                
+                if s3_url:
+                    result['s3_url'] = s3_url
+                    logger.info(f"Successfully uploaded image to S3: {s3_url}")
+                else:
+                    logger.warning(f"Failed to upload image to S3: {local_path}")
+        
+        return result
 
     def ingest_all_images(self) -> Dict:
         """
@@ -345,6 +498,7 @@ class ImageIngestionEngine:
                 download_status=image_data['download_status'],
                 width=image_data['width'],
                 height=image_data['height'],
+                s3_url=image_data['s3_url'],
                 sort_index=start_sort_index,
                 is_primary=True
             )
@@ -430,6 +584,7 @@ class ImageIngestionEngine:
                         download_status=image_data['download_status'],
                         width=image_data['width'],
                         height=image_data['height'],
+                        s3_url=image_data['s3_url'],
                         sort_index=current_sort_index,
                         is_primary=False
                     )
@@ -512,6 +667,7 @@ class ImageIngestionEngine:
                                 download_status=image_data['download_status'],
                                 width=image_data['width'],
                                 height=image_data['height'],
+                                s3_url=image_data['s3_url'],
                                 sort_index=current_sort_index,
                                 is_primary=False
                             )
@@ -570,6 +726,7 @@ class ImageIngestionEngine:
                     'local_file_path': img.local_file_path,
                     'phash': img.phash,
                     'download_status': img.download_status,
+                    's3_url': img.s3_url,
                     'sort_index': img.sort_index,
                     'width': img.width,
                     'height': img.height,
@@ -608,6 +765,7 @@ class ImageIngestionEngine:
                     'local_file_path': img.local_file_path,
                     'phash': img.phash,
                     'download_status': img.download_status,
+                    's3_url': img.s3_url,
                     'sort_index': img.sort_index,
                     'width': img.width,
                     'height': img.height,
@@ -667,6 +825,7 @@ class ImageIngestionEngine:
                     'local_file_path': img.local_file_path,
                     'phash': img.phash,
                     'download_status': img.download_status,
+                    's3_url': img.s3_url,
                     'sort_index': img.sort_index,
                     'width': img.width,
                     'height': img.height,
@@ -764,6 +923,7 @@ class ImageIngestionEngine:
                         download_status=image_data['download_status'],
                         width=image_data['width'],
                         height=image_data['height'],
+                        s3_url=image_data['s3_url'],
                         sort_index=current_sort_index,
                         is_primary=is_primary
                     )
@@ -796,7 +956,16 @@ def main():
         if download_images:
             sys.argv.remove("--download")
         
-        engine = ImageIngestionEngine(download_images=download_images)
+        # Check for S3 upload flag (optional override, defaults to auto-detect)
+        upload_to_s3 = None  # Auto-detect by default
+        if "--s3" in sys.argv:
+            upload_to_s3 = True
+            sys.argv.remove("--s3")
+        elif "--no-s3" in sys.argv:
+            upload_to_s3 = False
+            sys.argv.remove("--no-s3")
+        
+        engine = ImageIngestionEngine(download_images=download_images, upload_to_s3=upload_to_s3)
         
         if command == "ingest":
             # Ingest all images
@@ -804,6 +973,8 @@ def main():
             print(f"Image ingestion completed: {stats}")
             if download_images:
                 print("✅ Images were downloaded automatically")
+            if engine.upload_to_s3:
+                print("✅ Images were uploaded to S3 automatically")
             
         elif command == "product" and len(sys.argv) > 2:
             # Ingest images for specific product
@@ -856,12 +1027,19 @@ def main():
             
         else:
             print("Usage:")
-            print("  python -m src.ingestion.image_ingestion ingest")
-            print("  python -m src.ingestion.image_ingestion product <product_id>")
+            print("  python -m src.ingestion.image_ingestion ingest [--download] [--s3|--no-s3]")
+            print("  python -m src.ingestion.image_ingestion product <product_id> [--download] [--s3|--no-s3]")
             print("  python -m src.ingestion.image_ingestion list <product_id>")
             print("  python -m src.ingestion.image_ingestion list-with-shipping <product_id>")
             print("  python -m src.ingestion.image_ingestion list-by-sku <product_id> <sku_id>")
             print("  python -m src.ingestion.image_ingestion clear <product_id>")
+            print("")
+            print("Options:")
+            print("  --download   Download images to local storage")
+            print("  --s3         Force S3 upload (overrides auto-detection)")
+            print("  --no-s3      Disable S3 upload (overrides auto-detection)")
+            print("")
+            print("Note: S3 upload is automatically enabled when AWS credentials are configured")
     else:
         print("No command specified. Use 'ingest' to process all products.")
 

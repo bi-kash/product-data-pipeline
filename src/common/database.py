@@ -323,6 +323,9 @@ class ProductImage(Base):
     phash = Column(String(64), nullable=True)  # Perceptual hash for deduplication
     download_status = Column(String(20), nullable=True)  # 'pending', 'downloaded', 'failed'
     
+    # S3 storage
+    s3_url = Column(String(500), nullable=True)  # Public S3 URL with anonymized UUID filename
+    
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=func.now())
     
