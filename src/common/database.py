@@ -92,6 +92,7 @@ class Product(Base):
     product_title = Column(String(500), nullable=True)
     product_detail_url = Column(String(500), nullable=True)
     product_main_image_url = Column(String(500), nullable=True)
+    product_video_url = Column(String(500), nullable=True)
     original_price = Column(Float, nullable=True)
     target_sale_price = Column(Float, nullable=True)
     original_price_currency = Column(String(10), nullable=True)
@@ -190,6 +191,7 @@ class FilteredProduct(Base):
     product_title = Column(String(500), nullable=True)
     product_detail_url = Column(String(500), nullable=True)
     product_main_image_url = Column(String(500), nullable=True)
+    product_video_url = Column(String(500), nullable=True)
     original_price = Column(Float, nullable=True)
     target_sale_price = Column(Float, nullable=True)
     original_price_currency = Column(String(10), nullable=True)
@@ -356,6 +358,40 @@ class ProductImage(Base):
 
     def __repr__(self):
         return f"<ProductImage(product_id='{self.product_id}', role='{self.image_role}', property='{self.property_value}', url='{self.image_url[:50]}...')>"
+
+
+class ProductVideo(Base):
+    """
+    Model for tracking product videos from AliExpress.
+    
+    This table stores video URLs, download status, and S3 upload information
+    for products in the filtered_products table.
+    """
+
+    __tablename__ = "product_videos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False)
+    
+    # Video information
+    video_url = Column(String(500), nullable=False)  # Original AliExpress video URL
+    
+    # Download and storage
+    local_file_path = Column(String(500), nullable=True)  # Local file path after download
+    download_status = Column(String(20), nullable=True)  # 'pending', 'downloaded', 'failed'
+    
+    # S3 storage
+    s3_url = Column(String(500), nullable=True)  # Public S3 URL with anonymized UUID filename
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="product_videos")
+
+    def __repr__(self):
+        return f"<ProductVideo(product_id='{self.product_id}', status='{self.download_status}', url='{self.video_url[:50]}...')>"
 
 
 class ProductStatus(Base):
@@ -777,6 +813,7 @@ def upsert_product(
     product_title=None,
     product_detail_url=None,
     product_main_image_url=None,
+    product_video_url=None,
     original_price=None,
     target_sale_price=None,
     original_price_currency=None,
@@ -797,6 +834,7 @@ def upsert_product(
         product_title: Title of the product
         product_detail_url: URL to the product detail page
         product_main_image_url: URL to the main product image
+        product_video_url: URL to the product video
         original_price: Original price of the product
         target_sale_price: Sale price of the product
         original_price_currency: Currency of the original price
@@ -832,6 +870,8 @@ def upsert_product(
                 product.product_detail_url = product_detail_url
             if product_main_image_url:
                 product.product_main_image_url = product_main_image_url
+            if product_video_url:
+                product.product_video_url = product_video_url
             if original_price is not None:
                 product.original_price = original_price
             if target_sale_price is not None:
@@ -858,6 +898,7 @@ def upsert_product(
                 product_title=product_title,
                 product_detail_url=product_detail_url,
                 product_main_image_url=product_main_image_url,
+                product_video_url=product_video_url,
                 original_price=original_price,
                 target_sale_price=target_sale_price,
                 original_price_currency=original_price_currency,

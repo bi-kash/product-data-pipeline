@@ -96,6 +96,20 @@ Session management is **required first** before any module operations, as the pi
 
 ### Commands
 
+**Get a Link to code:**
+
+```bash
+python main.py get_code_link
+```
+
+This command:
+- Gives you the URL to get the code.
+- Open the URL above in your browser
+- Log in to your AliExpress account
+- Authorize the application
+- Copy the authorization code from the callback URL
+- Use the code with: python main.py create_session --code YOUR_CODE
+
 **Create a new session:**
 
 ```bash
@@ -291,27 +305,28 @@ AWS_ACCESS_KEY_ID=your_aws_access_key_id
 AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
 AWS_REGION=us-east-1
 S3_BUCKET_NAME=your-product-images-bucket
-S3_IMAGES_PREFIX=product-images/    # Optional prefix for organizing images
+S3_IMAGES_PREFIX=product-images/
+S3_VIDEOS_PREFIX=product-images/
 ```
 
 2. Configure your S3 bucket for public read access:
    - Go to S3 Console → Your Bucket → Permissions
    - Configure "Block public access" settings as needed
-   - Add a bucket policy to allow public read access to uploaded images
-   - Run `python test_s3_setup.py` to get the exact policy for your configuration
-
-**Usage:**
-
-```bash
-# Download and upload images for all products
-python -m src.ingestion.image_ingestion ingest --download --s3
-
-# Download and upload images for a specific product
-python -m src.ingestion.image_ingestion product <product_id> --download --s3
-
-# Test S3 configuration and upload
-python test_s3_setup.py
-```
+   - Add a bucket policy to allow public read access to uploaded images and videos
+      ```bash
+      {
+         "Version": "2012-10-17",
+         "Statement": [
+            {
+                  "Sid": "PublicReadGetObject",
+                  "Effect": "Allow",
+                  "Principal": "*",
+                  "Action": "s3:GetObject",
+                  "Resource": "arn:aws:s3:::productpipeline/product-images/*"
+            }
+         ]
+      }
+      ```
 
 **Features:**
 

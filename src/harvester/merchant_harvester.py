@@ -201,6 +201,25 @@ def _process_products(
                 product_title = product.get("product_title", "")
                 product_detail_url = product.get("product_detail_url", "")
                 product_main_image_url = product.get("product_main_image_url", "")
+                
+                # Extract video URL from product details if available
+                product_video_url = None
+                if product_details:
+                    try:
+                        # Navigate to the video URL in the product details JSON
+                        result = product_details.get("result", {})
+                        multimedia_info = result.get("ae_multimedia_info_dto", {})
+                        video_dtos = multimedia_info.get("ae_video_dtos", {})
+                        video_list = video_dtos.get("ae_video_d_t_o", [])
+                        
+                        if isinstance(video_list, list) and video_list:
+                            first_video = video_list[0]
+                            product_video_url = first_video.get("media_url")
+                        elif isinstance(video_list, dict):
+                            product_video_url = video_list.get("media_url")
+                    except (AttributeError, KeyError, TypeError):
+                        # If video extraction fails, just continue without video URL
+                        pass
 
                 # Handle prices
                 original_price = None
@@ -234,6 +253,7 @@ def _process_products(
                     product_title=product_title,
                     product_detail_url=product_detail_url,
                     product_main_image_url=product_main_image_url,
+                    product_video_url=product_video_url,
                     original_price=original_price,
                     target_sale_price=target_sale_price,
                     original_price_currency=original_price_currency,

@@ -8,10 +8,12 @@ This module processes raw product data to extract all available image URLs
 import logging
 import os
 from typing import List, Dict, Optional
-from src.common.database import get_db_session, ProductImage, FilteredProduct, Product
+from src.common.database import get_db_session, ProductImage, ProductVideo, FilteredProduct, Product
 from src.common.config import get_env
 from src.ingestion.image_download import ImageDownloader
 from src.ingestion.s3_image_uploader import S3ImageUploader
+from src.ingestion.video_download import VideoDownloader
+from src.ingestion.s3_video_uploader import S3VideoUploader
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -22,17 +24,20 @@ class ImageIngestionEngine:
     Engine for extracting and storing product images from raw JSON data.
     """
 
-    def __init__(self, download_images: bool = False, download_dir: str = None, upload_to_s3: bool = None):
+    def __init__(self, download_images: bool = False, download_videos: bool = False, download_dir: str = None, upload_to_s3: bool = None):
         """
-        Initialize the image ingestion engine.
+        Initialize the image and video ingestion engine.
         
         Args:
             download_images: Whether to automatically download images
-            download_dir: Directory to store downloaded images
-            upload_to_s3: Whether to upload downloaded images to S3 (None = auto-detect)
+            download_videos: Whether to automatically download videos
+            download_dir: Directory to store downloaded files
+            upload_to_s3: Whether to upload downloaded files to S3 (None = auto-detect)
         """
         self.download_images = download_images
+        self.download_videos = download_videos
         self.image_downloader = ImageDownloader(download_dir) if download_images else None
+        self.video_downloader = VideoDownloader(download_dir) if download_videos else None
         
         # Auto-detect S3 upload capability if not explicitly set
         if upload_to_s3 is None:
@@ -42,20 +47,23 @@ class ImageIngestionEngine:
         
         self.upload_to_s3 = upload_to_s3
         
-        # Initialize S3 uploader if S3 upload is enabled
+        # Initialize S3 uploaders if S3 upload is enabled
         if self.upload_to_s3:
             try:
                 self.s3_uploader = S3ImageUploader()
-                logger.info("S3 uploader initialized successfully")
+                self.s3_video_uploader = S3VideoUploader()
+                logger.info("S3 uploaders initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize S3 uploader: {e}")
+                logger.error(f"Failed to initialize S3 uploaders: {e}")
                 logger.warning("S3 upload will be disabled")
                 self.upload_to_s3 = False
                 self.s3_uploader = None
+                self.s3_video_uploader = None
         else:
             self.s3_uploader = None
+            self.s3_video_uploader = None
             
-        logger.info(f"Image ingestion engine initialized (download_images: {download_images}, upload_to_s3: {self.upload_to_s3})")
+        logger.info(f"Image and video ingestion engine initialized (download_images: {download_images}, download_videos: {download_videos}, upload_to_s3: {self.upload_to_s3})")
 
     def _check_s3_credentials_available(self) -> bool:
         """
@@ -221,7 +229,7 @@ class ImageIngestionEngine:
 
     def ingest_all_images(self) -> Dict:
         """
-        Process all filtered products and extract their images.
+        Process all filtered products and extract their images and videos.
         
         Returns:
             Dict with ingestion statistics
@@ -232,6 +240,9 @@ class ImageIngestionEngine:
             'hero_images': 0,
             'gallery_images': 0,
             'variant_images': 0,
+            'videos_processed': 0,
+            'videos_downloaded': 0,
+            'videos_uploaded': 0,
             'errors': 0
         }
 
@@ -257,10 +268,20 @@ class ImageIngestionEngine:
                     stats['hero_images'] += images_extracted['hero']
                     stats['gallery_images'] += images_extracted['gallery']
                     stats['variant_images'] += images_extracted['variant']
+                    
+                    # Process video for this product if video processing is enabled
+                    if self.download_videos:
+                        video_stats = self._process_product_video(filtered_product, db)
+                        stats['videos_processed'] += video_stats['processed']
+                        stats['videos_downloaded'] += video_stats['downloaded']
+                        stats['videos_uploaded'] += video_stats['uploaded']
+                        stats['errors'] += video_stats['errors']
+                    
                     stats['products_processed'] += 1
 
                     logger.info(f"Processed product {product.product_id}: "
-                              f"{images_extracted['total']} images extracted")
+                              f"{images_extracted['total']} images extracted, "
+                              f"{stats.get('videos_processed', 0)} videos processed")
 
                 except Exception as e:
                     logger.error(f"Error processing product {filtered_product.product_id}: {e}")
@@ -292,6 +313,107 @@ class ImageIngestionEngine:
             db.commit()
             
             return results
+
+    def ingest_product_video(self, product_id: str) -> Dict:
+        """
+        Extract and process video for a specific product.
+        
+        Args:
+            product_id: Product ID to process
+            
+        Returns:
+            Dict with video processing results
+        """
+        with get_db_session() as db:
+            # Get filtered product (since we're working with filtered products)
+            filtered_product = db.query(FilteredProduct).filter(FilteredProduct.product_id == product_id).first()
+            
+            if not filtered_product:
+                raise ValueError(f"FilteredProduct {product_id} not found")
+
+            results = self._process_product_video(filtered_product, db)
+            db.commit()
+            
+            return results
+
+    def _process_product_video(self, filtered_product: FilteredProduct, db) -> Dict:
+        """
+        Process video for a filtered product.
+        
+        Args:
+            filtered_product: FilteredProduct object with video URL
+            db: Database session
+            
+        Returns:
+            Dict with processing statistics
+        """
+        stats = {'processed': 0, 'downloaded': 0, 'uploaded': 0, 'errors': 0}
+
+        if not filtered_product.product_video_url:
+            logger.info(f"No video URL for product {filtered_product.product_id}")
+            return stats
+
+        video_url = filtered_product.product_video_url
+        product_id = filtered_product.product_id
+        
+        # Check if video already exists in database
+        existing_video = db.query(ProductVideo).filter(
+            ProductVideo.product_id == product_id,
+            ProductVideo.video_url == video_url
+        ).first()
+        
+        if existing_video:
+            logger.info(f"Video already exists for product {product_id}")
+            return stats
+        
+        # Create new video record
+        video_record = ProductVideo(
+            product_id=product_id,
+            video_url=video_url,
+            download_status='pending'
+        )
+        
+        db.add(video_record)
+        db.flush()  # Get the ID
+        
+        stats['processed'] = 1
+        
+        # Download video if downloading is enabled
+        if self.download_videos and self.video_downloader:
+            try:
+                local_path, download_status = self.video_downloader.download_video(video_url, product_id)
+                
+                video_record.local_file_path = local_path
+                video_record.download_status = download_status
+                
+                if download_status == 'downloaded':
+                    stats['downloaded'] = 1
+                    logger.info(f"Video downloaded: {product_id}")
+                    
+                    # Upload to S3 if enabled and download was successful
+                    if self.upload_to_s3 and self.s3_video_uploader and local_path:
+                        try:
+                            upload_result = self.s3_video_uploader.upload_video(local_path, product_id)
+                            
+                            if upload_result['success']:
+                                video_record.s3_url = upload_result['s3_url']
+                                stats['uploaded'] = 1
+                                logger.info(f"Video uploaded to S3: {upload_result['s3_url']}")
+                            else:
+                                logger.error(f"S3 upload failed for {product_id}: {upload_result.get('error')}")
+                                stats['errors'] += 1
+                        except Exception as e:
+                            logger.error(f"Error uploading video to S3 for {product_id}: {e}")
+                            stats['errors'] += 1
+                elif download_status == 'failed':
+                    stats['errors'] += 1
+                    
+            except Exception as e:
+                logger.error(f"Error processing video for {product_id}: {e}")
+                video_record.download_status = 'failed'
+                stats['errors'] += 1
+        
+        return stats
 
     def _extract_product_images(self, product: Product, db) -> Dict:
         """

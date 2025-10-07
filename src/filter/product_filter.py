@@ -488,6 +488,7 @@ class ProductFilterEngine:
             product_title=product.product_title,
             product_detail_url=product.product_detail_url,
             product_main_image_url=product.product_main_image_url,
+            product_video_url=product.product_video_url,
             original_price=product.original_price,
             target_sale_price=product.target_sale_price,
             original_price_currency=product.original_price_currency,
@@ -747,35 +748,38 @@ def run_product_filtering(limit: int = None, dry_run: bool = False) -> Dict[str,
     logger.info("Product filtering completed")
     logger.info(f"Statistics: {stats}")
     
-    # Run image ingestion for filtered products (unless dry run)
+    # Run image and video ingestion for filtered products (unless dry run)
     if not dry_run and stats.get('products_passed_filter', 0) > 0:
-        logger.info("Starting image ingestion for filtered products (with automatic download)")
+        logger.info("Starting image and video ingestion for filtered products (with automatic download)")
         try:
             from src.ingestion.image_ingestion import ImageIngestionEngine
             
-            # Enable automatic image downloads and pHash calculation
-            image_engine = ImageIngestionEngine(download_images=True)
-            image_stats = image_engine.ingest_all_images()
+            # Enable automatic image and video downloads with S3 upload
+            ingestion_engine = ImageIngestionEngine(download_images=True, download_videos=True)
+            ingestion_stats = ingestion_engine.ingest_all_images()
             
-            logger.info("Image ingestion completed")
-            logger.info(f"Image statistics: {image_stats}")
+            logger.info("Image and video ingestion completed")
+            logger.info(f"Ingestion statistics: {ingestion_stats}")
             
-            # Add image stats to the main stats
+            # Add ingestion stats to the main stats
             stats.update({
-                'images_extracted': image_stats.get('images_extracted', 0),
-                'hero_images': image_stats.get('hero_images', 0),
-                'gallery_images': image_stats.get('gallery_images', 0),
-                'variant_images': image_stats.get('variant_images', 0),
-                'image_errors': image_stats.get('errors', 0)
+                'images_extracted': ingestion_stats.get('images_extracted', 0),
+                'hero_images': ingestion_stats.get('hero_images', 0),
+                'gallery_images': ingestion_stats.get('gallery_images', 0),
+                'variant_images': ingestion_stats.get('variant_images', 0),
+                'videos_processed': ingestion_stats.get('videos_processed', 0),
+                'videos_downloaded': ingestion_stats.get('videos_downloaded', 0),
+                'videos_uploaded': ingestion_stats.get('videos_uploaded', 0),
+                'ingestion_errors': ingestion_stats.get('errors', 0)
             })
             
         except Exception as e:
-            logger.error(f"Error during image ingestion: {e}")
-            stats['image_errors'] = 1
+            logger.error(f"Error during image and video ingestion: {e}")
+            stats['ingestion_errors'] = 1
     else:
         if dry_run:
-            logger.info("Skipping image ingestion (dry run mode)")
+            logger.info("Skipping image and video ingestion (dry run mode)")
         else:
-            logger.info("Skipping image ingestion (no products passed filter)")
+            logger.info("Skipping image and video ingestion (no products passed filter)")
     
     return stats

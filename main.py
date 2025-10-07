@@ -11,7 +11,7 @@ from src.review.merchant_review import export_pending_merchants, import_review_r
 from src.harvester.merchant_harvester import init_harvest as original_init_harvest
 from src.harvester.merchant_harvester import delta_harvest as original_delta_harvest
 from src.harvester.merchant_harvester import harvest_status as original_harvest_status
-from src.session.session_manager import create_session, refresh_session_token, auto_refresh_session, list_sessions, force_unlock_database
+from src.session.session_manager import create_session, refresh_session_token, auto_refresh_session, list_sessions, force_unlock_database, get_oauth_authorization_url
 from src.filter.product_filter import run_product_filtering
 from src.duplicate_detection.duplicate_detector import DuplicateDetector
 from src.common.database import get_db_session
@@ -277,7 +277,7 @@ def export_suspect_duplicates(output_file):
     
     try:
         import csv
-        from src.common.database import ProductStatus, FilteredProduct, ProductImage
+        from src.common.database import ProductStatus, FilteredProduct, ProductImage, ProductVideo
         
         with get_db_session() as db:
             # Query suspects with their product details and potential masters
@@ -341,6 +341,20 @@ def export_suspect_duplicates(output_file):
                         ProductImage.s3_url.isnot(None)
                     ).order_by(ProductImage.sort_index).all()
                 
+                # Get S3 video URLs for duplicate product
+                duplicate_videos = db.query(ProductVideo).filter(
+                    ProductVideo.product_id == suspect.product_id,
+                    ProductVideo.s3_url.isnot(None)
+                ).all()
+                
+                # Get S3 video URLs for master product
+                master_videos = []
+                if suspect.duplicate_master_id:
+                    master_videos = db.query(ProductVideo).filter(
+                        ProductVideo.product_id == suspect.duplicate_master_id,
+                        ProductVideo.s3_url.isnot(None)
+                    ).all()
+                
                 # Find main images (hero or primary)
                 duplicate_main_image = ""
                 master_main_image = ""
@@ -379,6 +393,10 @@ def export_suspect_duplicates(output_file):
                 master_images_list = " | ".join(master_other_images)
                 duplicate_images_list = " | ".join(duplicate_other_images)
                 
+                # Get video URLs (take first video if available)
+                duplicate_video = duplicate_videos[0].s3_url if duplicate_videos else ""
+                master_video = master_videos[0].s3_url if master_videos else ""
+                
                 csv_data.append({
                     'master_product_id': suspect.duplicate_master_id or "",
                     'duplicate_product_id': suspect.product_id,
@@ -393,6 +411,8 @@ def export_suspect_duplicates(output_file):
                     'duplicate_main_image': duplicate_main_image,
                     'master_images': master_images_list,
                     'duplicate_images': duplicate_images_list,
+                    'master_video': master_video,
+                    'duplicate_video': duplicate_video,
                     'phash_difference': suspect.phash_difference or "",
                     'clip_similarity': f"{suspect.clip_similarity:.4f}" if suspect.clip_similarity else "",
                     'status': "",  # Empty column for review decisions (DUPLICATE, UNIQUE, UNCERTAIN)
@@ -405,8 +425,8 @@ def export_suspect_duplicates(output_file):
                     'master_product_id', 'duplicate_product_id', 'master_title', 'duplicate_title',
                     'master_price', 'duplicate_price', 'duplicate_cost',
                     'master_image', 'duplicate_image', 'master_main_image', 'duplicate_main_image',
-                    'master_images', 'duplicate_images', 'phash_difference', 'clip_similarity',
-                    'status', 'notes'
+                    'master_images', 'duplicate_images', 'master_video', 'duplicate_video',
+                    'phash_difference', 'clip_similarity', 'status', 'notes'
                 ]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 
@@ -521,6 +541,8 @@ def main():
     )
 
     subparsers.add_parser("list_sessions", help="List all sessions")
+    
+    subparsers.add_parser("get_code_link", help="Get AliExpress OAuth authorization URL")
     
     subparsers.add_parser("unlock_database", help="Force unlock database if it's stuck")
 
@@ -652,6 +674,17 @@ def main():
                 print(f"  Updated: {session['updated_at']}")
         else:
             print("No sessions found.")
+    
+    elif args.command == "get_code_link":
+        auth_url = get_oauth_authorization_url()
+        print("🔗 AliExpress OAuth Authorization URL:")
+        print(f"{auth_url}")
+        print("\n📋 Instructions:")
+        print("1. Open the URL above in your browser")
+        print("2. Log in to your AliExpress account")
+        print("3. Authorize the application")
+        print("4. Copy the authorization code from the callback URL")
+        print("5. Use the code with: python main.py create_session --code YOUR_CODE")
     
     elif args.command == "unlock_database":
         print("🔓 Attempting to force unlock database...")
