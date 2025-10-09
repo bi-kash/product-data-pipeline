@@ -16,6 +16,8 @@ from src.filter.product_filter import run_product_filtering
 from src.duplicate_detection.duplicate_detector import DuplicateDetector
 from src.common.database import get_db_session
 from src.common.logging_config import setup_logging
+from src.airtable.sync import sync_to_airtable
+from src.airtable.base_creator import create_base_command
 
 # Ensure logs directory exists
 os.makedirs("logs", exist_ok=True)
@@ -595,6 +597,53 @@ def main():
         help="Show what would be updated without making changes"
     )
 
+    # Airtable synchronization commands (Module D)
+    airtable_sync_parser = subparsers.add_parser(
+        "airtable:sync", help="Sync products and variants to Airtable"
+    )
+    airtable_sync_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit number of products to sync (for testing)"
+    )
+    airtable_sync_parser.add_argument(
+        "--filter",
+        type=str,
+        choices=["MASTER", "UNIQUE"],
+        help="Filter products by status (MASTER or UNIQUE only)"
+    )
+    airtable_sync_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be synced without actually syncing to Airtable"
+    )
+
+    # Airtable base creation command
+    airtable_create_parser = subparsers.add_parser(
+        "airtable:create-base", help="Create Airtable base with Products and Variants tables"
+    )
+    airtable_create_parser.add_argument(
+        "--name",
+        type=str,
+        default="Product Pipeline",
+        help="Name for the new base (default: Product Pipeline)"
+    )
+    airtable_create_parser.add_argument(
+        "--workspace-id",
+        type=str,
+        help="Workspace ID to create base in (optional, uses personal workspace if not provided)"
+    )
+    airtable_create_parser.add_argument(
+        "--list-workspaces",
+        action="store_true",
+        help="List available workspaces instead of creating base"
+    )
+    airtable_create_parser.add_argument(
+        "--test-token",
+        action="store_true",
+        help="Test Personal Access Token configuration"
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -709,6 +758,23 @@ def main():
         export_suspect_duplicates(output_file=args.output)
     elif args.command == "detect:import-reviewed":
         import_reviewed_suspects(input_file=args.input, dry_run=args.dry_run)
+    elif args.command == "airtable:sync":
+        result = sync_to_airtable(
+            limit=args.limit,
+            filter_status=args.filter,
+            dry_run=args.dry_run
+        )
+        print(f"✅ Airtable sync completed!")
+        print(f"📊 Products: {result['products']['created']} created, {result['products']['updated']} updated")
+        print(f"📦 Variants: {result['variants']['created']} created, {result['variants']['updated']} updated") 
+        print(f"📈 Total: {result['total_created']} created, {result['total_updated']} updated")
+    elif args.command == "airtable:create-base":
+        create_base_command(
+            base_name=args.name,
+            workspace_id=args.workspace_id,
+            list_workspaces=args.list_workspaces,
+            test_token=args.test_token
+        )
     else:
         parser.print_help()
 

@@ -4,133 +4,70 @@
       "ae_item_sku_info_dtos": {
         "ae_item_sku_info_d_t_o": [
           {
-            "sku_attr": "200000639:1440#22 inch (56 cm)",
-            "offer_sale_price": "253.39",
-            "sku_id": "12000033608048601",
+            "sku_attr": "14:10#blue",
+            "offer_sale_price": "124.39",
+            "sku_id": "12000050651533338",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "563.09",
-            "offer_bulk_sale_price": "253.39",
-            "sku_available_stock": 4136,
-            "id": "200000639:1440#22 inch (56 cm)",
+            "sku_price": "621.95",
+            "offer_bulk_sale_price": "124.39",
+            "sku_available_stock": 666,
+            "id": "14:10#blue",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "24cm",
-                  "sku_property_name": "Length",
-                  "property_value_definition_name": "22 inch (56 cm)",
-                  "property_value_id": 1440,
-                  "sku_property_id": 200000639
+                  "sku_property_value": "Red",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb9e1917d703b4d9988700a70e028c575x.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "blue",
+                  "property_value_id": 10,
+                  "sku_property_id": 14
                 }
               ]
             }
           },
           {
-            "sku_attr": "200000639:2851#20 inch (51 cm)",
-            "offer_sale_price": "232.99",
-            "sku_id": "12000033608048600",
+            "sku_attr": "14:29#green",
+            "offer_sale_price": "124.39",
+            "sku_id": "12000050651533339",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "517.76",
-            "offer_bulk_sale_price": "232.99",
-            "sku_available_stock": 4131,
-            "id": "200000639:2851#20 inch (51 cm)",
+            "sku_price": "621.95",
+            "offer_bulk_sale_price": "124.39",
+            "sku_available_stock": 666,
+            "id": "14:29#green",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "35cm",
-                  "sku_property_name": "Length",
-                  "property_value_definition_name": "20 inch (51 cm)",
-                  "property_value_id": 2851,
-                  "sku_property_id": 200000639
+                  "sku_property_value": "WHITE",
+                  "sku_image": "https://ae01.alicdn.com/kf/S17e19c52fa414cf6bc2f07656b536522L.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "green",
+                  "property_value_id": 29,
+                  "sku_property_id": 14
                 }
               ]
             }
           },
           {
-            "sku_attr": "200000639:1436#24 inch (61 cm)",
-            "offer_sale_price": "272.99",
-            "sku_id": "12000033608048602",
+            "sku_attr": "14:4#black",
+            "offer_sale_price": "124.39",
+            "sku_id": "12000050651533337",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "606.64",
-            "offer_bulk_sale_price": "272.99",
-            "sku_available_stock": 4136,
-            "id": "200000639:1436#24 inch (61 cm)",
+            "sku_price": "621.95",
+            "offer_bulk_sale_price": "124.39",
+            "sku_available_stock": 666,
+            "id": "14:4#black",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "16cm",
-                  "sku_property_name": "Length",
-                  "property_value_definition_name": "24 inch (61 cm)",
-                  "property_value_id": 1436,
-                  "sku_property_id": 200000639
-                }
-              ]
-            }
-          },
-          {
-            "sku_attr": "200000639:1950#15 inch (38 cm)",
-            "offer_sale_price": "177.69",
-            "sku_id": "12000033608048597",
-            "price_include_tax": true,
-            "currency_code": "EUR",
-            "sku_price": "394.87",
-            "offer_bulk_sale_price": "177.69",
-            "sku_available_stock": 4133,
-            "id": "200000639:1950#15 inch (38 cm)",
-            "ae_sku_property_dtos": {
-              "ae_sku_property_d_t_o": [
-                {
-                  "sku_property_value": "90cm",
-                  "sku_property_name": "Length",
-                  "property_value_definition_name": "15 inch (38 cm)",
-                  "property_value_id": 1950,
-                  "sku_property_id": 200000639
-                }
-              ]
-            }
-          },
-          {
-            "sku_attr": "200000639:2830#18 inch (45.5 cm)",
-            "offer_sale_price": "212.69",
-            "sku_id": "12000033608048599",
-            "price_include_tax": true,
-            "currency_code": "EUR",
-            "sku_price": "472.64",
-            "offer_bulk_sale_price": "212.69",
-            "sku_available_stock": 4123,
-            "id": "200000639:2830#18 inch (45.5 cm)",
-            "ae_sku_property_dtos": {
-              "ae_sku_property_d_t_o": [
-                {
-                  "sku_property_value": "25cm",
-                  "sku_property_name": "Length",
-                  "property_value_definition_name": "18 inch (45.5 cm)",
-                  "property_value_id": 2830,
-                  "sku_property_id": 200000639
-                }
-              ]
-            }
-          },
-          {
-            "sku_attr": "200000639:1438#16 inch (40.5 cm)",
-            "offer_sale_price": "190.69",
-            "sku_id": "12000033608048598",
-            "price_include_tax": true,
-            "currency_code": "EUR",
-            "sku_price": "423.76",
-            "offer_bulk_sale_price": "190.69",
-            "sku_available_stock": 4115,
-            "id": "200000639:1438#16 inch (40.5 cm)",
-            "ae_sku_property_dtos": {
-              "ae_sku_property_d_t_o": [
-                {
-                  "sku_property_value": "20cm",
-                  "sku_property_name": "Length",
-                  "property_value_definition_name": "16 inch (40.5 cm)",
-                  "property_value_id": 1438,
-                  "sku_property_id": 200000639
+                  "sku_property_value": "Other",
+                  "sku_image": "https://ae01.alicdn.com/kf/S09c29731dd76488e9808b8fc6b2f34f6J.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "black",
+                  "property_value_id": 4,
+                  "sku_property_id": 14
                 }
               ]
             }
@@ -143,75 +80,87 @@
             {
               "media_status": "approved",
               "media_type": "video",
-              "poster_url": "https://ae01.alicdn.com/kf/Sf5a97c407343439383d7ecebb71d4eb7X.jpg",
-              "ali_member_id": 229501438,
-              "media_id": 1100095554043,
-              "media_url": "https://video.aliexpress-media.com/play/1100095554043.mp4"
+              "poster_url": "https://ae01.alicdn.com/kf/Se7c7b0da4bfc4bb5a7739005a27d570eL.jpg",
+              "ali_member_id": 6002664089,
+              "media_id": 5000319550645,
+              "media_url": "https://video.aliexpress-media.com/play/5000319550645.mp4"
             }
           ]
         },
-        "image_urls": "https://ae01.alicdn.com/kf/S740da2171fe743b98cdf22472253e5b66.jpg;https://ae01.alicdn.com/kf/Aef5f993226194fc1b884ee52bb4884b0n.jpg;https://ae01.alicdn.com/kf/S4fa5c4c366134f699b78d3789b94d690m.jpg;https://ae01.alicdn.com/kf/S5e76755072d14ec4b1a36114477a7975p.jpg;https://ae01.alicdn.com/kf/A47aba252f2204c9394595ca1f713e284V.jpg;https://ae01.alicdn.com/kf/Ad4f375b0f7b04680b774ebc9d3d306fc1.jpg"
+        "image_urls": "https://ae01.alicdn.com/kf/S48863b30b4e04a7a94396103b043ea7cZ.jpg;https://ae01.alicdn.com/kf/S0c5e22b63e8d44eb8a63101aad928026c.jpg;https://ae01.alicdn.com/kf/S073442bd26a44e87b365d48e45a85267a.jpg;https://ae01.alicdn.com/kf/S56404f66c6784106a0523fd9ccd438908.jpg;https://ae01.alicdn.com/kf/S956927405d984d55bdae0906ae0938e9u.jpg;https://ae01.alicdn.com/kf/S965d9f9d2a7f402a8cd443b57747aec9W.jpg"
       },
       "package_info_dto": {
-        "package_width": 5,
-        "package_height": 5,
-        "package_length": 20,
-        "gross_weight": "0.100",
+        "package_width": 15,
+        "package_height": 10,
+        "package_length": 18,
+        "gross_weight": "0.250",
         "package_type": false,
         "product_unit": 100000015
       },
       "logistics_info_dto": {
-        "delivery_time": 5,
+        "delivery_time": 7,
         "ship_to_country": "DE"
       },
       "product_id_converter_result": {
-        "main_product_id": 1005004881797251,
-        "sub_product_id": "{\"US\":3256804695482499}"
+        "main_product_id": 1005009946386993,
+        "sub_product_id": "{\"US\":3256809760072241}"
       },
       "ae_item_base_info_dto": {
-        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"text\",\"data\":{\"content\":\"description\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Material:s925 sterling sliver plated 18k white gold\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Main stone: 3mm moissanite \",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Moissanite Color:D \",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Moissanite Clarity:VVS1\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Moissanite Cut: excellent\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Free GRA certification include:yes\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Package:1*moissanite Bracelet with gift box\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"\uff08We are factory and can make any length for you and the price is right.\uff09\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S68544ba88afb4a819a3d3fe0ea88ab9aM.png\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S037e70d2f7484e109f3213c444a28ca31.jpg\",\"style\":{\"width\":944,\"height\":944}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Ad4f375b0f7b04680b774ebc9d3d306fc1.jpg\",\"style\":{\"width\":944,\"height\":944}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S5e76755072d14ec4b1a36114477a7975p.jpg\",\"style\":{\"width\":944,\"height\":944}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S4fa5c4c366134f699b78d3789b94d690m.jpg\",\"style\":{\"width\":944,\"height\":944}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/A47aba252f2204c9394595ca1f713e284V.jpg\",\"style\":{\"width\":944,\"height\":944}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Ae31e5db0804940e7906adb83e338aee0T.jpg\",\"style\":{\"width\":944,\"height\":944}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Aef5f993226194fc1b884ee52bb4884b0n.jpg\",\"style\":{\"width\":944,\"height\":944}}}]}",
-        "subject": "KNOBSPIN Moissanite Tennis Necklace for Woman Wedding Luxury Jewely with GRA s925 Sterling Sliver Plated 18k White Gold Necklace",
-        "evaluation_count": "4",
-        "sales_count": "15",
+        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S60cdff6dcb364f0e963c0f289bf39323I.jpg\",\"style\":{\"width\":1600,\"height\":863}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S1a8d71c11ff74a5f8e756b4c484e59e4r.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S353f05044dc84ba0828dab57c6bc1136d.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sbba590ff544c44f58744cc6526b1da16l.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Se819e0df7b54405592b6a8cd201ca275X.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sae17e7097eb8463abe3beee338da0b71s.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd8907f81bb8243cdb7c9409202787dccM.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S65aa9d12f1894cbf81a7e00482d023c19.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S6e3271dd29db4e06822ea13ae7a25372u.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S3c5ae0baea904545a0d4270d77f01d35U.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sc8b326b1aeb241fd9103a15aac9b1028s.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd0754e07f33a415a99ee20c44fc0bda5Q.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S4855c9aff7b3437dae36baccf9b9602b6.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S5bf45973e56e4515b139791f7cc50132u.jpg\",\"style\":{\"width\":1000,\"height\":1000}}}]}",
+        "subject": "New Men's Gift Watch PAGANI DESIGN Automatic Watches 100M Waterproof Clock Stainless Steel Sapphire Glass Mechanical Wristwatch",
+        "evaluation_count": "0",
+        "sales_count": "0",
         "product_status_type": "onSelling",
-        "avg_evaluation_rating": "5.0",
-        "currency_code": "USD",
-        "category_id": 200001699,
-        "product_id": 1005004881797251,
-        "detail": "<div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">description</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Material:s925 sterling sliver plated 18k white gold</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Main stone: 3mm moissanite</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Moissanite Color:D</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Moissanite Clarity:VVS1</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Moissanite Cut: excellent</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Free GRA certification include:yes</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">Package:1*moissanite Bracelet with gift box</p></div><div class=\"detailmodule_text\"><p style=\"color:rgb(0, 0, 0)\">\uff08We are factory and can make any length for you and the price is right.\uff09</p></div><div class=\"detailmodule_image\"><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S68544ba88afb4a819a3d3fe0ea88ab9aM.png\" slate-data-type=\"image\"/></div><div class=\"detailmodule_image\"><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S037e70d2f7484e109f3213c444a28ca31.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Ad4f375b0f7b04680b774ebc9d3d306fc1.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S5e76755072d14ec4b1a36114477a7975p.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S4fa5c4c366134f699b78d3789b94d690m.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/A47aba252f2204c9394595ca1f713e284V.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Ae31e5db0804940e7906adb83e338aee0T.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Aef5f993226194fc1b884ee52bb4884b0n.jpg\" slate-data-type=\"image\"/></div><br/>"
+        "avg_evaluation_rating": "0.0",
+        "currency_code": "CNY",
+        "category_id": 202227034,
+        "product_id": 1005009946386993,
+        "detail": "<div class=\"detailmodule_image\"><kse:widget data-widget-type=\"customText\" id=\"1005000024219608\" type=\"relation\"></kse:widget><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S60cdff6dcb364f0e963c0f289bf39323I.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S1a8d71c11ff74a5f8e756b4c484e59e4r.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S353f05044dc84ba0828dab57c6bc1136d.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sbba590ff544c44f58744cc6526b1da16l.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Se819e0df7b54405592b6a8cd201ca275X.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sae17e7097eb8463abe3beee338da0b71s.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sd8907f81bb8243cdb7c9409202787dccM.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_image\"><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S65aa9d12f1894cbf81a7e00482d023c19.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S6e3271dd29db4e06822ea13ae7a25372u.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S3c5ae0baea904545a0d4270d77f01d35U.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sc8b326b1aeb241fd9103a15aac9b1028s.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sd0754e07f33a415a99ee20c44fc0bda5Q.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S4855c9aff7b3437dae36baccf9b9602b6.jpg\" slate-data-type=\"image\"/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S5bf45973e56e4515b139791f7cc50132u.jpg\" slate-data-type=\"image\"/></div><p><br/></p>"
       },
-      "has_whole_sale": false,
+      "has_whole_sale": true,
       "ae_item_properties": {
         "ae_item_property": [
           {
-            "attr_name_id": 2,
-            "attr_value_id": 202125822,
-            "attr_name": "Brand Name",
-            "attr_value": "knobspin"
+            "attr_name_id": 200000057,
+            "attr_value_id": 201564812,
+            "attr_name": "Water Resistance Depth",
+            "attr_value": "10Bar"
           },
           {
-            "attr_name_id": 200000085,
-            "attr_value_id": 200572190,
-            "attr_name": "Certificate Type",
-            "attr_value": "NGSTC"
+            "attr_name_id": 200000050,
+            "attr_value_id": 206,
+            "attr_name": "Band Material Type",
+            "attr_value": "Stainless Steel"
           },
           {
-            "attr_name_id": 219,
-            "attr_value_id": 9441741844,
-            "attr_name": "Origin",
-            "attr_value": "Mainland China"
+            "attr_name_id": 905,
+            "attr_value_id": 1981770201,
+            "attr_name": "Display Type",
+            "attr_value": "Arabic Numeral Markers"
           },
           {
-            "attr_name_id": 920,
-            "attr_value_id": 2468,
-            "attr_name": "Certificate",
-            "attr_value": "Yes"
+            "attr_name_id": 217,
+            "attr_value_id": 361687,
+            "attr_name": "Feature",
+            "attr_value": "Auto Date"
           },
           {
-            "attr_name_id": 200000195,
-            "attr_value_id": -1,
-            "attr_name": "Item Weight",
-            "attr_value": "other"
+            "attr_name_id": 217,
+            "attr_value_id": 361699,
+            "attr_name": "Feature",
+            "attr_value": "Water-Resistance"
+          },
+          {
+            "attr_name_id": 217,
+            "attr_value_id": 200003420,
+            "attr_name": "Feature",
+            "attr_value": "Shock Resistant"
+          },
+          {
+            "attr_name_id": 217,
+            "attr_value_id": 202779806,
+            "attr_name": "Feature",
+            "attr_value": "Luminous Hands"
           },
           {
             "attr_name_id": 400000603,
@@ -220,139 +169,115 @@
             "attr_value": "None"
           },
           {
-            "attr_name_id": 20252,
-            "attr_value_id": 361066,
-            "attr_name": "Main Stone",
-            "attr_value": "Moissanite"
-          },
-          {
-            "attr_name_id": 100005859,
-            "attr_value_id": 347,
-            "attr_name": "Metals Type",
-            "attr_value": "Silver"
-          },
-          {
-            "attr_name_id": 200000086,
-            "attr_value_id": 200000167,
-            "attr_name": "Metal Stamp",
-            "attr_value": "925,Sterling"
-          },
-          {
-            "attr_name_id": 284,
-            "attr_value_id": 100006040,
-            "attr_name": "Gender",
-            "attr_value": "Women"
-          },
-          {
-            "attr_name_id": 200000221,
-            "attr_value_id": 200000560,
-            "attr_name": "Necklace Type",
-            "attr_value": "Chains Necklaces"
-          },
-          {
-            "attr_name_id": 1186,
-            "attr_value_id": 200002407,
-            "attr_name": "Occasion",
-            "attr_value": "Party"
-          },
-          {
-            "attr_name_id": 200000171,
-            "attr_value_id": 350525,
-            "attr_name": "Chain Type",
-            "attr_value": "None"
-          },
-          {
-            "attr_name_id": 200000137,
-            "attr_value_id": 361229,
-            "attr_name": "Item Type",
-            "attr_value": "NECKLACES"
+            "attr_name_id": 400030258,
+            "attr_value_id": 9442072771,
+            "attr_name": "Movement origin",
+            "attr_value": "Jp(origin)"
           },
           {
             "attr_name_id": 326,
-            "attr_value_id": 200003768,
+            "attr_value_id": 361293,
             "attr_name": "Style",
-            "attr_value": "TRENDY"
+            "attr_value": "SPORT"
           },
           {
-            "attr_name_id": 348,
-            "attr_value_id": 1982300261,
-            "attr_name": "Certification",
-            "attr_value": "REACH"
-          },
-          {
-            "attr_name_id": 200103261,
-            "attr_value_id": 350525,
-            "attr_name": "Side Stone",
-            "attr_value": "None"
-          },
-          {
-            "attr_name_id": 200000087,
+            "attr_name_id": 200000052,
             "attr_value_id": -1,
-            "attr_name": "Certificate Number",
-            "attr_value": "GRA"
+            "attr_name": "Band Length",
+            "attr_value": "18"
+          },
+          {
+            "attr_name_id": 219,
+            "attr_value_id": 9441741844,
+            "attr_name": "Origin",
+            "attr_value": "Mainland China"
+          },
+          {
+            "attr_name_id": 200000053,
+            "attr_value_id": 200000081,
+            "attr_name": "Clasp Type",
+            "attr_value": "Bracelet Clasp"
+          },
+          {
+            "attr_name_id": 20280,
+            "attr_value_id": 206,
+            "attr_name": "Case Material",
+            "attr_value": "Stainless Steel"
+          },
+          {
+            "attr_name_id": 200000041,
+            "attr_value_id": 201566806,
+            "attr_name": "Dial Window Material Type",
+            "attr_value": "Sapphire Crystal"
+          },
+          {
+            "attr_name_id": 200000137,
+            "attr_value_id": 201564807,
+            "attr_name": "Item Type",
+            "attr_value": "Quartz Wristwatches"
+          },
+          {
+            "attr_name_id": 400048006,
+            "attr_value_id": 1951639238,
+            "attr_name": "Types of watches",
+            "attr_value": "Mechanical Wristwatches"
+          },
+          {
+            "attr_name_id": 200009205,
+            "attr_value_id": -1,
+            "attr_name": "Case Thickness",
+            "attr_value": "11.2"
+          },
+          {
+            "attr_name_id": 100005870,
+            "attr_value_id": 436,
+            "attr_name": "Boxes & Cases Material",
+            "attr_value": "Paper"
           },
           {
             "attr_name_id": 3,
             "attr_value_id": -1,
             "attr_name": "Model Number",
-            "attr_value": "Moissanite Tennis Necklace"
+            "attr_value": "PD-YS023 V2"
           },
           {
-            "attr_name_id": 200000631,
-            "attr_value_id": 349907,
-            "attr_name": "is_customized",
-            "attr_value": "Yes"
+            "attr_name_id": 200000051,
+            "attr_value_id": 1981786433,
+            "attr_name": "Band Width",
+            "attr_value": "20 to 24 mm"
           },
           {
-            "attr_name_id": 200000784,
+            "attr_name_id": 348,
+            "attr_value_id": 351626,
+            "attr_name": "Certification",
+            "attr_value": "CE"
+          },
+          {
+            "attr_name_id": 200000046,
+            "attr_value_id": 1981786434,
+            "attr_name": "Dial Diameter",
+            "attr_value": "40 to 44 mm"
+          },
+          {
+            "attr_name_id": 200000047,
             "attr_value_id": 353,
-            "attr_name": "Shape\\pattern",
+            "attr_name": "Case Shape",
             "attr_value": "Round"
-          },
-          {
-            "attr_name_id": 200000785,
-            "attr_value_id": 200003777,
-            "attr_name": "Fine or Fashion",
-            "attr_value": "Fine"
-          },
-          {
-            "attr_name_id": 200000640,
-            "attr_value_id": -1,
-            "attr_name": "Pendant Size",
-            "attr_value": "3cm 5cm"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "Design shapes",
-            "attr_value": "V style with pendant"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "pendant size",
-            "attr_value": "3cm and 5cm"
-          },
-          {
-            "attr_name_id": -1,
-            "attr_value_id": -1,
-            "attr_name": "diamond size",
-            "attr_value": "3mm"
           }
         ]
       },
       "ae_store_info": {
-        "store_id": 2629028,
-        "shipping_speed_rating": "4.8",
-        "communication_rating": "4.8",
-        "store_name": "knobspin Official Store",
+        "store_id": 1104883264,
+        "shipping_speed_rating": "4.6",
+        "communication_rating": "4.6",
+        "store_name": "PAGANI DESIGN Mens Watch Store",
         "store_country_code": "CN",
         "item_as_described_rating": "4.8"
       }
     },
     "rsp_code": 200,
     "rsp_msg": "Call succeeds",
-    "request_id": "212e59e617581126730034306",
-    "_trace_id_": "21411b6217581126730015087e4529"
+    "request_id": "212e526617585189962437416",
+    "_trace_id_": "213bf77217585189962425025ed54b"
   }
 }
