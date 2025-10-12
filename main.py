@@ -634,11 +634,6 @@ def main():
         help="Workspace ID to create base in (optional, uses personal workspace if not provided)"
     )
     airtable_create_parser.add_argument(
-        "--list-workspaces",
-        action="store_true",
-        help="List available workspaces instead of creating base"
-    )
-    airtable_create_parser.add_argument(
         "--test-token",
         action="store_true",
         help="Test Personal Access Token configuration"
@@ -774,7 +769,6 @@ def main():
         create_base_command(
             base_name=args.name,
             workspace_id=args.workspace_id,
-            list_workspaces=args.list_workspaces,
             test_token=args.test_token
         )
     else:

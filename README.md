@@ -105,6 +105,7 @@ python main.py get_code_link
 ```
 
 This command:
+
 - Gives you the URL to get the code.
 - Open the URL above in your browser
 - Log in to your AliExpress account
@@ -158,6 +159,7 @@ This displays:
 If you see repeated token refresh errors during operations:
 
 **Error Pattern:**
+
 ```
 ERROR:src.session.session_manager:Failed to refresh token: The specified refresh token is invalid or expired
 ERROR:src.session.session_manager:Error refreshing token: (sqlite3.OperationalError) database is locked
@@ -171,6 +173,7 @@ The pipeline now includes intelligent error handling that will stop repeated att
 3. **Automatic Recovery:** Creating a new session clears the error state
 
 **Steps to Fix:**
+
 1. Get a new authorization code from [AliExpress Open Platform](https://open.aliexpress.com/oauth/authorize?response_type=code&force_auth=true&redirect_uri=urn:ietf:wg:oauth:2.0:oob&client_id=YOUR_APP_KEY)
 2. Create a new session: `python main.py create_session --code YOUR_NEW_CODE`
 3. Resume your operations
@@ -315,20 +318,20 @@ S3_VIDEOS_PREFIX=product-images/
    - Go to S3 Console → Your Bucket → Permissions
    - Configure "Block public access" settings as needed
    - Add a bucket policy to allow public read access to uploaded images and videos
-      ```bash
-      {
-         "Version": "2012-10-17",
-         "Statement": [
-            {
-                  "Sid": "PublicReadGetObject",
-                  "Effect": "Allow",
-                  "Principal": "*",
-                  "Action": "s3:GetObject",
-                  "Resource": "arn:aws:s3:::productpipeline/product-images/*"
-            }
-         ]
-      }
-      ```
+     ```bash
+     {
+        "Version": "2012-10-17",
+        "Statement": [
+           {
+                 "Sid": "PublicReadGetObject",
+                 "Effect": "Allow",
+                 "Principal": "*",
+                 "Action": "s3:GetObject",
+                 "Resource": "arn:aws:s3:::productpipeline/product-images/*"
+           }
+        ]
+     }
+     ```
 
 **Features:**
 
@@ -448,16 +451,19 @@ python main.py detect:export-suspects --output data/review_cases.csv
 This creates a CSV file with the following columns:
 
 **Product Information:**
+
 - `master_product_id`, `duplicate_product_id`: Product identifiers
 - `master_title`, `duplicate_title`: Product titles
 - `master_price`, `duplicate_price`, `duplicate_cost`: Pricing information
 
 **S3 Image URLs (Direct Browser Access):**
+
 - `master_image`, `duplicate_image`: **Closest matching images with CLIP similarity scores**
 - `master_main_image`, `duplicate_main_image`: Hero/primary images
 - `master_images`, `duplicate_images`: All other product images (pipe-separated)
 
 **Analysis Data:**
+
 - `phash_difference`, `clip_similarity`: Similarity metrics
 - `status` (empty), `notes` (empty): **Review decision fields**
 
@@ -470,7 +476,7 @@ Open the CSV in Excel or similar spreadsheet application:
    - `master_image` vs `duplicate_image`: **Closest matching images** (includes CLIP similarity scores)
    - `master_main_image` vs `duplicate_main_image`: Hero images comparison
    - `master_images` vs `duplicate_images`: All product images (pipe-separated lists)
-3. **Analyze Similarity Metrics**: 
+3. **Analyze Similarity Metrics**:
    - **pHash difference**: Lower values indicate more similar images (0 = identical)
    - **CLIP similarity**: Higher values indicate more similar content (1.0 = identical)
 4. **Make Decision**: Fill the `status` column with:
@@ -590,16 +596,19 @@ The Airtable integration system provides:
 The module creates a structured three-table system in Airtable:
 
 #### 1. Products Table
+
 - **Purpose**: Main product data with anonymous IDs for public access
 - **Key Fields**: `anon_product_id`, `title`, `description`, `hero_image`, `gallery_images`, `price_eur`, `selected_variant`
 - **Data Privacy**: Uses anonymous IDs to protect sensitive product information
 
-#### 2. Variants Table  
+#### 2. Variants Table
+
 - **Purpose**: All SKU variations with proper multi-property formatting
 - **Key Fields**: `anon_product_id`, `variant_key`, `variant_label`, `price_eur`, `is_recommended`
 - **Variant Format**: "Color: Red + Size: L" (properly spaced formatting)
 
 #### 3. Product Mapping Table
+
 - **Purpose**: Secure mapping between anonymous and real AliExpress product data
 - **Key Fields**: `anon_product_id`, `real_product_id`, `aliexpress_product_url`, `aliexpress_main_image_url`
 - **Access Control**: Contains sensitive real product IDs and original AliExpress URLs
@@ -616,7 +625,6 @@ Options:
 
 - `--name NAME`: Specify base name (default: "Product Pipeline")
 - `--workspace-id ID`: Target workspace ID (optional)
-- `--list-workspaces`: List available workspaces
 - `--test-token`: Test token validity
 
 This command:
@@ -665,11 +673,13 @@ AIRTABLE_WORKSPACE_ID=wspXXXXXXXXXXXXX     # Optional workspace ID
 The module implements a comprehensive anonymization system:
 
 **Anonymous ID Generation:**
+
 - **Method**: 12-character MD5 hash of real product ID
 - **Example**: Real ID `1005010018511535` → Anonymous ID `0fb823156563`
 - **Consistency**: Same anonymous ID used across all three tables
 
 **Data Separation:**
+
 - **Public Tables** (Products, Variants): Use anonymous IDs only
 - **Mapping Table**: Contains the secure mapping between anonymous and real IDs
 - **Access Control**: Mapping table provides controlled access to original AliExpress data
@@ -679,11 +689,13 @@ The module implements a comprehensive anonymization system:
 The system handles complex product variants with multiple properties:
 
 **Variant Key Format:**
+
 - **Single Property**: "Color: Red"
 - **Multiple Properties**: "Color: Red + Size: L"
 - **Proper Spacing**: Ensures readable formatting with spaces around colons and plus signs
 
 **Variant Processing:**
+
 - Extracts all property combinations from AliExpress data
 - Creates properly formatted variant keys for each SKU
 - Links variants to product using consistent anonymous IDs
@@ -694,11 +706,13 @@ The system handles complex product variants with multiple properties:
 The module stores image references without uploading actual files:
 
 **Gallery Images:**
+
 - **Format**: Comma-separated S3 URLs stored as text
 - **Field Type**: Single line text (not attachment)
 - **Example**: `https://s3.amazonaws.com/bucket/image1.jpg, https://s3.amazonaws.com/bucket/image2.jpg`
 
 **Hero Images:**
+
 - **Format**: Single S3 URL stored as text
 - **Field Type**: URL field for direct linking
 - **Purpose**: Primary product image for display
@@ -708,12 +722,14 @@ The module stores image references without uploading actual files:
 The base creator includes intelligent environment file updates:
 
 **Automatic Updates:**
+
 - **Base ID Detection**: Extracts new base ID from API response
 - **Environment File Update**: Automatically updates `AIRTABLE_BASE_ID` in `.env`
 - **Backup Handling**: Preserves existing environment variables
 - **Error Recovery**: Provides manual instructions if automatic update fails
 
 **Benefits:**
+
 - **No Manual Copying**: Eliminates need to manually copy base IDs
 - **Reduced Errors**: Prevents copy-paste mistakes
 - **Streamlined Workflow**: Base creation immediately ready for sync
@@ -723,16 +739,19 @@ The base creator includes intelligent environment file updates:
 The module includes comprehensive error handling:
 
 **Field Detection:**
+
 - **Dynamic Schema**: Detects available fields in existing bases
 - **Graceful Degradation**: Skips unknown fields without failing
 - **Field Filtering**: Only syncs fields that exist in target tables
 
 **Connection Management:**
+
 - **Token Validation**: Tests token validity before operations
 - **Base Verification**: Confirms base accessibility before sync
 - **Table Detection**: Handles missing tables gracefully
 
 **Sync Recovery:**
+
 - **Partial Sync Support**: Continues if individual records fail
 - **Detailed Logging**: Provides specific error information
 - **Resume Capability**: Can resume interrupted syncs
@@ -740,12 +759,14 @@ The module includes comprehensive error handling:
 ### Base Creation Features
 
 **Schema Management:**
+
 - **Complete Field Definitions**: Creates all necessary fields with proper types
 - **Table Relationships**: Sets up linking between tables via anonymous IDs
 - **Field Descriptions**: Includes helpful descriptions for all fields
 - **Data Type Optimization**: Uses appropriate field types (URL, number, text, etc.)
 
 **Success Detection:**
+
 - **Status Code Handling**: Recognizes both 200 and 201 as success
 - **Response Parsing**: Extracts base ID and table information
 - **Validation**: Confirms base creation before proceeding
@@ -753,12 +774,14 @@ The module includes comprehensive error handling:
 ### Sync Performance
 
 **Optimized Processing:**
+
 - **Batch Operations**: Processes records in efficient batches
 - **Selective Sync**: Only syncs MASTER and UNIQUE products
 - **Status Filtering**: Supports filtering by product status
 - **Limit Controls**: Allows limiting sync size for testing
 
 **Progress Tracking:**
+
 - **Detailed Statistics**: Reports created/updated counts per table
 - **Total Summaries**: Provides overall sync performance metrics
 - **Error Reporting**: Identifies and reports any sync failures
@@ -789,24 +812,24 @@ python main.py airtable:sync --limit 1 --dry-run
 
 # Check token validity
 python main.py airtable:create-base --test-token
-
-# List available workspaces
-python main.py airtable:create-base --list-workspaces
 ```
 
 ### Integration Benefits
 
 **Data Organization:**
+
 - **Structured Schema**: Consistent data structure across all bases
 - **Relationship Integrity**: Proper linking between products and variants
 - **Data Privacy**: Anonymous IDs protect sensitive information
 
 **Operational Efficiency:**
+
 - **Automated Setup**: One command creates complete base structure
 - **Consistent Formatting**: Standardized variant and field formats
 - **Error Prevention**: Validates data before sync operations
 
 **Scalability:**
+
 - **Large Dataset Support**: Handles thousands of products efficiently
 - **Incremental Updates**: Supports ongoing sync operations
 - **Performance Monitoring**: Tracks sync performance and success rates

@@ -401,20 +401,6 @@ class AirtableBaseCreator:
             ]
         }
 
-    def list_workspaces(self) -> List[Dict[str, Any]]:
-        """List available workspaces."""
-        response = requests.get(
-            f"{self.base_url}/workspaces",
-            headers=self.headers,
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            return response.json()["workspaces"]
-        else:
-            logger.error(f"Failed to list workspaces: {response.status_code}")
-            response.raise_for_status()
-
     def get_base_schema(self, base_id: str) -> Dict[str, Any]:
         """Get existing base schema."""
         response = requests.get(
@@ -430,14 +416,13 @@ class AirtableBaseCreator:
             response.raise_for_status()
 
 
-def create_base_command(base_name: str = None, workspace_id: str = None, list_workspaces: bool = False, test_token: bool = False):
+def create_base_command(base_name: str = None, workspace_id: str = None, test_token: bool = False):
     """
     CLI command to create Airtable base.
     
     Args:
         base_name: Name for the new base
         workspace_id: Workspace ID to create base in  
-        list_workspaces: Just list available workspaces
         test_token: Test token configuration
     """
     creator = AirtableBaseCreator()
@@ -463,17 +448,6 @@ def create_base_command(base_name: str = None, workspace_id: str = None, list_wo
                 print(f"Response: {response.text}")
         except Exception as e:
             print(f"❌ Token test error: {e}")
-        return
-    
-    if list_workspaces:
-        print("📋 Available Workspaces:")
-        try:
-            workspaces = creator.list_workspaces()
-            for ws in workspaces:
-                print(f"  🗂️  {ws['name']} (ID: {ws['id']})")
-        except Exception as e:
-            print(f"❌ Failed to list workspaces: {e}")
-            print("💡 Make sure your Personal Access Token has 'schema.bases:read' scope")
         return
     
     # Override workspace if provided
