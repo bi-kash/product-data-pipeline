@@ -42,7 +42,14 @@ class AirtableClient:
         if not records:
             return {'created': 0, 'updated': 0}
         
-        table = self.products_table if table_name == self.products_table_name else self.variants_table
+        if table_name == self.products_table_name:
+            table = self.products_table
+        elif table_name == self.variants_table_name:
+            table = self.variants_table
+        elif table_name == "Product Mapping":
+            table = self.base.table("Product Mapping")
+        else:
+            raise ValueError(f"Unknown table name: {table_name}")
         result = {'created': 0, 'updated': 0}
         
         for record in records:

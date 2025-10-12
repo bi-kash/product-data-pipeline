@@ -12,6 +12,7 @@ This project implements a modular pipeline to identify jewelry products from Ali
 - **Module A (Harvesting):** Merchant discovery and product collection via category-based search
 - **Module B (Filtering):** Product qualification, enrichment, and image processing
 - **Module C (Duplicate Detection):** Advanced image-based duplicate detection and master selection
+- **Module D (Airtable Integration):** Data export to Airtable with anonymization and structured schema
 
 ### Key Features
 
@@ -20,6 +21,7 @@ This project implements a modular pipeline to identify jewelry products from Ali
 - **Shipping Cost Integration:** Real shipping costs and delivery time calculations
 - **Duplicate Detection:** Advanced pHash + CLIP analysis for identifying duplicate products
 - **Business Rule Filtering:** Configurable price and delivery time constraints
+- **Airtable Integration:** Automated export with data anonymization and structured three-table schema
 - **VA Workflow Support:** CSV export/import for merchant verification
 
 ## Requirements
@@ -568,6 +570,247 @@ CLIP_MAX_IMAGES_PER_PRODUCT=5    # Limit for efficiency
    - **REVIEW_SUSPECT**: Ambiguous cases requiring manual review
    - **UNIQUE**: Confirmed unique products
 
+## Module D: Airtable Integration & Data Export
+
+Module D provides comprehensive Airtable integration for the product data pipeline, enabling seamless export of processed product data to Airtable bases with proper anonymization and data organization.
+
+### Overview
+
+The Airtable integration system provides:
+
+1. **Automated Base Creation**: Creates complete Airtable bases with proper schema
+2. **Three-Table Architecture**: Separates data into Products, Variants, and Product Mapping tables
+3. **Data Anonymization**: Uses anonymous product IDs while maintaining mapping to real AliExpress data
+4. **URL-Based Image Storage**: Stores S3 image URLs instead of uploading attachments
+5. **Multi-Property Variant Support**: Handles complex variants (Color + Size combinations)
+6. **Automatic Environment Updates**: Updates `.env` file with new base IDs
+
+### Three-Table System
+
+The module creates a structured three-table system in Airtable:
+
+#### 1. Products Table
+- **Purpose**: Main product data with anonymous IDs for public access
+- **Key Fields**: `anon_product_id`, `title`, `description`, `hero_image`, `gallery_images`, `price_eur`, `selected_variant`
+- **Data Privacy**: Uses anonymous IDs to protect sensitive product information
+
+#### 2. Variants Table  
+- **Purpose**: All SKU variations with proper multi-property formatting
+- **Key Fields**: `anon_product_id`, `variant_key`, `variant_label`, `price_eur`, `is_recommended`
+- **Variant Format**: "Color: Red + Size: L" (properly spaced formatting)
+
+#### 3. Product Mapping Table
+- **Purpose**: Secure mapping between anonymous and real AliExpress product data
+- **Key Fields**: `anon_product_id`, `real_product_id`, `aliexpress_product_url`, `aliexpress_main_image_url`
+- **Access Control**: Contains sensitive real product IDs and original AliExpress URLs
+
+### Commands
+
+**Create Airtable base:**
+
+```bash
+python main.py airtable:create-base
+```
+
+Options:
+
+- `--name NAME`: Specify base name (default: "Product Pipeline")
+- `--workspace-id ID`: Target workspace ID (optional)
+- `--list-workspaces`: List available workspaces
+- `--test-token`: Test token validity
+
+This command:
+
+- Creates a new Airtable base with complete three-table schema
+- Sets up proper field types for all data (URLs, numbers, text, etc.)
+- Automatically updates `.env` file with new base ID
+- Provides direct links to the created base
+
+**Sync data to Airtable:**
+
+```bash
+python main.py airtable:sync
+```
+
+Options:
+
+- `--limit N`: Sync only first N products (useful for testing)
+- `--filter STATUS`: Sync only products with specific status (MASTER, UNIQUE)
+- `--dry-run`: Show what would be synced without making changes
+
+This command:
+
+- Syncs Products table with anonymous product data and S3 image URLs
+- Syncs Variants table with properly formatted multi-property variants
+- Syncs Product Mapping table with real AliExpress URLs and product IDs
+- Uses anonymous IDs consistently across all tables for data linking
+- Provides detailed sync statistics and error reporting
+
+### Configuration
+
+Airtable integration is configured via `.env` variables:
+
+```bash
+# Airtable Configuration
+AIRTABLE_PERSONAL_ACCESS_TOKEN=pat...    # Personal Access Token (recommended)
+AIRTABLE_API_KEY=pat...                  # Fallback API key
+AIRTABLE_BASE_ID=appXXXXXXXXXXXXXX        # Target base ID (auto-updated by create-base)
+AIRTABLE_PRODUCTS_TABLE=Products          # Products table name
+AIRTABLE_VARIANTS_TABLE=Variants          # Variants table name
+AIRTABLE_WORKSPACE_ID=wspXXXXXXXXXXXXX     # Optional workspace ID
+```
+
+### Data Anonymization
+
+The module implements a comprehensive anonymization system:
+
+**Anonymous ID Generation:**
+- **Method**: 12-character MD5 hash of real product ID
+- **Example**: Real ID `1005010018511535` → Anonymous ID `0fb823156563`
+- **Consistency**: Same anonymous ID used across all three tables
+
+**Data Separation:**
+- **Public Tables** (Products, Variants): Use anonymous IDs only
+- **Mapping Table**: Contains the secure mapping between anonymous and real IDs
+- **Access Control**: Mapping table provides controlled access to original AliExpress data
+
+### Multi-Property Variant Support
+
+The system handles complex product variants with multiple properties:
+
+**Variant Key Format:**
+- **Single Property**: "Color: Red"
+- **Multiple Properties**: "Color: Red + Size: L"
+- **Proper Spacing**: Ensures readable formatting with spaces around colons and plus signs
+
+**Variant Processing:**
+- Extracts all property combinations from AliExpress data
+- Creates properly formatted variant keys for each SKU
+- Links variants to product using consistent anonymous IDs
+- Identifies recommended variants (typically cheapest option)
+
+### Image URL Management
+
+The module stores image references without uploading actual files:
+
+**Gallery Images:**
+- **Format**: Comma-separated S3 URLs stored as text
+- **Field Type**: Single line text (not attachment)
+- **Example**: `https://s3.amazonaws.com/bucket/image1.jpg, https://s3.amazonaws.com/bucket/image2.jpg`
+
+**Hero Images:**
+- **Format**: Single S3 URL stored as text
+- **Field Type**: URL field for direct linking
+- **Purpose**: Primary product image for display
+
+### Automatic Environment Management
+
+The base creator includes intelligent environment file updates:
+
+**Automatic Updates:**
+- **Base ID Detection**: Extracts new base ID from API response
+- **Environment File Update**: Automatically updates `AIRTABLE_BASE_ID` in `.env`
+- **Backup Handling**: Preserves existing environment variables
+- **Error Recovery**: Provides manual instructions if automatic update fails
+
+**Benefits:**
+- **No Manual Copying**: Eliminates need to manually copy base IDs
+- **Reduced Errors**: Prevents copy-paste mistakes
+- **Streamlined Workflow**: Base creation immediately ready for sync
+
+### Error Handling & Recovery
+
+The module includes comprehensive error handling:
+
+**Field Detection:**
+- **Dynamic Schema**: Detects available fields in existing bases
+- **Graceful Degradation**: Skips unknown fields without failing
+- **Field Filtering**: Only syncs fields that exist in target tables
+
+**Connection Management:**
+- **Token Validation**: Tests token validity before operations
+- **Base Verification**: Confirms base accessibility before sync
+- **Table Detection**: Handles missing tables gracefully
+
+**Sync Recovery:**
+- **Partial Sync Support**: Continues if individual records fail
+- **Detailed Logging**: Provides specific error information
+- **Resume Capability**: Can resume interrupted syncs
+
+### Base Creation Features
+
+**Schema Management:**
+- **Complete Field Definitions**: Creates all necessary fields with proper types
+- **Table Relationships**: Sets up linking between tables via anonymous IDs
+- **Field Descriptions**: Includes helpful descriptions for all fields
+- **Data Type Optimization**: Uses appropriate field types (URL, number, text, etc.)
+
+**Success Detection:**
+- **Status Code Handling**: Recognizes both 200 and 201 as success
+- **Response Parsing**: Extracts base ID and table information
+- **Validation**: Confirms base creation before proceeding
+
+### Sync Performance
+
+**Optimized Processing:**
+- **Batch Operations**: Processes records in efficient batches
+- **Selective Sync**: Only syncs MASTER and UNIQUE products
+- **Status Filtering**: Supports filtering by product status
+- **Limit Controls**: Allows limiting sync size for testing
+
+**Progress Tracking:**
+- **Detailed Statistics**: Reports created/updated counts per table
+- **Total Summaries**: Provides overall sync performance metrics
+- **Error Reporting**: Identifies and reports any sync failures
+
+### Usage Examples
+
+**Complete Setup Workflow:**
+
+```bash
+# 1. Create new base with proper schema
+python main.py airtable:create-base --name "My Product Base"
+
+# 2. Test sync with small dataset
+python main.py airtable:sync --limit 5 --dry-run
+
+# 3. Sync MASTER products only
+python main.py airtable:sync --filter MASTER
+
+# 4. Full sync of all qualifying products
+python main.py airtable:sync
+```
+
+**Development & Testing:**
+
+```bash
+# Test with dry run
+python main.py airtable:sync --limit 1 --dry-run
+
+# Check token validity
+python main.py airtable:create-base --test-token
+
+# List available workspaces
+python main.py airtable:create-base --list-workspaces
+```
+
+### Integration Benefits
+
+**Data Organization:**
+- **Structured Schema**: Consistent data structure across all bases
+- **Relationship Integrity**: Proper linking between products and variants
+- **Data Privacy**: Anonymous IDs protect sensitive information
+
+**Operational Efficiency:**
+- **Automated Setup**: One command creates complete base structure
+- **Consistent Formatting**: Standardized variant and field formats
+- **Error Prevention**: Validates data before sync operations
+
+**Scalability:**
+- **Large Dataset Support**: Handles thousands of products efficiently
+- **Incremental Updates**: Supports ongoing sync operations
+- **Performance Monitoring**: Tracks sync performance and success rates
+
 ## Search Configuration
 
 The pipeline supports both category-based and keyword-based search methods. Category-based search is recommended for most use cases as it provides better precision for finished jewelry products.
@@ -587,7 +830,7 @@ The pipeline is configured via:
 
 ## Complete Pipeline Workflow
 
-The product data pipeline follows this modular workflow across all three modules:
+The product data pipeline follows this modular workflow across all four modules:
 
 ### Phase 1: Module A - Data Collection & Merchant Review
 
@@ -613,11 +856,20 @@ The product data pipeline follows this modular workflow across all three modules
 14. **Master Reassignment** - System automatically handles master changes when needed
 15. **Status Tracking** - Monitor detection results and pipeline performance
 
-### Phase 4: Monitoring & Maintenance
+### Phase 4: Module D - Airtable Integration & Export
 
-13. **Session Management** - Refresh API sessions as needed
-14. **Status Monitoring** - Use status commands to track each module
-15. **Data Analysis** - Query database for insights and optimization
+16. **Base Creation** - Run `airtable:create-base` to create structured Airtable base
+17. **Data Export** - Run `airtable:sync` to export processed products to Airtable
+18. **Anonymous ID Management** - Automatically handles data anonymization and mapping
+19. **Multi-Property Variants** - Exports complex variant combinations with proper formatting
+20. **Image URL Storage** - Stores S3 image URLs for efficient access
+
+### Phase 5: Monitoring & Maintenance
+
+21. **Session Management** - Refresh API sessions as needed
+22. **Status Monitoring** - Use status commands to track each module
+23. **Data Analysis** - Query database for insights and optimization
+24. **Airtable Updates** - Periodic sync updates to keep Airtable data current
 
 **Pipeline Benefits:**
 

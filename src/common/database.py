@@ -245,27 +245,22 @@ class ProductVariant(Base):
     # SKU information from AliExpress API
     sku_id = Column(String(255), nullable=False, unique=True)  # Unique SKU identifier
     sku_attr = Column(String(500), nullable=True)  # e.g., "14:10#blue"
-    variant_id = Column(String(255), nullable=True)  # The "id" field from API
     
     # Pricing information
     offer_sale_price = Column(Float, nullable=True)  # Sale price
-    sku_price = Column(Float, nullable=True)  # Original price
-    offer_bulk_sale_price = Column(Float, nullable=True)  # Bulk price
     currency_code = Column(String(10), nullable=True)  # e.g., "EUR", "USD"
-    price_include_tax = Column(Boolean, nullable=True)
     
     # Stock information
     sku_available_stock = Column(Integer, nullable=True)
     
-        # Primary attribute (most common property like Color, Size)
-    property_name = Column(String(100), nullable=True)  # e.g., "Color"
-    property_value = Column(String(200), nullable=True)  # e.g., "Red"
-    property_id = Column(String(50), nullable=True)  # Property ID
-    property_value_id = Column(String(50), nullable=True)  # Property value ID
+    # Multiple properties support (JSON array of all properties)
+    properties = Column(JSON, nullable=True)  # Array of {name, value, id, value_id} objects
+    
+    # Legacy field for backward compatibility
     property_value_definition_name = Column(String(200), nullable=True)  # e.g., "blue"
     
-    # Variant key for linking (matches product_images.variant_key format)
-    variant_key = Column(String(300), nullable=True)  # e.g., "Color:Red"
+    # Combined variant key for linking (all properties combined) with proper formatting
+    variant_key = Column(String(500), nullable=True)  # e.g., "Color: Red + Size: L" or "Color: Red"
     
     # Associated image URL for this variant
     sku_image_url = Column(Text, nullable=True)

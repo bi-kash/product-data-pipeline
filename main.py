@@ -766,7 +766,9 @@ def main():
         )
         print(f"✅ Airtable sync completed!")
         print(f"📊 Products: {result['products']['created']} created, {result['products']['updated']} updated")
-        print(f"📦 Variants: {result['variants']['created']} created, {result['variants']['updated']} updated") 
+        print(f"📦 Variants: {result['variants']['created']} created, {result['variants']['updated']} updated")
+        if 'mapping' in result:
+            print(f"🔗 Mapping: {result['mapping']['created']} created, {result['mapping']['updated']} updated")
         print(f"📈 Total: {result['total_created']} created, {result['total_updated']} updated")
     elif args.command == "airtable:create-base":
         create_base_command(

@@ -5,6 +5,8 @@ Uses Airtable Meta API to create base and tables programmatically.
 
 import json
 import logging
+import os
+import re
 import requests
 from typing import Dict, List, Any, Optional
 from src.common.config import get_env
@@ -32,6 +34,50 @@ class AirtableBaseCreator:
             raise ValueError("No Airtable token found. Set AIRTABLE_PERSONAL_ACCESS_TOKEN")
         return token
 
+    def _update_env_file(self, new_base_id: str) -> bool:
+        """
+        Update the .env file with the new base ID.
+        
+        Args:
+            new_base_id: The new Airtable base ID to set
+            
+        Returns:
+            bool: True if update was successful, False otherwise
+        """
+        try:
+            env_file_path = ".env"
+            
+            # Check if .env file exists
+            if not os.path.exists(env_file_path):
+                logger.warning("No .env file found to update")
+                return False
+                
+            # Read the current .env file content
+            with open(env_file_path, 'r') as file:
+                content = file.read()
+            
+            # Pattern to match AIRTABLE_BASE_ID line
+            pattern = r'^AIRTABLE_BASE_ID=.*$'
+            replacement = f'AIRTABLE_BASE_ID={new_base_id}'
+            
+            # Replace the line or add it if it doesn't exist
+            if re.search(pattern, content, re.MULTILINE):
+                updated_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+            else:
+                # Add the line at the end if it doesn't exist
+                updated_content = content.rstrip() + f'\n{replacement}\n'
+            
+            # Write the updated content back to the file
+            with open(env_file_path, 'w') as file:
+                file.write(updated_content)
+                
+            logger.info(f"Successfully updated .env file with new base ID: {new_base_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update .env file: {e}")
+            return False
+
     def create_product_base(self, base_name: str = "Product Pipeline") -> Dict[str, Any]:
         """
         Create a complete Airtable base with Products and Variants tables.
@@ -49,7 +95,8 @@ class AirtableBaseCreator:
             "name": base_name,
             "tables": [
                 self._get_products_table_schema(),
-                self._get_variants_table_schema()
+                self._get_variants_table_schema(),
+                self._get_product_mapping_table_schema()
             ]
         }
         
@@ -65,16 +112,31 @@ class AirtableBaseCreator:
             timeout=30
         )
         
-        if response.status_code == 201:
+        if response.status_code in [200, 201]:
             data = response.json()
+            base_id = data['id']
+            
             print(f"✅ Base created successfully!")
-            print(f"Base ID: {data['id']}")
-            print(f"Base URL: https://airtable.com/{data['id']}")
+            print(f"Base ID: {base_id}")
+            print(f"Base URL: https://airtable.com/{base_id}")
+            print()
+            print("📊 Created tables:")
+            print("   1️⃣  Products - Main product data with S3 URLs")
+            print("   2️⃣  Variants - All SKU variations with proper formatting") 
+            print("   3️⃣  Product Mapping - Original AliExpress URLs and real IDs")
+            print()
+            
+            # Automatically update .env file
+            if self._update_env_file(base_id):
+                print("🔧 Automatically updated .env file with new base ID")
+            else:
+                print("⚠️  Could not update .env file automatically")
+                print(f"Please manually add: AIRTABLE_BASE_ID={base_id}")
+            
             print()
             print("Next steps:")
-            print(f"1. Add this to your .env file: AIRTABLE_BASE_ID={data['id']}")
-            print("2. Run: python main.py airtable:sync")
-            return data['id']
+            print("1. Run: python main.py airtable:sync")
+            return base_id
         elif response.status_code == 422:
             print(f"❌ Base creation failed: Server error (422)")
             print(f"This usually means your token doesn't have the required scopes for base creation.")
@@ -119,8 +181,8 @@ class AirtableBaseCreator:
                 },
                 {
                     "name": "gallery_images",
-                    "type": "multipleAttachments", 
-                    "description": "Gallery images (S3 URLs as attachments)"
+                    "type": "multilineText", 
+                    "description": "Gallery images (comma-separated S3 URLs)"
                 },
                 {
                     "name": "video",
@@ -281,6 +343,50 @@ class AirtableBaseCreator:
                         "color": "yellowBright"
                     },
                     "description": "Recommended variant flag (e.g. cheapest & fastest)"
+                },
+                {
+                    "name": "sync_timestamp",
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {"name": "iso"},
+                        "timeFormat": {"name": "24hour"},
+                        "timeZone": "utc"
+                    },
+                    "description": "Last sync timestamp"
+                }
+            ]
+        }
+
+    def _get_product_mapping_table_schema(self) -> Dict[str, Any]:
+        """Define Product Mapping table schema."""
+        return {
+            "name": "Product Mapping",
+            "description": "Maps anonymous product IDs to real AliExpress data and URLs",
+            "fields": [
+                {
+                    "name": "anon_product_id",
+                    "type": "singleLineText",
+                    "description": "Anonymous product ID (matches Products.anon_product_id)"
+                },
+                {
+                    "name": "real_product_id",
+                    "type": "singleLineText", 
+                    "description": "Real AliExpress product ID"
+                },
+                {
+                    "name": "aliexpress_product_url",
+                    "type": "url",
+                    "description": "Direct AliExpress product page URL"
+                },
+                {
+                    "name": "aliexpress_main_image_url",
+                    "type": "url",
+                    "description": "Original AliExpress main product image URL"
+                },
+                {
+                    "name": "aliexpress_video_url",
+                    "type": "url",
+                    "description": "Original AliExpress product video URL (if available)"
                 },
                 {
                     "name": "sync_timestamp",

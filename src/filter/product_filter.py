@@ -746,56 +746,64 @@ class ProductFilterEngine:
                 
                 # Extract pricing and stock information
                 offer_sale_price = self._parse_float(sku.get('offer_sale_price'))
-                sku_price = self._parse_float(sku.get('sku_price'))
-                offer_bulk_sale_price = self._parse_float(sku.get('offer_bulk_sale_price'))
                 currency_code = sku.get('currency_code')
-                price_include_tax = self._parse_bool(sku.get('price_include_tax'))
                 sku_available_stock = self._parse_int(sku.get('sku_available_stock'))
                 
-                # Extract primary property information
-                property_name = None
-                primary_property_value = None
-                primary_property_id = None
-                primary_property_value_id = None
-                property_value_definition_name = None
-                sku_image_url = None
-                variant_key = None
+                # Extract ALL property information (multi-property support)
+                properties = []
+                variant_key_parts = []
+                variant_label_parts = []
                 
                 # Extract property details from ae_sku_property_dtos
                 if 'ae_sku_property_dtos' in sku:
                     props = sku['ae_sku_property_dtos'].get('ae_sku_property_d_t_o', [])
-                    if props and len(props) > 0:
-                        # Use the first property as primary (usually Color)
-                        first_prop = props[0]
-                        property_name = first_prop.get('sku_property_name')
-                        property_value = first_prop.get('sku_property_value') 
-                        property_id = first_prop.get('sku_property_id')
-                        property_value_id = first_prop.get('property_value_id')
-                        property_value_definition_name = first_prop.get('property_value_definition_name')
-                        sku_image_url = first_prop.get('sku_image')
+                    for prop in props:
+                        prop_name = prop.get('sku_property_name')
+                        prop_value = prop.get('sku_property_value')
+                        prop_id = prop.get('sku_property_id')
+                        prop_value_id = prop.get('property_value_id')
+                        prop_value_def_name = prop.get('property_value_definition_name')
                         
-                        # Create variant key in same format as product_images
-                        if property_name and property_value:
-                            variant_key = f"{property_name}:{property_value}"
+                        if prop_name and prop_value:
+                            # Add to properties array
+                            properties.append({
+                                'name': prop_name,
+                                'value': prop_value,
+                                'property_id': str(prop_id) if prop_id else None,
+                                'value_id': str(prop_value_id) if prop_value_id else None,
+                                'definition_name': prop_value_def_name
+                            })
+                            
+                            # Build variant key parts with proper formatting
+                            variant_key_parts.append(f"{prop_name}: {prop_value}")
+                            variant_label_parts.append(prop_value)
+                
+                # Create properly formatted variant key with spaces
+                variant_key = " + ".join(sorted(variant_key_parts)) if variant_key_parts else None
+                
+                # Get legacy field for backward compatibility
+                property_value_definition_name = None
+                if properties:
+                    property_value_definition_name = properties[0].get('definition_name')
+                
+                # Get SKU image URL
+                sku_image_url = None
+                if 'ae_sku_property_dtos' in sku:
+                    props = sku['ae_sku_property_dtos'].get('ae_sku_property_d_t_o', [])
+                    if props and len(props) > 0:
+                        sku_image_url = props[0].get('sku_image')
                 
                 # Create ProductVariant record
                 variant = ProductVariant(
                     product_id=product.product_id,
                     sku_id=sku_id,
                     sku_attr=sku.get('sku_attr'),
-                    variant_id=sku.get('id'),
                     offer_sale_price=offer_sale_price,
-                    sku_price=sku_price,
-                    offer_bulk_sale_price=offer_bulk_sale_price,
                     currency_code=currency_code,
-                    price_include_tax=price_include_tax,
                     sku_available_stock=sku_available_stock,
-                    property_name=property_name,
-                    property_value=property_value,
-                    property_id=str(property_id) if property_id else None,
-                    property_value_id=str(property_value_id) if property_value_id else None,
+                    properties=properties,  # JSON array of all properties
+                    variant_key=variant_key,  # Properly formatted key like "Color: Red + Size: L"
                     property_value_definition_name=property_value_definition_name,
-                    variant_key=variant_key,
                     sku_image_url=sku_image_url,
                     raw_variant_data=sku
                 )
