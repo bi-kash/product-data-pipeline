@@ -22,6 +22,7 @@ from src.common.database import (
     Product, 
     Seller, 
     FilteredProduct,
+    ProductVariant,
     ShippingInfo,
     get_db_session
 )
@@ -513,6 +514,9 @@ class ProductFilterEngine:
         db.add(filtered_product)
         db.flush()  # Ensure filtered_product is in DB before adding shipping info
         
+        # Extract and store product variants
+        self._extract_and_store_variants(product, db)
+        
         # Fetch detailed shipping information using freight query API
         self._fetch_and_store_shipping_info(product, db)
         
@@ -699,6 +703,110 @@ class ProductFilterEngine:
                 
         except Exception as e:
             logger.error(f"Error fetching shipping info for product {product.product_id}: {e}")
+
+    def _extract_and_store_variants(self, product: Product, db):
+        """
+        Extract and store all product variants from raw_json_detail.
+        
+        Args:
+            product: Product to extract variants from
+            db: Database session
+        """
+        try:
+            if not product.raw_json_detail:
+                logger.info(f"No raw_json_detail found for product {product.product_id}")
+                return
+            
+            # Extract variant data from AliExpress API response
+            result = product.raw_json_detail.get('aliexpress_ds_product_get_response', {}).get('result', {})
+            sku_info = result.get('ae_item_sku_info_dtos', {})
+            
+            if not sku_info or 'ae_item_sku_info_d_t_o' not in sku_info:
+                logger.info(f"No SKU info found for product {product.product_id}")
+                return
+            
+            skus = sku_info['ae_item_sku_info_d_t_o']
+            logger.info(f"Found {len(skus)} variants for product {product.product_id}")
+            
+            for sku in skus:
+                # Extract basic SKU information
+                sku_id = sku.get('sku_id')
+                if not sku_id:
+                    logger.warning(f"SKU missing sku_id for product {product.product_id}")
+                    continue
+                
+                # Check if variant already exists
+                existing_variant = db.query(ProductVariant).filter(
+                    ProductVariant.sku_id == sku_id
+                ).first()
+                
+                if existing_variant:
+                    logger.debug(f"Variant {sku_id} already exists, skipping")
+                    continue
+                
+                # Extract pricing and stock information
+                offer_sale_price = self._parse_float(sku.get('offer_sale_price'))
+                sku_price = self._parse_float(sku.get('sku_price'))
+                offer_bulk_sale_price = self._parse_float(sku.get('offer_bulk_sale_price'))
+                currency_code = sku.get('currency_code')
+                price_include_tax = self._parse_bool(sku.get('price_include_tax'))
+                sku_available_stock = self._parse_int(sku.get('sku_available_stock'))
+                
+                # Extract primary property information
+                property_name = None
+                primary_property_value = None
+                primary_property_id = None
+                primary_property_value_id = None
+                property_value_definition_name = None
+                sku_image_url = None
+                variant_key = None
+                
+                # Extract property details from ae_sku_property_dtos
+                if 'ae_sku_property_dtos' in sku:
+                    props = sku['ae_sku_property_dtos'].get('ae_sku_property_d_t_o', [])
+                    if props and len(props) > 0:
+                        # Use the first property as primary (usually Color)
+                        first_prop = props[0]
+                        property_name = first_prop.get('sku_property_name')
+                        property_value = first_prop.get('sku_property_value') 
+                        property_id = first_prop.get('sku_property_id')
+                        property_value_id = first_prop.get('property_value_id')
+                        property_value_definition_name = first_prop.get('property_value_definition_name')
+                        sku_image_url = first_prop.get('sku_image')
+                        
+                        # Create variant key in same format as product_images
+                        if property_name and property_value:
+                            variant_key = f"{property_name}:{property_value}"
+                
+                # Create ProductVariant record
+                variant = ProductVariant(
+                    product_id=product.product_id,
+                    sku_id=sku_id,
+                    sku_attr=sku.get('sku_attr'),
+                    variant_id=sku.get('id'),
+                    offer_sale_price=offer_sale_price,
+                    sku_price=sku_price,
+                    offer_bulk_sale_price=offer_bulk_sale_price,
+                    currency_code=currency_code,
+                    price_include_tax=price_include_tax,
+                    sku_available_stock=sku_available_stock,
+                    property_name=property_name,
+                    property_value=property_value,
+                    property_id=str(property_id) if property_id else None,
+                    property_value_id=str(property_value_id) if property_value_id else None,
+                    property_value_definition_name=property_value_definition_name,
+                    variant_key=variant_key,
+                    sku_image_url=sku_image_url,
+                    raw_variant_data=sku
+                )
+                
+                db.add(variant)
+                logger.debug(f"Added variant {sku_id} for product {product.product_id}: {variant_key}")
+            
+            logger.info(f"Successfully processed variants for product {product.product_id}")
+            
+        except Exception as e:
+            logger.error(f"Error extracting variants for product {product.product_id}: {e}")
 
     def _parse_float(self, value) -> Optional[float]:
         """Safely parse float value."""

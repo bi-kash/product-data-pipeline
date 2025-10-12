@@ -226,6 +226,64 @@ class FilteredProduct(Base):
         return f"<FilteredProduct(product_id='{self.product_id}', is_active={self.is_active}, replaced_product_id={self.replaced_product_id}, delivery_time={self.delivery_time})>"
 
 
+class ProductVariant(Base):
+    """
+    Model representing product variants/SKUs extracted from AliExpress API.
+    
+    This table stores all variants for filtered products, including pricing,
+    stock, and attribute information (color, size, etc.).
+    """
+
+    __tablename__ = "product_variants"
+
+    # Primary key
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # Foreign key relationship to filtered_products
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False)
+    
+    # SKU information from AliExpress API
+    sku_id = Column(String(255), nullable=False, unique=True)  # Unique SKU identifier
+    sku_attr = Column(String(500), nullable=True)  # e.g., "14:10#blue"
+    variant_id = Column(String(255), nullable=True)  # The "id" field from API
+    
+    # Pricing information
+    offer_sale_price = Column(Float, nullable=True)  # Sale price
+    sku_price = Column(Float, nullable=True)  # Original price
+    offer_bulk_sale_price = Column(Float, nullable=True)  # Bulk price
+    currency_code = Column(String(10), nullable=True)  # e.g., "EUR", "USD"
+    price_include_tax = Column(Boolean, nullable=True)
+    
+    # Stock information
+    sku_available_stock = Column(Integer, nullable=True)
+    
+        # Primary attribute (most common property like Color, Size)
+    property_name = Column(String(100), nullable=True)  # e.g., "Color"
+    property_value = Column(String(200), nullable=True)  # e.g., "Red"
+    property_id = Column(String(50), nullable=True)  # Property ID
+    property_value_id = Column(String(50), nullable=True)  # Property value ID
+    property_value_definition_name = Column(String(200), nullable=True)  # e.g., "blue"
+    
+    # Variant key for linking (matches product_images.variant_key format)
+    variant_key = Column(String(300), nullable=True)  # e.g., "Color:Red"
+    
+    # Associated image URL for this variant
+    sku_image_url = Column(Text, nullable=True)
+    
+    # Raw JSON data from API for this specific variant
+    raw_variant_data = Column(JSON)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="variants")
+    
+    def __repr__(self):
+        return f"<ProductVariant(sku_id='{self.sku_id}', product_id='{self.product_id}', variant_key='{self.variant_key}', price={self.offer_sale_price})>"
+
+
 class ShippingInfo(Base):
     """
     Model representing detailed shipping information for filtered products.
