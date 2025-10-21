@@ -620,7 +620,7 @@ def main():
 
     # Airtable base creation command
     airtable_create_parser = subparsers.add_parser(
-        "airtable:create-base", help="Create Airtable base with Products and Variants tables"
+        "airtable:create-base", help="Create Airtable base with Products, Variants, Product Mapping, and SKU Mapping tables"
     )
     airtable_create_parser.add_argument(
         "--name",
@@ -764,6 +764,8 @@ def main():
         print(f"📦 Variants: {result['variants']['created']} created, {result['variants']['updated']} updated")
         if 'mapping' in result:
             print(f"🔗 Mapping: {result['mapping']['created']} created, {result['mapping']['updated']} updated")
+        if 'sku_mapping' in result:
+            print(f"🏷️  SKU Mapping: {result['sku_mapping']['created']} created, {result['sku_mapping']['updated']} updated")
         print(f"📈 Total: {result['total_created']} created, {result['total_updated']} updated")
     elif args.command == "airtable:create-base":
         create_base_command(

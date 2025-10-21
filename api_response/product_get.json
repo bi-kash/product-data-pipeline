@@ -4,22 +4,87 @@
       "ae_item_sku_info_dtos": {
         "ae_item_sku_info_d_t_o": [
           {
-            "sku_attr": "5:361385;14:193",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177610",
+            "sku_attr": "5:100014065;14:1254#Pink Dress and Scarf",
+            "offer_sale_price": "54.39",
+            "sku_id": "12000051104541482",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:361385;14:193",
+            "sku_price": "139.46",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "54.39",
+            "sku_available_stock": 50,
+            "id": "5:100014065;14:1254#Pink Dress and Scarf",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "black",
-                  "sku_image": "https://ae01.alicdn.com/kf/S8befa892e15f47519643f161b9b53d74E.jpeg",
+                  "sku_property_value": "SKY BLUE",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sba46e1cc34b14e35a5ec404b2bed0388n.jpg",
                   "sku_property_name": "Color",
-                  "property_value_id": 193,
+                  "property_value_definition_name": "Pink Dress and Scarf",
+                  "property_value_id": 1254,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "XL",
+                  "sku_property_name": "Size",
+                  "property_value_id": 100014065,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:361386;14:1254#Pink Dress and Scarf",
+            "offer_sale_price": "52.69",
+            "sku_id": "12000051104541480",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "135.10",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "52.69",
+            "sku_available_stock": 50,
+            "id": "5:361386;14:1254#Pink Dress and Scarf",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "SKY BLUE",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sba46e1cc34b14e35a5ec404b2bed0388n.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "Pink Dress and Scarf",
+                  "property_value_id": 1254,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "M",
+                  "sku_property_name": "Size",
+                  "property_value_id": 361386,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:361385;14:1254#Pink Dress and Scarf",
+            "offer_sale_price": "53.69",
+            "sku_id": "12000051104541481",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "137.67",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "53.69",
+            "sku_available_stock": 50,
+            "id": "5:361385;14:1254#Pink Dress and Scarf",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "SKY BLUE",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sba46e1cc34b14e35a5ec404b2bed0388n.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "Pink Dress and Scarf",
+                  "property_value_id": 1254,
                   "sku_property_id": 14
                 },
                 {
@@ -32,21 +97,148 @@
             }
           },
           {
-            "sku_attr": "5:100014065;14:193",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177611",
+            "sku_attr": "5:100014065;14:173#White Dress andScarf",
+            "offer_sale_price": "54.39",
+            "sku_id": "12000051104541478",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:100014065;14:193",
+            "sku_price": "139.46",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "54.39",
+            "sku_available_stock": 50,
+            "id": "5:100014065;14:173#White Dress andScarf",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/S20a65533f1cd4ec68ec89563af7927084.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "White Dress andScarf",
+                  "property_value_id": 173,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "XL",
+                  "sku_property_name": "Size",
+                  "property_value_id": 100014065,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:100014064;14:1254#Pink Dress and Scarf",
+            "offer_sale_price": "51.99",
+            "sku_id": "12000051104541479",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "133.31",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "51.99",
+            "sku_available_stock": 50,
+            "id": "5:100014064;14:1254#Pink Dress and Scarf",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "SKY BLUE",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sba46e1cc34b14e35a5ec404b2bed0388n.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "Pink Dress and Scarf",
+                  "property_value_id": 1254,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "S",
+                  "sku_property_name": "Size",
+                  "property_value_id": 100014064,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:361386;14:173#White Dress andScarf",
+            "offer_sale_price": "52.69",
+            "sku_id": "12000051104541476",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "135.10",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "52.69",
+            "sku_available_stock": 50,
+            "id": "5:361386;14:173#White Dress andScarf",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/S20a65533f1cd4ec68ec89563af7927084.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "White Dress andScarf",
+                  "property_value_id": 173,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "M",
+                  "sku_property_name": "Size",
+                  "property_value_id": 361386,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:361385;14:173#White Dress andScarf",
+            "offer_sale_price": "53.69",
+            "sku_id": "12000051104541477",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "137.67",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "53.69",
+            "sku_available_stock": 50,
+            "id": "5:361385;14:173#White Dress andScarf",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/S20a65533f1cd4ec68ec89563af7927084.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "White Dress andScarf",
+                  "property_value_id": 173,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "L",
+                  "sku_property_name": "Size",
+                  "property_value_id": 361385,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:100014065;14:193#White Dress Only",
+            "offer_sale_price": "43.39",
+            "sku_id": "12000051104541474",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "114.18",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "43.39",
+            "sku_available_stock": 50,
+            "id": "5:100014065;14:193#White Dress Only",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
                   "sku_property_value": "black",
-                  "sku_image": "https://ae01.alicdn.com/kf/S8befa892e15f47519643f161b9b53d74E.jpeg",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb2dbd1e3188f4c83ad957218a684ff80X.jpg",
                   "sku_property_name": "Color",
+                  "property_value_definition_name": "White Dress Only",
                   "property_value_id": 193,
                   "sku_property_id": 14
                 },
@@ -60,22 +252,25 @@
             }
           },
           {
-            "sku_attr": "5:100014064;14:193",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177608",
+            "sku_attr": "5:100014064;14:173#White Dress andScarf",
+            "offer_sale_price": "51.99",
+            "sku_id": "12000051104541475",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:100014064;14:193",
+            "sku_price": "133.31",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "51.99",
+            "sku_available_stock": 50,
+            "id": "5:100014064;14:173#White Dress andScarf",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "black",
-                  "sku_image": "https://ae01.alicdn.com/kf/S8befa892e15f47519643f161b9b53d74E.jpeg",
+                  "sku_property_value": "Blue",
+                  "sku_image": "https://ae01.alicdn.com/kf/S20a65533f1cd4ec68ec89563af7927084.jpg",
                   "sku_property_name": "Color",
-                  "property_value_id": 193,
+                  "property_value_definition_name": "White Dress andScarf",
+                  "property_value_id": 173,
                   "sku_property_id": 14
                 },
                 {
@@ -88,21 +283,24 @@
             }
           },
           {
-            "sku_attr": "5:361386;14:193",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177609",
+            "sku_attr": "5:361386;14:193#White Dress Only",
+            "offer_sale_price": "41.39",
+            "sku_id": "12000051104541472",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 999,
-            "id": "5:361386;14:193",
+            "sku_price": "111.86",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "41.39",
+            "sku_available_stock": 50,
+            "id": "5:361386;14:193#White Dress Only",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
                   "sku_property_value": "black",
-                  "sku_image": "https://ae01.alicdn.com/kf/S8befa892e15f47519643f161b9b53d74E.jpeg",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb2dbd1e3188f4c83ad957218a684ff80X.jpg",
                   "sku_property_name": "Color",
+                  "property_value_definition_name": "White Dress Only",
                   "property_value_id": 193,
                   "sku_property_id": 14
                 },
@@ -116,23 +314,25 @@
             }
           },
           {
-            "sku_attr": "5:361385;14:200004889#Brown coffee color",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177614",
+            "sku_attr": "5:361385;14:193#White Dress Only",
+            "offer_sale_price": "42.99",
+            "sku_id": "12000051104541473",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:361385;14:200004889#Brown coffee color",
+            "sku_price": "113.13",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "42.99",
+            "sku_available_stock": 50,
+            "id": "5:361385;14:193#White Dress Only",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "army green",
-                  "sku_image": "https://ae01.alicdn.com/kf/S15ccb2aaa0024a7896a7ea73450df66eO.jpeg",
+                  "sku_property_value": "black",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb2dbd1e3188f4c83ad957218a684ff80X.jpg",
                   "sku_property_name": "Color",
-                  "property_value_definition_name": "Brown coffee color",
-                  "property_value_id": 200004889,
+                  "property_value_definition_name": "White Dress Only",
+                  "property_value_id": 193,
                   "sku_property_id": 14
                 },
                 {
@@ -145,23 +345,25 @@
             }
           },
           {
-            "sku_attr": "5:100014065;14:200004889#Brown coffee color",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177615",
+            "sku_attr": "5:100014065;14:771#Pink Dress Only",
+            "offer_sale_price": "43.39",
+            "sku_id": "12000051104541470",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:100014065;14:200004889#Brown coffee color",
+            "sku_price": "114.18",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "43.39",
+            "sku_available_stock": 50,
+            "id": "5:100014065;14:771#Pink Dress Only",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "army green",
-                  "sku_image": "https://ae01.alicdn.com/kf/S15ccb2aaa0024a7896a7ea73450df66eO.jpeg",
+                  "sku_property_value": "Beige",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sf51b3a819d9f4439b017a874f299fa244.jpg",
                   "sku_property_name": "Color",
-                  "property_value_definition_name": "Brown coffee color",
-                  "property_value_id": 200004889,
+                  "property_value_definition_name": "Pink Dress Only",
+                  "property_value_id": 771,
                   "sku_property_id": 14
                 },
                 {
@@ -174,23 +376,25 @@
             }
           },
           {
-            "sku_attr": "5:100014064;14:200004889#Brown coffee color",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177612",
+            "sku_attr": "5:100014064;14:193#White Dress Only",
+            "offer_sale_price": "41.19",
+            "sku_id": "12000051104541471",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:100014064;14:200004889#Brown coffee color",
+            "sku_price": "111.32",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "41.19",
+            "sku_available_stock": 49,
+            "id": "5:100014064;14:193#White Dress Only",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "army green",
-                  "sku_image": "https://ae01.alicdn.com/kf/S15ccb2aaa0024a7896a7ea73450df66eO.jpeg",
+                  "sku_property_value": "black",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sb2dbd1e3188f4c83ad957218a684ff80X.jpg",
                   "sku_property_name": "Color",
-                  "property_value_definition_name": "Brown coffee color",
-                  "property_value_id": 200004889,
+                  "property_value_definition_name": "White Dress Only",
+                  "property_value_id": 193,
                   "sku_property_id": 14
                 },
                 {
@@ -203,29 +407,93 @@
             }
           },
           {
-            "sku_attr": "5:361386;14:200004889#Brown coffee color",
-            "offer_sale_price": "57.69",
-            "sku_id": "12000050854177613",
+            "sku_attr": "5:361386;14:771#Pink Dress Only",
+            "offer_sale_price": "41.39",
+            "sku_id": "12000051104541468",
+            "limit_strategy": "create_order_fail",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "104.89",
-            "offer_bulk_sale_price": "57.69",
-            "sku_available_stock": 1000,
-            "id": "5:361386;14:200004889#Brown coffee color",
+            "sku_price": "111.86",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "41.39",
+            "sku_available_stock": 50,
+            "id": "5:361386;14:771#Pink Dress Only",
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "army green",
-                  "sku_image": "https://ae01.alicdn.com/kf/S15ccb2aaa0024a7896a7ea73450df66eO.jpeg",
+                  "sku_property_value": "Beige",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sf51b3a819d9f4439b017a874f299fa244.jpg",
                   "sku_property_name": "Color",
-                  "property_value_definition_name": "Brown coffee color",
-                  "property_value_id": 200004889,
+                  "property_value_definition_name": "Pink Dress Only",
+                  "property_value_id": 771,
                   "sku_property_id": 14
                 },
                 {
                   "sku_property_value": "M",
                   "sku_property_name": "Size",
                   "property_value_id": 361386,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:361385;14:771#Pink Dress Only",
+            "offer_sale_price": "42.99",
+            "sku_id": "12000051104541469",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "113.13",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "42.99",
+            "sku_available_stock": 50,
+            "id": "5:361385;14:771#Pink Dress Only",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Beige",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sf51b3a819d9f4439b017a874f299fa244.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "Pink Dress Only",
+                  "property_value_id": 771,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "L",
+                  "sku_property_name": "Size",
+                  "property_value_id": 361385,
+                  "sku_property_id": 5
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "5:100014064;14:771#Pink Dress Only",
+            "offer_sale_price": "40.99",
+            "sku_id": "12000051104541467",
+            "limit_strategy": "create_order_fail",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "110.78",
+            "buy_amount_limit_set_by_promotion": "1",
+            "offer_bulk_sale_price": "40.99",
+            "sku_available_stock": 50,
+            "id": "5:100014064;14:771#Pink Dress Only",
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Beige",
+                  "sku_image": "https://ae01.alicdn.com/kf/Sf51b3a819d9f4439b017a874f299fa244.jpg",
+                  "sku_property_name": "Color",
+                  "property_value_definition_name": "Pink Dress Only",
+                  "property_value_id": 771,
+                  "sku_property_id": 14
+                },
+                {
+                  "sku_property_value": "S",
+                  "sku_property_name": "Size",
+                  "property_value_id": 100014064,
                   "sku_property_id": 5
                 }
               ]
@@ -234,13 +502,25 @@
         ]
       },
       "ae_multimedia_info_dto": {
-        "image_urls": "https://ae01.alicdn.com/kf/S8befa892e15f47519643f161b9b53d74E.jpeg;https://ae01.alicdn.com/kf/Sd98b585431e54b4cb9d227b6f3ad2089K.jpg;https://ae01.alicdn.com/kf/S942ab3ee8e2a43e4a38d6ad9a697224di.jpeg;https://ae01.alicdn.com/kf/S15ccb2aaa0024a7896a7ea73450df66eO.jpeg;https://ae01.alicdn.com/kf/Sa4850de6cb17420db8df3aa2974f91dbY.jpeg;https://ae01.alicdn.com/kf/S41a629f1c19941bd87eb10ec694afbddO.jpeg"
+        "ae_video_dtos": {
+          "ae_video_d_t_o": [
+            {
+              "media_status": "approved",
+              "media_type": "video",
+              "poster_url": "https://ae01.alicdn.com/kf/Se3a41198066f4beda371492e575eafb7w.jpg",
+              "ali_member_id": 2677394772,
+              "media_id": 5000346446299,
+              "media_url": "https://video.aliexpress-media.com/play/5000346446299.mp4"
+            }
+          ]
+        },
+        "image_urls": "https://ae01.alicdn.com/kf/S02ec4465d5b742a7902974d556ffa86bT.jpg;https://ae01.alicdn.com/kf/S0632a887deac4c6a8956f95c542549f1G.jpg;https://ae01.alicdn.com/kf/S8e7fc9b4b3a342f0ada05ca36a0d9d92z.jpg;https://ae01.alicdn.com/kf/Sb55762a1214b4675a43f5b3d5d3a0ffeg.jpg;https://ae01.alicdn.com/kf/S594f6302358540e4a2f1d86dcc853dcdB.jpg;https://ae01.alicdn.com/kf/S00b02c2bf84f4e77a15c7fd5cbf14bf0v.jpg"
       },
       "package_info_dto": {
-        "package_width": 30,
-        "package_height": 3,
-        "package_length": 30,
-        "gross_weight": "1.500",
+        "package_width": 32,
+        "package_height": 10,
+        "package_length": 35,
+        "gross_weight": "1.800",
         "package_type": false,
         "product_unit": 100000015
       },
@@ -249,35 +529,107 @@
         "ship_to_country": "DE"
       },
       "product_id_converter_result": {
-        "main_product_id": 1005010018511535,
-        "sub_product_id": "{\"US\":3256809832196783}"
+        "main_product_id": 1005010090361750,
+        "sub_product_id": "{\"US\":3256809904046998}"
       },
       "ae_item_base_info_dto": {
-        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sc818e7e10fef491aa17cceedb15546ecx.jpg\",\"style\":{\"height\":296}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sc594835a328040438af33bb4db1964ecK.jpeg\",\"style\":{\"height\":680}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S2314a5bda1314574b00c30969cf63ab5v.jpeg\",\"style\":{\"height\":1750}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sad093ed064094ad094da6bd9677e9e93p.jpeg\",\"style\":{\"height\":880}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sc91deaedfcaa4d6994a7f079bcde3e0d0.jpeg\",\"style\":{\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S104e8e48af1844d690c9f6708eb45905c.jpeg\",\"style\":{\"height\":1060}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S66c1d2e0238b40a48e41fec6763c92fab.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S0b455a2fe88144f9a30dcd6f2f60e14c4.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S31f68a7aeec142dca47338d712b82657p.jpg\",\"style\":{\"height\":1070}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sa2a43ad23e054a6fa182b00a54896fadL.jpg\",\"style\":{\"height\":1070}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S4acd43b13d4c4faeadad6e184d560a22D.jpeg\",\"style\":{\"height\":1070}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S7d4ed553db924794a1f4916c73ad46fbn.jpeg\",\"style\":{\"height\":1060}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Se67b9d706bfe40c89f4ea92c8949dae2c.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S1837ed7ba5804c898f36b9469fd403cdQ.jpeg\",\"style\":{\"height\":1060}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S41fc7fcd628d4f989a8f14bffd3230639.jpeg\",\"style\":{\"height\":1070}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S711798c5132847c99f22b58366fb1198F.jpeg\",\"style\":{\"height\":1070}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S02f8cdd17e084a09b3cff9b35208c25b3.jpeg\",\"style\":{\"height\":1070}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S0ab3e6a10b9a44d8a4543d2b881d683fi.jpeg\",\"style\":{\"height\":1090}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sad795545bb034ffcb6ff4b8a41cba06aJ.jpeg\",\"style\":{\"height\":1060}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S69a1980b05f4462ab78f4dffca8ed57aE.jpeg\",\"style\":{\"height\":1060}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sa1ef070a2ac644fb9519153a74ab63eaZ.jpeg\",\"style\":{\"height\":1950}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sffe7a7fa781c45e199600dd95f09edf8l.jpeg\",\"style\":{\"height\":2200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sbcf141e4ce7f43a2b166265e7d11642fj.jpeg\",\"style\":{\"height\":2200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S589e20e685c8406f9098a1ef12973f50r.jpeg\",\"style\":{\"height\":2000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S9324849d3a0d4a549a0341d1d213bc3eA.jpeg\",\"style\":{\"height\":2000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd72effbba5034ab186c9938214630388Z.jpeg\",\"style\":{\"height\":2000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sadfbaaf08b734e95be3f2b864d00ef87z.jpeg\",\"style\":{\"height\":2000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Seb55e43ac7d343e39f6fdb144b7a54faV.jpeg\",\"style\":{\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/H76264bc9a2544db59ee22359889b1dbbq.jpg\",\"style\":{\"height\":513}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/H5c84042962cb4556a6c94412a90c7e4aY.jpg\",\"style\":{\"height\":283}}}]}",
-        "subject": "Y2K Faux Wool Coats for Women Winter Thick Warm Double Breasted Long Jacket Female Korean Streetwear All Match Blend Outerwear",
-        "evaluation_count": "1",
+        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"text\",\"data\":{\"content\":\"S\u00a0\u00a0\u00a0\u00a0\u00a0suit\u00a040kg-47.5kg\\M\u00a0\u00a0\u00a0suit\u00a047.5kg-52.5kg\\L\u00a0\u00a0\u00a0\u00a0\u00a0suit\u00a052.5kg-57.5kg\\XL\u00a0\u00a0\u00a0suit\u00a057.5kg-62.5kg\",\"style\":{\"fontSize\":13,\"fontWeight\":\"normal\",\"align\":\"left\",\"color\":\"#434649\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sb55762a1214b4675a43f5b3d5d3a0ffeg.jpg\",\"style\":{\"width\":750,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S02ec4465d5b742a7902974d556ffa86bT.jpg\",\"style\":{\"width\":750,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Se4874072271942d89d03b4cb3681bf83a.jpg\",\"style\":{\"width\":750,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Scbdd15f607a646a4b2b9a1fe3ee4ad53I.jpg\",\"style\":{\"width\":583,\"height\":778}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S16134536afc5440e9617c07df8e33e6aY.jpg\",\"style\":{\"width\":750,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S21a7bd4c00e94a2ea0fa0a498f32b99cB.jpg\",\"style\":{\"width\":750,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S223730f940394700a7ad339c9c33a0cd7.jpg\",\"style\":{\"width\":691,\"height\":811}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S00b02c2bf84f4e77a15c7fd5cbf14bf0v.jpg\",\"style\":{\"width\":750,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S58d1afc9d04a431ab929b3a8ccae41dfI.jpg\",\"style\":{\"width\":750,\"height\":720}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Se4e999fb066a4812b5f13857139a19cc4.jpg\",\"style\":{\"width\":750,\"height\":794}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S81a4aab9fe594899ad446e22ef941dcdg.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd0085455d80a407295689c88127703ec2.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S9d14d437bd094a88afd7a23ab67a0a5d6.jpg\",\"style\":{\"width\":480,\"height\":480}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S0632a887deac4c6a8956f95c542549f1G.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sf37bee9832e7408fac50c8c6e4573a3cb.jpg\",\"style\":{\"width\":1000,\"height\":1000}}}]}",
+        "subject": "Y2K Aesthetic Lolita Party Dress Coat - Japanese Kawaii Style Lace Patchwork Single Breasted Vestidos with Contrast Color Trim",
+        "evaluation_count": "0",
         "sales_count": "1",
         "product_status_type": "onSelling",
-        "avg_evaluation_rating": "5.0",
+        "avg_evaluation_rating": "0.0",
         "currency_code": "CNY",
-        "category_id": 200001907,
-        "product_id": 1005010018511535,
-        "detail": "<div class=\"detailmodule_html\"><div class=\"detail-desc-decorate-richtext\"><img src=\"https://ae01.alicdn.com/kf/Sc818e7e10fef491aa17cceedb15546ecx.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sc594835a328040438af33bb4db1964ecK.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S2314a5bda1314574b00c30969cf63ab5v.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sad093ed064094ad094da6bd9677e9e93p.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sc91deaedfcaa4d6994a7f079bcde3e0d0.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S104e8e48af1844d690c9f6708eb45905c.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S66c1d2e0238b40a48e41fec6763c92fab.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S0b455a2fe88144f9a30dcd6f2f60e14c4.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S31f68a7aeec142dca47338d712b82657p.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sa2a43ad23e054a6fa182b00a54896fadL.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S4acd43b13d4c4faeadad6e184d560a22D.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S7d4ed553db924794a1f4916c73ad46fbn.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Se67b9d706bfe40c89f4ea92c8949dae2c.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S1837ed7ba5804c898f36b9469fd403cdQ.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S41fc7fcd628d4f989a8f14bffd3230639.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S711798c5132847c99f22b58366fb1198F.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S02f8cdd17e084a09b3cff9b35208c25b3.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S0ab3e6a10b9a44d8a4543d2b881d683fi.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sad795545bb034ffcb6ff4b8a41cba06aJ.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S69a1980b05f4462ab78f4dffca8ed57aE.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sa1ef070a2ac644fb9519153a74ab63eaZ.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sffe7a7fa781c45e199600dd95f09edf8l.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sbcf141e4ce7f43a2b166265e7d11642fj.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S589e20e685c8406f9098a1ef12973f50r.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/S9324849d3a0d4a549a0341d1d213bc3eA.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sd72effbba5034ab186c9938214630388Z.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Sadfbaaf08b734e95be3f2b864d00ef87z.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/Seb55e43ac7d343e39f6fdb144b7a54faV.jpeg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/H76264bc9a2544db59ee22359889b1dbbq.jpg\" slate-data-type=\"image\"/><br/><img src=\"https://ae01.alicdn.com/kf/H5c84042962cb4556a6c94412a90c7e4aY.jpg\" slate-data-type=\"image\"/></div></div><br/>"
+        "category_id": 200000347,
+        "product_id": 1005010090361750,
+        "detail": "<div class=\"detailmodule_html\"><div class=\"detail-desc-decorate-richtext\"><span style=\"font-size:20px\"><span style=\"background-color:rgb(241, 196, 15)\">\u00a0 \u00a0 \u00a0 \u00a0 \u00a0S\u00a0\u00a0\u00a0\u00a0\u00a0suit\u00a040kg-47.5kg\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0\u00a0</span></span><span style=\"font-size:20px\"><br/> </span><span style=\"font-size:20px\"><span style=\"background-color:rgb(241, 196, 15)\">\u00a0 \u00a0 \u00a0 \u00a0 \u00a0M\u00a0\u00a0\u00a0suit\u00a047.5kg-52.5kg\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0\u00a0</span></span><span style=\"font-size:20px\"><br/> </span><span style=\"font-size:20px\"><span style=\"background-color:rgb(241, 196, 15)\">\u00a0 \u00a0 \u00a0 \u00a0 \u00a0L\u00a0\u00a0\u00a0\u00a0\u00a0suit\u00a052.5kg-57.5kg\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0</span></span><span style=\"font-size:20px\"><br/> </span><span style=\"font-size:20px\"><span style=\"background-color:rgb(241, 196, 15)\">\u00a0 \u00a0 \u00a0 \u00a0 \u00a0XL\u00a0\u00a0\u00a0suit\u00a057.5kg-62.5kg\u00a0 \u00a0 \u00a0 \u00a0 \u00a0 \u00a0</span></span> <img src=\"https://ae01.alicdn.com/kf/Sb55762a1214b4675a43f5b3d5d3a0ffeg.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S02ec4465d5b742a7902974d556ffa86bT.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/Se4874072271942d89d03b4cb3681bf83a.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/Scbdd15f607a646a4b2b9a1fe3ee4ad53I.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S16134536afc5440e9617c07df8e33e6aY.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S21a7bd4c00e94a2ea0fa0a498f32b99cB.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S223730f940394700a7ad339c9c33a0cd7.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S00b02c2bf84f4e77a15c7fd5cbf14bf0v.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S58d1afc9d04a431ab929b3a8ccae41dfI.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/Se4e999fb066a4812b5f13857139a19cc4.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S81a4aab9fe594899ad446e22ef941dcdg.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/Sd0085455d80a407295689c88127703ec2.jpg\" slate-data-type=\"image\"/> <img src=\"https://ae01.alicdn.com/kf/S9d14d437bd094a88afd7a23ab67a0a5d6.jpg\" slate-data-type=\"image\"/><img src=\"https://ae01.alicdn.com/kf/S0632a887deac4c6a8956f95c542549f1G.jpg\" slate-data-type=\"image\"/><img src=\"https://ae01.alicdn.com/kf/Sf37bee9832e7408fac50c8c6e4573a3cb.jpg\" slate-data-type=\"image\"/></div></div><br/>"
       },
       "has_whole_sale": false,
       "ae_item_properties": {
         "ae_item_property": [
           {
             "attr_name_id": 2,
-            "attr_value_id": 5980179634,
+            "attr_value_id": 23432801568,
             "attr_name": "Brand Name",
-            "attr_value": "GIDYQ"
+            "attr_value": "hanfdfy"
           },
           {
-            "attr_name_id": 227611301,
-            "attr_value_id": 15243922323,
-            "attr_name": "Age",
-            "attr_value": "Middle Age"
+            "attr_name_id": 276984023,
+            "attr_value_id": 21894370529,
+            "attr_name": "Elasticity",
+            "attr_value": "Slight Strech"
+          },
+          {
+            "attr_name_id": 200000362,
+            "attr_value_id": 200013017,
+            "attr_name": "Sleeve Style",
+            "attr_value": "regular"
+          },
+          {
+            "attr_name_id": 100002012,
+            "attr_value_id": 835172228,
+            "attr_name": "Fabric Type",
+            "attr_value": "Chemical Fiber"
+          },
+          {
+            "attr_name_id": 400000603,
+            "attr_value_id": 23399591357,
+            "attr_name": "High-concerned chemical",
+            "attr_value": "None"
+          },
+          {
+            "attr_name_id": 200000329,
+            "attr_value_id": 200004096,
+            "attr_name": "Pattern Type",
+            "attr_value": "Patchwork"
+          },
+          {
+            "attr_name_id": 200000277,
+            "attr_value_id": 21892919964,
+            "attr_name": "Fit Type",
+            "attr_value": "Regular Fit"
+          },
+          {
+            "attr_name_id": 100004669,
+            "attr_value_id": 100006419,
+            "attr_name": "Silhouette",
+            "attr_value": "A-LINE"
+          },
+          {
+            "attr_name_id": 200000364,
+            "attr_value_id": 200004106,
+            "attr_name": "Neckline",
+            "attr_value": "Peter Pan Collar"
+          },
+          {
+            "attr_name_id": 19150,
+            "attr_value_id": 200001928,
+            "attr_name": "Decoration",
+            "attr_value": "Bow"
+          },
+          {
+            "attr_name_id": 326,
+            "attr_value_id": 18099926,
+            "attr_name": "Style",
+            "attr_value": "Y2k"
+          },
+          {
+            "attr_name_id": 200000446,
+            "attr_value_id": 100006003,
+            "attr_name": "Dresses Length",
+            "attr_value": "Knee-Length"
+          },
+          {
+            "attr_name_id": 10,
+            "attr_value_id": 47,
+            "attr_name": "Material",
+            "attr_value": "COTTON"
+          },
+          {
+            "attr_name_id": 10,
+            "attr_value_id": 48,
+            "attr_name": "Material",
+            "attr_value": "POLYESTER"
           },
           {
             "attr_name_id": 340863826,
@@ -286,28 +638,10 @@
             "attr_value": "Non-Woven"
           },
           {
-            "attr_name_id": 200001085,
-            "attr_value_id": 200005943,
-            "attr_name": "Thickness",
-            "attr_value": "Standard"
-          },
-          {
-            "attr_name_id": 326,
-            "attr_value_id": 203010841,
-            "attr_name": "Style",
-            "attr_value": "Office Lady"
-          },
-          {
-            "attr_name_id": 200000303,
-            "attr_value_id": 1875,
-            "attr_name": "Clothing Length",
-            "attr_value": "long\uff0826+inch\uff09"
-          },
-          {
-            "attr_name_id": 400023003,
-            "attr_value_id": 24097551176,
-            "attr_name": "whether full opening",
-            "attr_value": "Yes"
+            "attr_name_id": 227611301,
+            "attr_value_id": 200177489,
+            "attr_name": "Age",
+            "attr_value": "Junior"
           },
           {
             "attr_name_id": 219,
@@ -329,81 +663,27 @@
           },
           {
             "attr_name_id": 200000306,
-            "attr_value_id": 200001124,
+            "attr_value_id": 200001125,
             "attr_name": "Closure Type",
-            "attr_value": "Double Breasted"
+            "attr_value": "Single Breasted"
           },
           {
-            "attr_name_id": 10,
-            "attr_value_id": 48,
-            "attr_name": "Material",
-            "attr_value": "POLYESTER"
-          },
-          {
-            "attr_name_id": 400000603,
-            "attr_value_id": 23399591357,
-            "attr_name": "High-concerned chemical",
-            "attr_value": "None"
-          },
-          {
-            "attr_name_id": 19150,
-            "attr_value_id": 1639,
-            "attr_name": "Decoration",
-            "attr_value": "Button"
-          },
-          {
-            "attr_name_id": 19150,
-            "attr_value_id": 1946,
-            "attr_name": "Decoration",
-            "attr_value": "Pockets"
-          },
-          {
-            "attr_name_id": 200000400,
-            "attr_value_id": -1,
-            "attr_name": "Material Composition",
-            "attr_value": "faux woolen"
-          },
-          {
-            "attr_name_id": 200000329,
-            "attr_value_id": 200001248,
-            "attr_name": "Pattern Type",
-            "attr_value": "Solid"
-          },
-          {
-            "attr_name_id": 200007728,
-            "attr_value_id": 1982342012,
-            "attr_name": "Release Date",
-            "attr_value": "Winter 2025"
-          },
-          {
-            "attr_name_id": 200005985,
-            "attr_value_id": 200660004,
-            "attr_name": "Place Of Origin",
-            "attr_value": "China (mainland)"
-          },
-          {
-            "attr_name_id": 3,
-            "attr_value_id": -1,
-            "attr_name": "Model Number",
-            "attr_value": "ME09226"
-          },
-          {
-            "attr_name_id": 200000457,
-            "attr_value_id": 200003574,
-            "attr_name": "Collar",
-            "attr_value": "Turn-Down Collar"
-          },
-          {
-            "attr_name_id": 200000362,
-            "attr_value_id": 200013017,
-            "attr_name": "Sleeve Style",
+            "attr_name_id": 351,
+            "attr_value_id": 200001384,
+            "attr_name": "Type",
             "attr_value": "regular"
           },
           {
-            "attr_name_id": 284,
-            "attr_value_id": 494,
-            "attr_name": "Gender",
-            "attr_value": "Women"
+            "attr_name_id": 200000400,
+            "attr_value_id": 7772,
+            "attr_name": "Material Composition",
+            "attr_value": "synthetic fiber"
+          },
+          {
+            "attr_name_id": 200000363,
+            "attr_value_id": 200001503,
+            "attr_name": "Waistline",
+            "attr_value": "empire"
           },
           {
             "attr_name_id": 100007732,
@@ -412,31 +692,90 @@
             "attr_value": "Full"
           },
           {
-            "attr_name_id": 351,
-            "attr_value_id": 200005967,
-            "attr_name": "Type",
-            "attr_value": "Wide-waisted"
+            "attr_name_id": 200007728,
+            "attr_value_id": 12190785090,
+            "attr_name": "Release Date",
+            "attr_value": "Winter 2024"
           },
           {
-            "attr_name_id": 200000309,
-            "attr_value_id": 200004212,
-            "attr_name": "Outerwear Type",
-            "attr_value": "Wool & Blends"
+            "attr_name_id": 248373937,
+            "attr_value_id": 200000345,
+            "attr_name": "Profile Type",
+            "attr_value": "A"
+          },
+          {
+            "attr_name_id": 3,
+            "attr_value_id": -1,
+            "attr_name": "Model Number",
+            "attr_value": "LYQ251003"
+          },
+          {
+            "attr_name_id": 200005985,
+            "attr_value_id": 200660004,
+            "attr_name": "Place Of Origin",
+            "attr_value": "China (mainland)"
+          },
+          {
+            "attr_name_id": 284,
+            "attr_value_id": 494,
+            "attr_name": "Gender",
+            "attr_value": "Women"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "woman dress",
+            "attr_value": "vestido de mujer"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "kobieta sukienka",
+            "attr_value": "vestido de mulher"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "dresses for women",
+            "attr_value": "ropa de mujer bodycon dress"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "vestidos de fiesta",
+            "attr_value": "vestito da donna"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "maxi dresses for women",
+            "attr_value": "boho dress"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "bandage dress",
+            "attr_value": "jurken zomer"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_name": "Choice",
+            "attr_value": "yes"
           }
         ]
       },
       "ae_store_info": {
-        "store_id": 5834273,
-        "shipping_speed_rating": "4.9",
-        "communication_rating": "4.8",
-        "store_name": "GIDYQ Official Store",
+        "store_id": 1103286361,
+        "shipping_speed_rating": "4.6",
+        "communication_rating": "4.5",
+        "store_name": "reebozo Official Store",
         "store_country_code": "CN",
-        "item_as_described_rating": "4.7"
+        "item_as_described_rating": "4.3"
       }
     },
     "rsp_code": 200,
     "rsp_msg": "Call succeeds",
-    "request_id": "2102e2c017602578074314028",
-    "_trace_id_": "21413d5a17602578074293680e2e6f"
+    "request_id": "2101164317610408520136659",
+    "_trace_id_": "2140e84617610408520117533ec6a2"
   }
 }

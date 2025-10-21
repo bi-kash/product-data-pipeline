@@ -207,7 +207,12 @@ def _process_products(
                 if product_details:
                     try:
                         # Navigate to the video URL in the product details JSON
-                        result = product_details.get("result", {})
+                        # Check if it's wrapped in aliexpress_ds_product_get_response
+                        if "aliexpress_ds_product_get_response" in product_details:
+                            result = product_details.get("aliexpress_ds_product_get_response", {}).get("result", {})
+                        else:
+                            result = product_details.get("result", {})
+                            
                         multimedia_info = result.get("ae_multimedia_info_dto", {})
                         video_dtos = multimedia_info.get("ae_video_dtos", {})
                         video_list = video_dtos.get("ae_video_d_t_o", [])

@@ -96,7 +96,8 @@ class AirtableBaseCreator:
             "tables": [
                 self._get_products_table_schema(),
                 self._get_variants_table_schema(),
-                self._get_product_mapping_table_schema()
+                self._get_product_mapping_table_schema(),
+                self._get_sku_mapping_table_schema()
             ]
         }
         
@@ -124,6 +125,7 @@ class AirtableBaseCreator:
             print("   1️⃣  Products - Main product data with S3 URLs")
             print("   2️⃣  Variants - All SKU variations with proper formatting") 
             print("   3️⃣  Product Mapping - Original AliExpress URLs and real IDs")
+            print("   4️⃣  SKU Mapping - Anonymous to real SKU mapping with variant URLs")
             print()
             
             # Automatically update .env file
@@ -173,6 +175,11 @@ class AirtableBaseCreator:
                     "name": "description", 
                     "type": "multilineText",
                     "description": "Product description"
+                },
+                {
+                    "name": "specifications",
+                    "type": "multilineText",
+                    "description": "Product specifications (key-value pairs from ae_item_properties)"
                 },
                 {
                     "name": "hero_image",
@@ -268,14 +275,14 @@ class AirtableBaseCreator:
                     "description": "Link to parent product (anon_product_id)"
                 },
                 {
-                    "name": "sku_id",
+                    "name": "anon_sku_id",
                     "type": "singleLineText",
-                    "description": "AliExpress SKU ID"
+                    "description": "Anonymous SKU ID"
                 },
                 {
-                    "name": "variant_label",
-                    "type": "singleLineText", 
-                    "description": "Human-readable variant label (e.g. 'Silver | Size 52')"
+                    "name": "definition_name",
+                    "type": "singleLineText",
+                    "description": "Property value definition name (e.g. 'Cherry Wood Color', 'blue')"
                 },
                 {
                     "name": "price_eur",
@@ -414,6 +421,50 @@ class AirtableBaseCreator:
         else:
             logger.error(f"Failed to get base schema: {response.status_code}")
             response.raise_for_status()
+
+    def _get_sku_mapping_table_schema(self) -> Dict[str, Any]:
+        """Define SKU Mapping table schema."""
+        return {
+            "name": "SKU Mapping",
+            "description": "Maps anonymous SKU IDs to real AliExpress SKU data and variant URLs",
+            "fields": [
+                {
+                    "name": "anon_sku_id",
+                    "type": "singleLineText",
+                    "description": "Anonymous SKU ID (matches Variants.anon_sku_id)"
+                },
+                {
+                    "name": "real_sku_id",
+                    "type": "singleLineText", 
+                    "description": "Real AliExpress SKU ID"
+                },
+                {
+                    "name": "aliexpress_product_url",
+                    "type": "url",
+                    "description": "Direct AliExpress product page URL"
+                },
+                {
+                    "name": "aliexpress_main_image",
+                    "type": "url",
+                    "description": "Original AliExpress main product image URL"
+                },
+                {
+                    "name": "aliexpress_variant_image",
+                    "type": "url",
+                    "description": "Original AliExpress variant-specific image URL"
+                },
+                {
+                    "name": "sync_timestamp",
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {"name": "iso"},
+                        "timeFormat": {"name": "24hour"},
+                        "timeZone": "utc"
+                    },
+                    "description": "Last sync timestamp"
+                }
+            ]
+        }
 
 
 def create_base_command(base_name: str = None, workspace_id: str = None, test_token: bool = False):

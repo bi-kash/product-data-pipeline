@@ -36,13 +36,21 @@ class AirtableDataSync:
             
             # Try to get Product Mapping table schema
             try:
-                mapping_table = self.client.base.table("Product Mapping")
-                mapping_schema = mapping_table.schema()
+                mapping_schema = self.client.mapping_table.schema()
                 self.mapping_fields = {field.name for field in mapping_schema.fields}
                 logger.info(f"Product Mapping table fields: {sorted(self.mapping_fields)}")
             except Exception as mapping_error:
                 logger.warning(f"Product Mapping table not found or inaccessible: {mapping_error}")
                 self.mapping_fields = set()  # Empty set - table doesn't exist
+            
+            # Try to get SKU Mapping table schema
+            try:
+                sku_mapping_schema = self.client.sku_mapping_table.schema()
+                self.sku_mapping_fields = {field.name for field in sku_mapping_schema.fields}
+                logger.info(f"SKU Mapping table fields: {sorted(self.sku_mapping_fields)}")
+            except Exception as sku_mapping_error:
+                logger.warning(f"SKU Mapping table not found or inaccessible: {sku_mapping_error}")
+                self.sku_mapping_fields = set()  # Empty set - table doesn't exist
             
             logger.info(f"Products table fields: {sorted(self.products_fields)}")
             logger.info(f"Variants table fields: {sorted(self.variants_fields)}")
@@ -50,14 +58,19 @@ class AirtableDataSync:
             logger.warning(f"Could not fetch table schemas: {e}")
             # Conservative fallback - only include basic fields that should exist
             self.products_fields = {
-                'anon_product_id', 'title', 'hero_image', 'gallery_images', 
-                'duplicate_status'
+                'anon_product_id', 'title', 'description', 'specifications', 
+                'hero_image', 'gallery_images', 'duplicate_status'
             }
             self.variants_fields = {
                 'variant_id', 'anon_product_id', 'attribute_name', 'attribute_value',
-                'price_eur', 'shipping_eur', 'total_eur', 'delivery_time', 'stock_quantity'
+                'price_eur', 'shipping_eur', 'total_eur', 'delivery_time', 'stock_quantity',
+                'definition_name', 'anon_sku_id'
             }
             self.mapping_fields = set()
+            self.sku_mapping_fields = {
+                'anon_sku_id', 'real_sku_id', 'aliexpress_product_url', 
+                'aliexpress_main_image', 'aliexpress_variant_image'
+            }
         
     def sync_products(self, limit: Optional[int] = None, filter_status: Optional[str] = None) -> Dict[str, int]:
         """
@@ -141,11 +154,11 @@ class AirtableDataSync:
                 logger.info(f"DRY RUN: Would sync {len(airtable_records)} variant records")
                 return {'created': 0, 'updated': 0}
             
-            # Upsert to Airtable using sku_id as unique key (variant_key is not unique across products)
+            # Upsert to Airtable using anon_sku_id as unique key (variant_key is not unique across products)
             result = self.client.upsert_records(
                 self.client.variants_table_name,
                 airtable_records,
-                key_field='sku_id'
+                key_field='anon_sku_id'
             )
             
             logger.info(f"Variants sync completed: {result}")
@@ -254,6 +267,114 @@ class AirtableDataSync:
             logger.error(f"Error preparing mapping record for {product.product_id}: {e}")
             return None
     
+    def sync_sku_mapping(self, limit: Optional[int] = None) -> Dict[str, int]:
+        """
+        Sync SKU mapping data to Airtable SKU Mapping table.
+        Maps anonymous SKU IDs to real SKU IDs and variant images.
+        """
+        logger.info(f"Starting SKU mapping sync (limit: {limit}, dry_run: {self.dry_run})")
+        
+        with get_db_session() as db:
+            # Query for MASTER and UNIQUE products only
+            query = db.query(FilteredProduct).join(
+                ProductStatus, FilteredProduct.product_id == ProductStatus.product_id
+            ).filter(
+                ProductStatus.status.in_(['MASTER', 'UNIQUE'])
+            )
+            
+            if limit:
+                query = query.limit(limit)
+            
+            products = query.all()
+            logger.info(f"Found {len(products)} products to create SKU mapping records from")
+            
+            if not products:
+                return {'created': 0, 'updated': 0}
+            
+            # Convert to Airtable format
+            all_sku_records = []
+            for product in products:
+                sku_records = self._prepare_sku_mapping_records(db, product)
+                all_sku_records.extend(sku_records)
+            
+            logger.info(f"Prepared {len(all_sku_records)} SKU mapping records")
+            
+            if self.dry_run:
+                logger.info(f"DRY RUN: Would sync {len(all_sku_records)} SKU mapping records")
+                return {'created': 0, 'updated': 0}
+            
+            if not all_sku_records:
+                return {'created': 0, 'updated': 0}
+            
+            # Check if SKU mapping table exists
+            sku_mapping_table_name = "SKU Mapping"  # Default name
+            if hasattr(self.client, 'sku_mapping_table_name'):
+                sku_mapping_table_name = self.client.sku_mapping_table_name
+            
+            # Upsert to Airtable
+            result = self.client.upsert_records(
+                sku_mapping_table_name,
+                all_sku_records,
+                key_field='anon_sku_id'
+            )
+            
+            logger.info(f"SKU mapping sync completed: {result}")
+            return result
+    
+    def _prepare_sku_mapping_records(self, db: Session, product: FilteredProduct) -> List[Dict]:
+        """
+        Prepare SKU mapping records for a product using the ProductVariant table.
+        Maps anonymous SKU IDs to real AliExpress SKU data.
+        """
+        try:
+            # Get variants from the ProductVariant table
+            variants = db.query(ProductVariant).filter(
+                ProductVariant.product_id == product.product_id
+            ).all()
+            
+            if not variants:
+                logger.warning(f"No variants found in ProductVariant table for SKU mapping {product.product_id}")
+                return []
+            
+            # Build AliExpress product URL
+            aliexpress_product_url = f"https://www.aliexpress.com/item/{product.product_id}.html"
+            
+            # Get main product image
+            aliexpress_main_image_url = ""
+            if hasattr(product, 'product_main_image_url') and product.product_main_image_url:
+                aliexpress_main_image_url = product.product_main_image_url
+            
+            sku_mapping_records = []
+            
+            for variant in variants:
+                # Generate anonymous SKU ID
+                anon_sku_id = self.client.generate_anonymous_id(variant.sku_id)
+                
+                # Get variant-specific image URL (original AliExpress URL)
+                aliexpress_variant_image = ""
+                if hasattr(variant, 'sku_image_url') and variant.sku_image_url:
+                    # Extract original URL if this is an S3 URL, otherwise use as-is
+                    aliexpress_variant_image = variant.sku_image_url
+                
+                # Prepare SKU mapping record
+                mapping_fields = {
+                    'anon_sku_id': anon_sku_id,
+                    'real_sku_id': variant.sku_id,
+                    'aliexpress_product_url': aliexpress_product_url,
+                    'aliexpress_main_image': aliexpress_main_image_url,
+                    'aliexpress_variant_image': aliexpress_variant_image,
+                    'sync_timestamp': datetime.now().isoformat()
+                }
+                
+                sku_mapping_records.append({'fields': mapping_fields})
+            
+            logger.info(f"Prepared {len(sku_mapping_records)} SKU mapping records for {product.product_id}")
+            return sku_mapping_records
+            
+        except Exception as e:
+            logger.error(f"Error preparing SKU mapping records for {product.product_id}: {e}")
+            return []
+    
     def _filter_fields(self, record_fields: Dict[str, Any], available_fields: set) -> Dict[str, Any]:
         """Filter record fields to only include those that exist in the Airtable base."""
         filtered = {}
@@ -283,6 +404,9 @@ class AirtableDataSync:
             
             # Extract description from raw_json_detail
             description = self._extract_description(product)
+            
+            # Extract specifications from raw_json_detail
+            specifications = self._extract_specifications(product)
             
             # Get images
             images = db.query(ProductImage).filter(
@@ -332,6 +456,7 @@ class AirtableDataSync:
                 'anon_product_id': product_id,  # Map product_id to existing anon_product_id field
                 'title': product.product_title or '',
                 'description': description,
+                'specifications': specifications,
                 'hero_image': hero_image or '',
                 'gallery_images': gallery_images,
                 'video': video_url or '',
@@ -357,68 +482,50 @@ class AirtableDataSync:
     
     def _prepare_variant_records(self, db: Session, product: FilteredProduct) -> List[Dict]:
         """
-        Prepare variant records for a product.
-        Extracts real variants from raw_json_detail if available.
+        Prepare variant records for a product using the existing ProductVariant table.
         """
         try:
             # Generate anonymous product ID for consistency with other tables
             product_id = self.client.generate_anonymous_id(product.product_id)
             
-            # Extract variants from raw_json_detail
-            variants = self._extract_variants_from_json(product)
+            # Get variants from the ProductVariant table
+            variants = db.query(ProductVariant).filter(
+                ProductVariant.product_id == product.product_id
+            ).all()
             
             if not variants:
-                # Fallback to single default variant
-                variants = [{
-                    'sku_id': '',
-                    'variant_key': f"{product_id}_default",
-                    'attribute_name': 'Default',
-                    'attribute_value': 'Standard',
-                    'price_eur': float(product.target_sale_price or 0),
-                    'stock_quantity': 1
-                }]
+                logger.warning(f"No variants found in ProductVariant table for {product.product_id}")
+                return []
             
             variant_records = []
             
-            # Get images for variants (fallback to product images)
-            all_images = db.query(ProductImage).filter(
-                ProductImage.product_id == product.product_id,
-                ProductImage.s3_url.isnot(None)
-            ).order_by(ProductImage.sort_index).all()
+            # Find the recommended variant (cheapest one)
+            cheapest_variant = min(variants, key=lambda v: v.offer_sale_price or float('inf'))
             
-            hero_image = None
-            gallery_images = []
-            
-            for img in all_images:
-                if img.is_primary or img.image_role == 'hero':
-                    hero_image = img.s3_url
-                else:
-                    gallery_images.append(img.s3_url)
-            
-            if not hero_image and all_images:
-                hero_image = all_images[0].s3_url
-            
-            # Get the recommended variant SKU for consistency
-            recommended_sku = self._get_recommended_variant_sku(product)
-            
-            # Create variant records
-            for i, variant in enumerate(variants):
-                is_recommended = (variant.get('sku_id') == recommended_sku)  # Match the selected variant
+            # Create variant records from ProductVariant table data
+            for variant in variants:
+                is_recommended = (variant.sku_id == cheapest_variant.sku_id)
                 
-                # Prepare variant record fields (use field names that exist in user's base)
+                # Use the variant's own image URL
+                variant_image_url = variant.sku_image_url or ''
+                
+                # Generate anonymous SKU ID
+                anon_sku_id = self.client.generate_anonymous_id(variant.sku_id)
+                
+                # Prepare variant record fields
                 variant_fields = {
-                    'variant_key': variant['variant_key'],
-                    'anon_product_id': product_id,  # Map to existing anon_product_id field
-                    'variant_label': variant.get('attribute_value', 'Default'),
-                    'sku_id': variant.get('sku_id', ''),
-                    'price_eur': variant.get('price_eur', 0),
+                    'variant_key': variant.variant_key or f"Variant_{variant.sku_id}",
+                    'anon_product_id': product_id,
+                    'definition_name': variant.property_value_definition_name or '',
+                    'anon_sku_id': anon_sku_id,
+                    'price_eur': float(variant.offer_sale_price or 0),
                     'shipping_eur': float(product.min_shipping_price or 0),
-                    'total_eur': variant.get('price_eur', 0) + float(product.min_shipping_price or 0),
+                    'total_eur': float(variant.offer_sale_price or 0) + float(product.min_shipping_price or 0),
                     'delivery_min_days': int(product.min_delivery_days or 0),
                     'delivery_max_days': int(product.max_delivery_days or 0),
                     'delivery_range': f"{product.min_delivery_days or 0}-{product.max_delivery_days or 0} days",
-                    'variant_hero_image': hero_image or '',
-                    'variant_images': ', '.join(gallery_images) if gallery_images else '',
+                    'variant_hero_image': variant_image_url,
+                    'variant_images': variant_image_url,  # Use the specific variant image
                     'is_recommended': is_recommended,
                     'sync_timestamp': datetime.now().isoformat()
                 }
@@ -427,6 +534,7 @@ class AirtableDataSync:
                 filtered_fields = self._filter_fields(variant_fields, self.variants_fields)
                 variant_records.append({'fields': filtered_fields})
             
+            logger.info(f"Prepared {len(variant_records)} variant records from ProductVariant table for {product.product_id}")
             return variant_records
             
         except Exception as e:
@@ -488,6 +596,40 @@ class AirtableDataSync:
             return ''
         except Exception as e:
             logger.warning(f"Error extracting description for {product.product_id}: {e}")
+            return ''
+    
+    def _extract_specifications(self, product: FilteredProduct) -> str:
+        """Extract product specifications from ae_item_properties in raw_json_detail."""
+        try:
+            if not product.raw_json_detail:
+                return ''
+            
+            result = product.raw_json_detail.get('aliexpress_ds_product_get_response', {}).get('result', {})
+            properties = result.get('ae_item_properties', {})
+            
+            if not properties:
+                return ''
+            
+            # Get the property list
+            property_list = properties.get('ae_item_property', [])
+            if not property_list:
+                return ''
+            
+            # Convert to dictionary format for easy analysis
+            specs = []
+            for prop in property_list:
+                attr_name = prop.get('attr_name', '').strip()
+                attr_value = prop.get('attr_value', '').strip()
+                
+                if attr_name and attr_value:
+                    # Format as "Name: Value" for readability
+                    specs.append(f"{attr_name}: {attr_value}")
+            
+            # Join specifications with line breaks for multilineText field
+            return '\n'.join(specs) if specs else ''
+            
+        except Exception as e:
+            logger.warning(f"Error extracting specifications for {product.product_id}: {e}")
             return ''
     
     def _count_variants(self, product: FilteredProduct) -> int:
@@ -628,12 +770,22 @@ def sync_to_airtable(limit: Optional[int] = None, filter_status: Optional[str] =
     except Exception as e:
         logger.warning(f"Product Mapping table sync failed (table may not exist): {e}")
     
+    # Sync SKU Mapping table
+    sku_mapping_result = {'created': 0, 'updated': 0}  # Default in case table doesn't exist
+    try:
+        sku_mapping_result = sync_engine.sync_sku_mapping(limit=limit)
+    except Exception as e:
+        logger.warning(f"SKU Mapping table sync failed (table may not exist): {e}")
+    
     result = {
         'products': products_result,
         'variants': variants_result,
         'mapping': mapping_result,
-        'total_created': products_result['created'] + variants_result['created'] + mapping_result['created'],
-        'total_updated': products_result['updated'] + variants_result['updated'] + mapping_result['updated']
+        'sku_mapping': sku_mapping_result,
+        'total_created': (products_result['created'] + variants_result['created'] + 
+                         mapping_result['created'] + sku_mapping_result['created']),
+        'total_updated': (products_result['updated'] + variants_result['updated'] + 
+                         mapping_result['updated'] + sku_mapping_result['updated'])
     }
     
     logger.info(f"Airtable sync completed: {result}")

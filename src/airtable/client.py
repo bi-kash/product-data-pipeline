@@ -25,6 +25,8 @@ class AirtableClient:
         self.base_id = get_env('AIRTABLE_BASE_ID')
         self.products_table_name = get_env('AIRTABLE_PRODUCTS_TABLE', 'Products')
         self.variants_table_name = get_env('AIRTABLE_VARIANTS_TABLE', 'Variants')
+        self.mapping_table_name = get_env('AIRTABLE_MAPPING_TABLE', 'Product Mapping')
+        self.sku_mapping_table_name = get_env('AIRTABLE_SKU_MAPPING_TABLE', 'SKU Mapping')
         
         if not self.token or not self.base_id:
             raise ValueError("Missing Airtable config: AIRTABLE_PERSONAL_ACCESS_TOKEN and AIRTABLE_BASE_ID required")
@@ -34,6 +36,8 @@ class AirtableClient:
         self.base = self.api.base(self.base_id)
         self.products_table = self.base.table(self.products_table_name)
         self.variants_table = self.base.table(self.variants_table_name)
+        self.mapping_table = self.base.table(self.mapping_table_name)
+        self.sku_mapping_table = self.base.table(self.sku_mapping_table_name)
         
         logger.info(f"Initialized Airtable client for base {self.base_id}")
     
@@ -46,8 +50,10 @@ class AirtableClient:
             table = self.products_table
         elif table_name == self.variants_table_name:
             table = self.variants_table
-        elif table_name == "Product Mapping":
-            table = self.base.table("Product Mapping")
+        elif table_name == self.mapping_table_name or table_name == "Product Mapping":
+            table = self.mapping_table
+        elif table_name == self.sku_mapping_table_name or table_name == "SKU Mapping":
+            table = self.sku_mapping_table
         else:
             raise ValueError(f"Unknown table name: {table_name}")
         result = {'created': 0, 'updated': 0}
