@@ -138,7 +138,7 @@ class AirtableBaseCreator:
             print()
             print("Next steps:")
             print("1. Run: python main.py airtable:sync")
-            return base_id
+            return data  # Return full data object instead of just base_id
         elif response.status_code == 422:
             print(f"❌ Base creation failed: Server error (422)")
             print(f"This usually means your token doesn't have the required scopes for base creation.")
@@ -512,19 +512,23 @@ def create_base_command(base_name: str = None, workspace_id: str = None, test_to
         
         if result:
             print(f"🎉 Successfully created Airtable base!")
-            print(f"📊 Base ID: {result['id']}")
-            print(f"📋 Base Name: {result['name']}")
+            print(f"📊 Base ID: {result.get('id', 'Unknown')}")
+            if result.get('name'):
+                print(f"📋 Base Name: {result['name']}")
             
             # Display tables
-            if "tables" in result:
+            if "tables" in result and result["tables"]:
                 print(f"\n📁 Tables created:")
                 for table in result["tables"]:
-                    print(f"  🗃️  {table['name']} (ID: {table['id']})")
-                    print(f"      Fields: {len(table.get('fields', []))} fields")
+                    table_name = table.get('name', 'Unknown')
+                    table_id = table.get('id', 'Unknown')
+                    field_count = len(table.get('fields', []))
+                    print(f"  🗃️  {table_name} (ID: {table_id})")
+                    print(f"      Fields: {field_count} fields")
             
             print(f"\n🔧 Next steps:")
             print(f"1. Update your .env file:")
-            print(f"   AIRTABLE_BASE_ID={result['id']}")
+            print(f"   AIRTABLE_BASE_ID={result.get('id', 'UNKNOWN')}")
             print(f"2. Run sync command:")
             print(f"   python main.py airtable:sync --dry-run")
         else:
