@@ -242,11 +242,11 @@ class AirtableDataSync:
                     if not aliexpress_main_image_url:
                         aliexpress_main_image_url = result.get('product_main_image_url', '')
                     
-                    # Get video URL if available
-                    aliexpress_video_url = result.get('product_video_url', '')
-                    
                 except Exception as e:
                     logger.debug(f"Error extracting URLs from raw data for {product.product_id}: {e}")
+            
+            # Get video URL from product_video_url field (already extracted during harvest)
+            aliexpress_video_url = product.product_video_url or ''
             
             # Generate anonymous ID using the client method
             anon_id = self.client.generate_anonymous_id(product.product_id)
