@@ -512,9 +512,12 @@ class AirtableDataSync:
                 # Generate anonymous SKU ID
                 anon_sku_id = self.client.generate_anonymous_id(variant.sku_id)
                 
+                # Build variant_key using property_value_definition_name with fallback to sku_property_value
+                variant_key = self._build_variant_key(variant)
+                
                 # Prepare variant record fields
                 variant_fields = {
-                    'variant_key': variant.variant_key or f"Variant_{variant.sku_id}",
+                    'variant_key': variant_key,
                     'anon_product_id': product_id,
                     'definition_name': variant.property_value_definition_name or '',
                     'anon_sku_id': anon_sku_id,
@@ -540,6 +543,40 @@ class AirtableDataSync:
         except Exception as e:
             logger.error(f"Error preparing variant records for {product.product_id}: {e}")
             return []
+    
+    def _build_variant_key(self, variant: 'ProductVariant') -> str:
+        """
+        Build variant key using property_value_definition_name when available,
+        falling back to sku_property_value when definition_name is null.
+        """
+        try:
+            if not variant.properties or not isinstance(variant.properties, list):
+                # Fallback to existing variant_key or generate one
+                return variant.variant_key or f"Variant_{variant.sku_id}"
+            
+            # Build key from properties with proper fallback logic
+            key_parts = []
+            for prop in variant.properties:
+                prop_name = prop.get('name', '')
+                definition_name = prop.get('definition_name')
+                prop_value = prop.get('value', '')
+                
+                if prop_name:
+                    # Use definition_name if it exists and is not null, otherwise use value
+                    display_value = definition_name if definition_name else prop_value
+                    if display_value:
+                        key_parts.append(f"{prop_name}: {display_value}")
+            
+            # Join all parts with " + " separator
+            if key_parts:
+                return " + ".join(key_parts)
+            else:
+                # Final fallback to existing variant_key or generate one
+                return variant.variant_key or f"Variant_{variant.sku_id}"
+                
+        except Exception as e:
+            logger.warning(f"Error building variant key for {variant.sku_id}: {e}")
+            return variant.variant_key or f"Variant_{variant.sku_id}"
     
     def _filter_fields(self, fields: Dict[str, Any], available_fields: set) -> Dict[str, Any]:
         """Filter fields to only include those that exist in the Airtable base."""
