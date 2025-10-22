@@ -506,8 +506,45 @@ class AirtableDataSync:
             for variant in variants:
                 is_recommended = (variant.sku_id == cheapest_variant.sku_id)
                 
-                # Use the variant's own image URL
-                variant_image_url = variant.sku_image_url or ''
+                # Get S3 image URLs from product_images table using sku_image_url to match
+                variant_hero_image = ''
+                variant_images_list = []
+                
+                if variant.sku_image_url:
+                    # Strategy 1: Try to find by sku_id first (most reliable)
+                    matching_images_by_sku = db.query(ProductImage).filter(
+                        ProductImage.product_id == product.product_id,
+                        ProductImage.sku_id == variant.sku_id,
+                        ProductImage.s3_url.isnot(None)
+                    ).order_by(ProductImage.sort_index).all()
+                    
+                    if matching_images_by_sku:
+                        variant_hero_image = matching_images_by_sku[0].s3_url
+                        variant_images_list = [img.s3_url for img in matching_images_by_sku]
+                        logger.info(f"✅ Found {len(matching_images_by_sku)} S3 images for variant {variant.sku_id} by sku_id match")
+                    else:
+                        # Strategy 2: Try to match by checking if image_url contains the variant's sku_image_url
+                        # This handles cases where image_url might still contain AliExpress URLs
+                        all_product_images = db.query(ProductImage).filter(
+                            ProductImage.product_id == product.product_id,
+                            ProductImage.s3_url.isnot(None)
+                        ).all()
+                        
+                        for img in all_product_images:
+                            # Check if the original AliExpress URL matches (image_url might be AliExpress or S3)
+                            if img.image_url == variant.sku_image_url and img.s3_url:
+                                variant_hero_image = img.s3_url
+                                variant_images_list = [img.s3_url]
+                                logger.info(f"✅ Found S3 URL for variant {variant.sku_id} by URL match: {variant.sku_image_url} → {img.s3_url}")
+                                break
+                        
+                        if not variant_hero_image:
+                            logger.warning(f"No S3 image found for variant {variant.sku_id} with URL {variant.sku_image_url}")
+                else:
+                    logger.warning(f"No sku_image_url found for variant {variant.sku_id}")
+                
+                # Join variant images as comma-separated string
+                variant_images_str = ', '.join(variant_images_list) if variant_images_list else ''
                 
                 # Generate anonymous SKU ID
                 anon_sku_id = self.client.generate_anonymous_id(variant.sku_id)
@@ -527,8 +564,8 @@ class AirtableDataSync:
                     'delivery_min_days': int(product.min_delivery_days or 0),
                     'delivery_max_days': int(product.max_delivery_days or 0),
                     'delivery_range': f"{product.min_delivery_days or 0}-{product.max_delivery_days or 0} days",
-                    'variant_hero_image': variant_image_url,
-                    'variant_images': variant_image_url,  # Use the specific variant image
+                    'variant_hero_image': variant_hero_image,
+                    'variant_images': variant_images_str,  # Use S3 URLs from product_images table
                     'is_recommended': is_recommended,
                     'sync_timestamp': datetime.now().isoformat()
                 }
