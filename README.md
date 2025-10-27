@@ -88,6 +88,79 @@ The application automatically creates the required tables when first run. For co
 
 The database is managed using SQLAlchemy ORM for better code organization and type safety, with support for both SQLite (development) and PostgreSQL (production).
 
+## Quick Start Demo
+
+For a complete demonstration of the entire pipeline, use the automated demo script:
+
+### Automated Pipeline Demo
+
+```bash
+python demo_pipeline.py
+```
+
+**⚠️ WARNING: This script will DELETE ALL DATABASE DATA!**
+
+This comprehensive demo script demonstrates the complete pipeline workflow by:
+
+1. **🗑️ Database Cleanup**: Deletes all existing data (with safety confirmation)
+2. **🔑 API Session Setup**: Guides you through creating a fresh API session
+3. **🌾 Merchant Harvest**: Harvests 100 products from AliExpress
+4. **👥 Seller Approval**: Randomly assigns seller statuses (80% whitelist, 10% blacklist, 10% pending)
+5. **🔍 Product Filtering**: Filters products based on business rules
+6. **🔍 Duplicate Detection**: Runs advanced duplicate detection using pHash + CLIP
+7. **📊 Airtable Integration**: Creates Airtable base and syncs all processed data
+
+**Features:**
+
+- **Interactive Setup**: Provides authorization URL and guides you through API setup
+- **Safety Confirmations**: Multiple confirmations before deleting data
+- **Progress Tracking**: Clear progress indicators and status messages
+- **Error Handling**: Graceful error handling with helpful messages
+- **Final Statistics**: Complete summary of pipeline results
+
+**Options:**
+
+```bash
+python demo_pipeline.py --skip-confirmation  # Skip safety prompts (use with caution)
+python demo_pipeline.py --help              # Show help
+```
+
+**Demo Workflow:**
+
+1. **Run the demo**: `python demo_pipeline.py`
+2. **Confirm data deletion** (script will ask for confirmation)
+3. **Get authorization code**:
+   - Script provides AliExpress authorization URL
+   - Visit the URL in your browser
+   - Log in and authorize the application
+   - Copy the authorization code from the redirect URL
+   - Paste it into the script
+4. **Watch the pipeline run** through all modules automatically
+5. **Review results** in terminal and check your Airtable base
+
+**Expected Results:**
+
+- Complete product catalog with images and variants
+- Duplicate detection results with master selection
+- Structured Airtable base with anonymized data
+- Statistics showing seller approval distribution and processing results
+
+This demo is perfect for:
+
+- **New users** wanting to see the complete pipeline in action
+- **Testing** the pipeline with fresh data
+- **Demonstrations** to stakeholders or team members
+- **Development** testing after making changes
+
+**Demo Files:**
+
+- `demo_pipeline.py`: Main automated demo script
+- `demo_usage_examples.sh`: Usage examples and help
+
+**Alternative: Individual Module Testing**
+
+If you prefer to run modules individually, follow the detailed usage instructions in each module section below.
+
 ## Usage by Module
 
 For a detailed explanation of each command, workflow steps, and troubleshooting, please refer to the [Quality Assurance Guide](./QA.md).
@@ -366,6 +439,7 @@ The duplicate detection system uses a two-stage cascade approach with comprehens
 4. **Manual Verification**: Export confirmed duplicates and suspects for accuracy verification and parameter tuning
 
 **Key Benefits**:
+
 - **Intelligent Cascade**: Fast pHash screening reduces expensive CLIP computations by ~85%
 - **Tunable Parameters**: Comprehensive threshold configuration for different accuracy requirements
 - **Quality Assurance**: Export functionality enables manual verification of algorithm decisions
@@ -450,24 +524,25 @@ This command:
 
 **CSV Format** (for both export commands):
 
-| Column | Description | Example |
-|--------|-------------|---------|
-| `master_product_id` | ID of the master product | `1005010018511535` |
-| `duplicate_product_id` | ID of the duplicate product | `1005010018511536` |
-| `master_title` | Title of master product | `Gold Plated Chain Necklace...` |
-| `duplicate_title` | Title of duplicate product | `18K Gold Chain Necklace...` |
-| `master_image` | **Closest matching image** with CLIP score | `https://s3.../image.jpg (CLIP: 0.9756)` |
-| `duplicate_image` | **Closest matching image** with CLIP score | `https://s3.../image.jpg (CLIP: 0.9756)` |
-| `master_main_image` | Hero/primary image | `https://s3.../hero.jpg` |
-| `duplicate_main_image` | Hero/primary image | `https://s3.../hero.jpg` |
-| `master_images` | All other images (pipe-separated) | `https://s3.../img1.jpg \| https://s3.../img2.jpg` |
-| `duplicate_images` | All other images (pipe-separated) | `https://s3.../img3.jpg \| https://s3.../img4.jpg` |
-| `phash_difference` | Perceptual hash difference (0-64) | `3` |
-| `clip_similarity` | CLIP similarity score (0.0-1.0) | `0.9756` |
-| `status` | Current status | `DUPLICATE` or `REVIEW_SUSPECT` |
-| `notes` | Manual review notes (empty) | _(for your notes)_ |
+| Column                 | Description                                | Example                                            |
+| ---------------------- | ------------------------------------------ | -------------------------------------------------- |
+| `master_product_id`    | ID of the master product                   | `1005010018511535`                                 |
+| `duplicate_product_id` | ID of the duplicate product                | `1005010018511536`                                 |
+| `master_title`         | Title of master product                    | `Gold Plated Chain Necklace...`                    |
+| `duplicate_title`      | Title of duplicate product                 | `18K Gold Chain Necklace...`                       |
+| `master_image`         | **Closest matching image** with CLIP score | `https://s3.../image.jpg (CLIP: 0.9756)`           |
+| `duplicate_image`      | **Closest matching image** with CLIP score | `https://s3.../image.jpg (CLIP: 0.9756)`           |
+| `master_main_image`    | Hero/primary image                         | `https://s3.../hero.jpg`                           |
+| `duplicate_main_image` | Hero/primary image                         | `https://s3.../hero.jpg`                           |
+| `master_images`        | All other images (pipe-separated)          | `https://s3.../img1.jpg \| https://s3.../img2.jpg` |
+| `duplicate_images`     | All other images (pipe-separated)          | `https://s3.../img3.jpg \| https://s3.../img4.jpg` |
+| `phash_difference`     | Perceptual hash difference (0-64)          | `3`                                                |
+| `clip_similarity`      | CLIP similarity score (0.0-1.0)            | `0.9756`                                           |
+| `status`               | Current status                             | `DUPLICATE` or `REVIEW_SUSPECT`                    |
+| `notes`                | Manual review notes (empty)                | _(for your notes)_                                 |
 
 **Key Features**:
+
 - **Direct S3 Access**: All image URLs are clickable for instant browser viewing
 - **Closest Match Detection**: `master_image` and `duplicate_image` show the most similar images with CLIP scores
 - **Complete Image Sets**: Access to all product images for comprehensive comparison
