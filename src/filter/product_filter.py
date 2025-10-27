@@ -774,9 +774,10 @@ class ProductFilterEngine:
                                 'definition_name': prop_value_def_name
                             })
                             
-                            # Build variant key parts with proper formatting
-                            variant_key_parts.append(f"{prop_name}: {prop_value}")
-                            variant_label_parts.append(prop_value)
+                            # Build variant key parts with proper formatting - use definition name if available, fallback to prop_value
+                            display_value = prop_value_def_name if prop_value_def_name else prop_value
+                            variant_key_parts.append(f"{prop_name}: {display_value}")
+                            variant_label_parts.append(display_value)
                 
                 # Create properly formatted variant key with spaces
                 variant_key = " + ".join(sorted(variant_key_parts)) if variant_key_parts else None

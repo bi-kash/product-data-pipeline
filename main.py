@@ -273,6 +273,181 @@ def import_reviewed_suspects(input_file, dry_run=False):
         sys.exit(1)
 
 
+def export_duplicates(output_file):
+    """Export confirmed duplicates to CSV for analysis."""
+    logger.info(f"Exporting confirmed duplicates to {output_file}")
+    
+    try:
+        import csv
+        from src.common.database import ProductStatus, FilteredProduct, ProductImage, ProductVideo
+        
+        with get_db_session() as db:
+            # Query confirmed duplicates with their product details and masters
+            duplicates_query = db.query(
+                ProductStatus.product_id,
+                ProductStatus.duplicate_master_id,
+                ProductStatus.phash_difference,
+                ProductStatus.clip_similarity,
+                ProductStatus.total_landed_cost,
+                FilteredProduct.product_title,
+                FilteredProduct.target_sale_price
+            ).join(
+                FilteredProduct, ProductStatus.product_id == FilteredProduct.product_id
+            ).filter(
+                ProductStatus.status == 'DUPLICATE'
+            ).all()
+            
+            if not duplicates_query:
+                print("📝 No confirmed duplicates found")
+                return
+            
+            logger.info(f"Found {len(duplicates_query)} duplicate products")
+            
+            # Create output directory if it doesn't exist
+            output_dir = os.path.dirname(output_file)
+            if output_dir:  # Only create directory if there's a directory part
+                os.makedirs(output_dir, exist_ok=True)
+            
+            # Prepare CSV data
+            csv_data = []
+            for duplicate in duplicates_query:
+                # Get master product details if available
+                master_title = ""
+                master_price = ""
+                
+                if duplicate.duplicate_master_id:
+                    master_query = db.query(
+                        FilteredProduct.product_title,
+                        FilteredProduct.target_sale_price
+                    ).filter(
+                        FilteredProduct.product_id == duplicate.duplicate_master_id
+                    ).first()
+                    
+                    if master_query:
+                        master_title = master_query.product_title or ""
+                        master_price = master_query.target_sale_price or ""
+
+                
+                
+                # Get S3 image URLs for duplicate product
+                duplicate_images = db.query(ProductImage).filter(
+                    ProductImage.product_id == duplicate.product_id,
+                    ProductImage.s3_url.isnot(None)
+                ).order_by(ProductImage.sort_index).all()
+                
+                # Get S3 image URLs for master product
+                master_images = []
+                if duplicate.duplicate_master_id:
+                    master_images = db.query(ProductImage).filter(
+                        ProductImage.product_id == duplicate.duplicate_master_id,
+                        ProductImage.s3_url.isnot(None)
+                    ).order_by(ProductImage.sort_index).all()
+                
+                # Get S3 video URLs for duplicate product
+                duplicate_videos = db.query(ProductVideo).filter(
+                    ProductVideo.product_id == duplicate.product_id,
+                    ProductVideo.s3_url.isnot(None)
+                ).all()
+                
+                # Get S3 video URLs for master product
+                master_videos = []
+                if duplicate.duplicate_master_id:
+                    master_videos = db.query(ProductVideo).filter(
+                        ProductVideo.product_id == duplicate.duplicate_master_id,
+                        ProductVideo.s3_url.isnot(None)
+                    ).all()
+                
+                # Find main images (hero or primary)
+                duplicate_main_image = ""
+                master_main_image = ""
+                
+                # Get main image for duplicate (prefer is_primary=True, then hero role, then first image)
+                for img in duplicate_images:
+                    if img.is_primary or img.image_role == 'hero':
+                        duplicate_main_image = img.s3_url
+                        break
+                if not duplicate_main_image and duplicate_images:
+                    duplicate_main_image = duplicate_images[0].s3_url
+                
+                # Get main image for master
+                for img in master_images:
+                    if img.is_primary or img.image_role == 'hero':
+                        master_main_image = img.s3_url
+                        break
+                if not master_main_image and master_images:
+                    master_main_image = master_images[0].s3_url
+                
+                # Find the closest matching images (highest CLIP similarity)
+                # For now, we'll use the main images as the closest match since we have CLIP similarity at product level
+                master_image = master_main_image  # This is the closest match from master
+                duplicate_image = duplicate_main_image  # This is the closest match from duplicate
+                
+                # Add CLIP similarity info to indicate this is the closest match
+                if duplicate.clip_similarity:
+                    master_image = f"{master_main_image} (CLIP: {duplicate.clip_similarity:.4f})" if master_main_image else f"No image (CLIP: {duplicate.clip_similarity:.4f})"
+                    duplicate_image = f"{duplicate_main_image} (CLIP: {duplicate.clip_similarity:.4f})" if duplicate_main_image else f"No image (CLIP: {duplicate.clip_similarity:.4f})"
+                
+                # Get all other images (excluding the main ones)
+                master_other_images = [img.s3_url for img in master_images if img.s3_url != master_main_image]
+                duplicate_other_images = [img.s3_url for img in duplicate_images if img.s3_url != duplicate_main_image]
+                
+                # Format image lists as pipe-separated
+                master_images_list = " | ".join(master_other_images)
+                duplicate_images_list = " | ".join(duplicate_other_images)
+                
+                # Get video URLs (take first video if available)
+                duplicate_video = duplicate_videos[0].s3_url if duplicate_videos else ""
+                master_video = master_videos[0].s3_url if master_videos else ""
+                
+                csv_data.append({
+                    'master_product_id': duplicate.duplicate_master_id or "",
+                    'duplicate_product_id': duplicate.product_id,
+                    'master_title': master_title,
+                    'duplicate_title': duplicate.product_title or "",
+                    'master_price': master_price,
+                    'duplicate_price': duplicate.target_sale_price or "",
+                    'duplicate_cost': duplicate.total_landed_cost or "",
+                    'master_image': master_image,
+                    'duplicate_image': duplicate_image,
+                    'master_main_image': master_main_image,
+                    'duplicate_main_image': duplicate_main_image,
+                    'master_images': master_images_list,
+                    'duplicate_images': duplicate_images_list,
+                    'master_video': master_video,
+                    'duplicate_video': duplicate_video,
+                    'phash_difference': duplicate.phash_difference or "",
+                    'clip_similarity': f"{duplicate.clip_similarity:.4f}" if duplicate.clip_similarity else "",
+                    'status': "DUPLICATE",  # All records are confirmed duplicates
+                    'notes': ""  # Empty column for additional notes
+                })
+            
+            # Write to CSV
+            with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = [
+                    'master_product_id', 'duplicate_product_id', 'master_title', 'duplicate_title',
+                    'master_price', 'duplicate_price', 'duplicate_cost',
+                    'master_image', 'duplicate_image', 'master_main_image', 'duplicate_main_image',
+                    'master_images', 'duplicate_images', 'master_video', 'duplicate_video',
+                    'phash_difference', 'clip_similarity', 'status', 'notes'
+                ]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                
+                writer.writeheader()
+                writer.writerows(csv_data)
+            
+            print(f"✅ Exported {len(csv_data)} confirmed duplicates to {output_file}")
+            print(f"📊 Analysis data:")
+            print(f"   • All records have status: DUPLICATE")
+            print(f"   • Images and videos are S3 URLs for direct access")
+            print(f"   • CLIP similarity scores included where available")
+            print(f"   • pHash differences included for image comparison analysis")
+            
+    except Exception as e:
+        logger.error(f"Error exporting confirmed duplicates: {e}")
+        print(f"❌ Error: {e}")
+        sys.exit(1)
+
+
 def export_suspect_duplicates(output_file):
     """Export suspect duplicates to CSV for manual review."""
     logger.info(f"Exporting suspect duplicates to {output_file}")
@@ -582,6 +757,16 @@ def main():
         help="Output CSV file path"
     )
 
+    detect_export_duplicates_parser = subparsers.add_parser(
+        "detect:export-duplicates", help="Export confirmed DUPLICATE cases for analysis"
+    )
+    detect_export_duplicates_parser.add_argument(
+        "--output",
+        type=str,
+        default="data/confirmed_duplicates.csv",
+        help="Output CSV file path"
+    )
+
     detect_import_parser = subparsers.add_parser(
         "detect:import-reviewed", help="Import reviewed suspect duplicates and update database"
     )
@@ -751,6 +936,8 @@ def main():
         detect_status()
     elif args.command == "detect:export-suspects":
         export_suspect_duplicates(output_file=args.output)
+    elif args.command == "detect:export-duplicates":
+        export_duplicates(output_file=args.output)
     elif args.command == "detect:import-reviewed":
         import_reviewed_suspects(input_file=args.input, dry_run=args.dry_run)
     elif args.command == "airtable:sync":
@@ -761,12 +948,7 @@ def main():
         )
         print(f"✅ Airtable sync completed!")
         print(f"📊 Products: {result['products']['created']} created, {result['products']['updated']} updated")
-        print(f"📦 Variants: {result['variants']['created']} created, {result['variants']['updated']} updated")
-        if 'mapping' in result:
-            print(f"🔗 Mapping: {result['mapping']['created']} created, {result['mapping']['updated']} updated")
-        if 'sku_mapping' in result:
-            print(f"🏷️  SKU Mapping: {result['sku_mapping']['created']} created, {result['sku_mapping']['updated']} updated")
-        print(f"📈 Total: {result['total_created']} created, {result['total_updated']} updated")
+        print(f" Total: {result['total_created']} created, {result['total_updated']} updated")
     elif args.command == "airtable:create-base":
         create_base_command(
             base_name=args.name,

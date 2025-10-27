@@ -358,11 +358,18 @@ Module C provides intelligent duplicate detection capabilities using advanced im
 
 ### Overview
 
-The duplicate detection system uses a two-stage cascade approach:
+The duplicate detection system uses a two-stage cascade approach with comprehensive verification capabilities:
 
 1. **pHash Analysis**: Fast perceptual hashing to identify potential duplicates
 2. **CLIP Analysis**: Deep learning-based semantic image analysis for ambiguous cases
 3. **Master Selection**: Intelligent selection of the best product from each duplicate group
+4. **Manual Verification**: Export confirmed duplicates and suspects for accuracy verification and parameter tuning
+
+**Key Benefits**:
+- **Intelligent Cascade**: Fast pHash screening reduces expensive CLIP computations by ~85%
+- **Tunable Parameters**: Comprehensive threshold configuration for different accuracy requirements
+- **Quality Assurance**: Export functionality enables manual verification of algorithm decisions
+- **Continuous Improvement**: Analysis tools support iterative parameter optimization
 
 ### Commands
 
@@ -415,6 +422,56 @@ This command:
 - Separates main/hero images from other product images for easy comparison
 - Provides direct S3 access to all images for instant browser viewing
 - Creates empty status and notes columns for manual input
+
+**Export confirmed duplicates for analysis:**
+
+```bash
+python main.py detect:export-duplicates
+```
+
+Options:
+
+- `--output PATH`: Specify output CSV file path (default: data/confirmed_duplicates.csv)
+
+This command:
+
+- **Purpose**: Verify accuracy of automatic duplicate detection decisions
+- **Content**: All products with status=DUPLICATE and their master products
+- **Data Included**:
+  - Master-duplicate product relationships with titles and prices
+  - S3 URLs for direct image/video comparison in browser
+  - Detection scores (pHash differences, CLIP similarities)
+  - All images organized as: closest match, main/hero, and other images
+- **Use Cases**:
+  - **Accuracy Verification**: Manually verify that detected duplicates are truly duplicates
+  - **Parameter Tuning**: Analyze score distributions to optimize thresholds
+  - **Quality Assurance**: Review algorithm performance before production deployment
+  - **Data Analysis**: Understand duplicate patterns in your product catalog
+
+**CSV Format** (for both export commands):
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| `master_product_id` | ID of the master product | `1005010018511535` |
+| `duplicate_product_id` | ID of the duplicate product | `1005010018511536` |
+| `master_title` | Title of master product | `Gold Plated Chain Necklace...` |
+| `duplicate_title` | Title of duplicate product | `18K Gold Chain Necklace...` |
+| `master_image` | **Closest matching image** with CLIP score | `https://s3.../image.jpg (CLIP: 0.9756)` |
+| `duplicate_image` | **Closest matching image** with CLIP score | `https://s3.../image.jpg (CLIP: 0.9756)` |
+| `master_main_image` | Hero/primary image | `https://s3.../hero.jpg` |
+| `duplicate_main_image` | Hero/primary image | `https://s3.../hero.jpg` |
+| `master_images` | All other images (pipe-separated) | `https://s3.../img1.jpg \| https://s3.../img2.jpg` |
+| `duplicate_images` | All other images (pipe-separated) | `https://s3.../img3.jpg \| https://s3.../img4.jpg` |
+| `phash_difference` | Perceptual hash difference (0-64) | `3` |
+| `clip_similarity` | CLIP similarity score (0.0-1.0) | `0.9756` |
+| `status` | Current status | `DUPLICATE` or `REVIEW_SUSPECT` |
+| `notes` | Manual review notes (empty) | _(for your notes)_ |
+
+**Key Features**:
+- **Direct S3 Access**: All image URLs are clickable for instant browser viewing
+- **Closest Match Detection**: `master_image` and `duplicate_image` show the most similar images with CLIP scores
+- **Complete Image Sets**: Access to all product images for comprehensive comparison
+- **Score Analysis**: Both pHash and CLIP scores for understanding detection logic
 
 **Import reviewed suspects:**
 
@@ -526,9 +583,9 @@ python main.py detect:import-reviewed --input data/review_cases.csv --dry-run
 
 This shows exactly what would be updated without making any database changes.
 
-### Configuration
+### Configuration & Parameter Tuning
 
-Duplicate detection is configured via `.env` variables:
+Duplicate detection is configured via `.env` variables. These parameters can be tuned based on manual verification of results:
 
 ```bash
 # pHash thresholds (Hamming distance, 0-64)
@@ -536,14 +593,118 @@ PHASH_DUPLICATE_THRESHOLD=2       # ≤2: Definitely duplicate
 PHASH_AMBIGUOUS_THRESHOLD=18      # 3-18: Send to CLIP analysis
                                   # >18: Definitely not duplicate
 
-# CLIP threshold (similarity score, 0.0-1.0)
-CLIP_DUPLICATE_THRESHOLD=0.95     # ≥0.95: Confirmed duplicate
+# CLIP thresholds (similarity score, 0.0-1.0)
+CLIP_DUPLICATE_THRESHOLD=0.955    # ≥0.955: Confirmed duplicate
+CLIP_AMBIGUOUS_THRESHOLD=0.94     # 0.94-0.955: Send to manual review
+                                  # <0.94: Definitely not duplicate
 
 # CLIP model configuration
 CLIP_MODEL=ViT-B/32              # Model type (CPU-friendly)
 CLIP_DEVICE=auto                 # Device: 'auto', 'cpu', or 'cuda'
 CLIP_MAX_IMAGES_PER_PRODUCT=5    # Limit for efficiency
 ```
+
+### Parameter Verification & Tuning Workflow
+
+To verify and optimize detection parameters, use this systematic approach:
+
+#### 1. Export Analysis Data
+
+```bash
+# Export confirmed duplicates for accuracy verification
+python main.py detect:export-duplicates --output data/duplicates_analysis.csv
+
+# Export suspects for threshold tuning
+python main.py detect:export-suspects --output data/suspects_analysis.csv
+```
+
+#### 2. Manual Comparison & Analysis
+
+**Analyze Confirmed Duplicates:**
+
+1. **Open duplicates_analysis.csv** in Excel or spreadsheet application
+2. **Review accuracy** by comparing:
+   - **Product titles**: Check if `master_title` vs `duplicate_title` are actually the same
+   - **Images**: Click S3 URLs to visually compare `master_image` vs `duplicate_image`
+   - **Scores**: Analyze `phash_difference` and `clip_similarity` values
+3. **Identify false positives**:
+   - Products marked as duplicates that are actually different
+   - Note the score ranges where false positives occur
+4. **Check threshold effectiveness**:
+   - Very low pHash differences (0-2) should be true duplicates
+   - High CLIP similarities (>0.955) should be true duplicates
+
+**Analyze Suspect Cases:**
+
+1. **Open suspects_analysis.csv** for threshold tuning
+2. **Review borderline cases** that fall in ambiguous ranges:
+   - pHash differences between 3-18
+   - CLIP similarities between 0.94-0.955
+3. **Manual classification**:
+   - True duplicates that should be auto-detected
+   - True uniques that should be auto-rejected
+   - Genuine ambiguous cases requiring human review
+
+#### 3. Parameter Adjustment Guidelines
+
+**pHash Threshold Tuning:**
+
+- **Lower PHASH_DUPLICATE_THRESHOLD** (e.g., 1): More conservative, fewer false positives
+- **Raise PHASH_DUPLICATE_THRESHOLD** (e.g., 5): More aggressive, catch more variations
+- **Adjust PHASH_AMBIGUOUS_THRESHOLD** (e.g., 15): Reduce CLIP workload if too many ambiguous cases
+
+**CLIP Threshold Tuning:**
+
+- **Raise CLIP_DUPLICATE_THRESHOLD** (e.g., 0.97): More conservative, fewer false positives
+- **Lower CLIP_DUPLICATE_THRESHOLD** (e.g., 0.93): More aggressive, catch subtle duplicates
+- **Adjust CLIP_AMBIGUOUS_THRESHOLD**: Fine-tune the manual review boundary
+
+**Example Tuning Process:**
+
+```bash
+# 1. Initial analysis
+python main.py detect:duplicates --limit 100
+python main.py detect:export-duplicates --output analysis_v1.csv
+
+# 2. Review analysis_v1.csv, identify issues
+# 3. Adjust parameters in .env file
+
+# 4. Re-run with new parameters
+python main.py detect:duplicates --limit 100 --force
+python main.py detect:export-duplicates --output analysis_v2.csv
+
+# 5. Compare results and iterate
+```
+
+#### 4. Quality Metrics to Track
+
+**Accuracy Indicators:**
+
+- **False Positive Rate**: Confirmed duplicates that are actually different products
+- **False Negative Rate**: Products marked as unique that are actually duplicates
+- **Manual Review Load**: Percentage of products requiring human review
+- **Consistency**: Similar products receiving consistent classifications
+
+**Performance Indicators:**
+
+- **CLIP Usage**: Percentage of comparisons requiring CLIP analysis
+- **Processing Speed**: Detection time per product pair
+- **Resource Usage**: Memory and compute requirements
+
+#### 5. Validation Workflow
+
+```bash
+# Complete validation cycle
+python main.py detect:duplicates              # Run detection
+python main.py detect:status                  # Check statistics
+python main.py detect:export-duplicates       # Export for verification
+python main.py detect:export-suspects         # Export ambiguous cases
+
+# Manual review and parameter adjustment
+# Repeat until satisfactory accuracy achieved
+```
+
+This systematic approach ensures optimal detection accuracy while minimizing manual review overhead.
 
 ### Detection Logic
 

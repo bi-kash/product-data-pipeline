@@ -80,7 +80,7 @@ class AirtableBaseCreator:
 
     def create_product_base(self, base_name: str = "Product Pipeline") -> Dict[str, Any]:
         """
-        Create a complete Airtable base with Products and Variants tables.
+        Create a complete Airtable base with only Products table.
         
         Args:
             base_name: Name for the new base
@@ -90,14 +90,11 @@ class AirtableBaseCreator:
         """
         logger.info(f"Creating Airtable base: {base_name}")
         
-        # Define the base structure
+        # Define the base structure - only Products table
         base_data = {
             "name": base_name,
             "tables": [
-                self._get_products_table_schema(),
-                self._get_variants_table_schema(),
-                self._get_product_mapping_table_schema(),
-                self._get_sku_mapping_table_schema()
+                self._get_products_table_schema()
             ]
         }
         
@@ -121,11 +118,8 @@ class AirtableBaseCreator:
             print(f"Base ID: {base_id}")
             print(f"Base URL: https://airtable.com/{base_id}")
             print()
-            print("📊 Created tables:")
-            print("   1️⃣  Products - Main product data with S3 URLs")
-            print("   2️⃣  Variants - All SKU variations with proper formatting") 
-            print("   3️⃣  Product Mapping - Original AliExpress URLs and real IDs")
-            print("   4️⃣  SKU Mapping - Anonymous to real SKU mapping with variant URLs")
+            print("📊 Created table:")
+            print("   📦 Products - Complete product data with images and variants")
             print()
             
             # Automatically update .env file
@@ -159,7 +153,7 @@ class AirtableBaseCreator:
         """Define Products table schema."""
         return {
             "name": "Products",
-            "description": "Master and Unique products (one row per product)",
+            "description": "Master and Unique products with complete image and variant data",
             "fields": [
                 {
                     "name": "anon_product_id",
@@ -192,6 +186,16 @@ class AirtableBaseCreator:
                     "description": "Gallery images (comma-separated S3 URLs)"
                 },
                 {
+                    "name": "other_images",
+                    "type": "multilineText", 
+                    "description": "Other product images from detail sections (comma-separated S3 URLs)"
+                },
+                {
+                    "name": "variant_images",
+                    "type": "multilineText", 
+                    "description": "All variant-specific images (comma-separated S3 URLs)"
+                },
+                {
                     "name": "video",
                     "type": "url",
                     "description": "Product video (S3 URL, if available)"
@@ -208,19 +212,13 @@ class AirtableBaseCreator:
                     "description": "Product duplicate status"
                 },
                 {
-                    "name": "selected_variant",
-                    "type": "singleLineText",
-                    "description": "Selected variant key (will link after tables created)"
-                },
-                # Simple fields that will be populated by sync (rollups require table relationships)
-                {
                     "name": "price_eur",
                     "type": "currency",
                     "options": {
                         "symbol": "€",
                         "precision": 2
                     },
-                    "description": "Price from selected variant"
+                    "description": "Minimum price from all variants"
                 },
                 {
                     "name": "shipping_eur", 
@@ -229,7 +227,7 @@ class AirtableBaseCreator:
                         "symbol": "€",
                         "precision": 2
                     },
-                    "description": "Shipping cost from selected variant"
+                    "description": "Shipping cost"
                 },
                 {
                     "name": "total_eur",
@@ -238,220 +236,12 @@ class AirtableBaseCreator:
                         "symbol": "€",
                         "precision": 2
                     },
-                    "description": "Total cost from selected variant"
+                    "description": "Total cost (price + shipping)"
                 },
                 {
                     "name": "delivery_time",
                     "type": "singleLineText",
-                    "description": "Delivery time from selected variant"
-                },
-                {
-                    "name": "sync_timestamp",
-                    "type": "dateTime",
-                    "options": {
-                        "dateFormat": {"name": "iso"},
-                        "timeFormat": {"name": "24hour"},
-                        "timeZone": "utc"
-                    },
-                    "description": "Last sync timestamp"
-                }
-            ]
-        }
-
-    def _get_variants_table_schema(self) -> Dict[str, Any]:
-        """Define Variants table schema.""" 
-        return {
-            "name": "Variants",
-            "description": "Product variants (one row per purchasable combination)",
-            "fields": [
-                {
-                    "name": "variant_key",
-                    "type": "singleLineText",
-                    "description": "Stable variant key (primary key)"
-                },
-                {
-                    "name": "anon_product_id",
-                    "type": "singleLineText",
-                    "description": "Link to parent product (anon_product_id)"
-                },
-                {
-                    "name": "anon_sku_id",
-                    "type": "singleLineText",
-                    "description": "Anonymous SKU ID"
-                },
-                {
-                    "name": "definition_name",
-                    "type": "singleLineText",
-                    "description": "Property value definition name (e.g. 'Cherry Wood Color', 'blue')"
-                },
-                {
-                    "name": "price_eur",
-                    "type": "currency",
-                    "options": {
-                        "symbol": "€",
-                        "precision": 2
-                    },
-                    "description": "Variant price in EUR"
-                },
-                {
-                    "name": "shipping_eur",
-                    "type": "currency", 
-                    "options": {
-                        "symbol": "€",
-                        "precision": 2
-                    },
-                    "description": "Shipping cost in EUR"
-                },
-                {
-                    "name": "total_eur", 
-                    "type": "currency",
-                    "options": {
-                        "symbol": "€", 
-                        "precision": 2
-                    },
-                    "description": "Total cost (price + shipping) in EUR"
-                },
-                {
-                    "name": "delivery_min_days",
-                    "type": "number",
-                    "options": {
-                        "precision": 0
-                    },
-                    "description": "Minimum delivery time in days"
-                },
-                {
-                    "name": "delivery_max_days",
-                    "type": "number", 
-                    "options": {
-                        "precision": 0
-                    },
-                    "description": "Maximum delivery time in days"
-                },
-                {
-                    "name": "delivery_range",
-                    "type": "singleLineText",
-                    "description": "Delivery time range (e.g. '7-14 days')"
-                },
-                {
-                    "name": "variant_hero_image",
-                    "type": "url",
-                    "description": "Variant-specific hero image (S3 URL)"
-                },
-                {
-                    "name": "variant_images",
-                    "type": "multilineText",
-                    "description": "Variant-specific images (S3 URLs, pipe-separated)"
-                },
-                {
-                    "name": "is_recommended",
-                    "type": "checkbox",
-                    "options": {
-                        "icon": "star",
-                        "color": "yellowBright"
-                    },
-                    "description": "Recommended variant flag (e.g. cheapest & fastest)"
-                },
-                {
-                    "name": "sync_timestamp",
-                    "type": "dateTime",
-                    "options": {
-                        "dateFormat": {"name": "iso"},
-                        "timeFormat": {"name": "24hour"},
-                        "timeZone": "utc"
-                    },
-                    "description": "Last sync timestamp"
-                }
-            ]
-        }
-
-    def _get_product_mapping_table_schema(self) -> Dict[str, Any]:
-        """Define Product Mapping table schema."""
-        return {
-            "name": "Product Mapping",
-            "description": "Maps anonymous product IDs to real AliExpress data and URLs",
-            "fields": [
-                {
-                    "name": "anon_product_id",
-                    "type": "singleLineText",
-                    "description": "Anonymous product ID (matches Products.anon_product_id)"
-                },
-                {
-                    "name": "real_product_id",
-                    "type": "singleLineText", 
-                    "description": "Real AliExpress product ID"
-                },
-                {
-                    "name": "aliexpress_product_url",
-                    "type": "url",
-                    "description": "Direct AliExpress product page URL"
-                },
-                {
-                    "name": "aliexpress_main_image_url",
-                    "type": "url",
-                    "description": "Original AliExpress main product image URL"
-                },
-                {
-                    "name": "aliexpress_video_url",
-                    "type": "url",
-                    "description": "Original AliExpress product video URL (if available)"
-                },
-                {
-                    "name": "sync_timestamp",
-                    "type": "dateTime",
-                    "options": {
-                        "dateFormat": {"name": "iso"},
-                        "timeFormat": {"name": "24hour"},
-                        "timeZone": "utc"
-                    },
-                    "description": "Last sync timestamp"
-                }
-            ]
-        }
-
-    def get_base_schema(self, base_id: str) -> Dict[str, Any]:
-        """Get existing base schema."""
-        response = requests.get(
-            f"{self.base_url}/bases/{base_id}/tables",
-            headers=self.headers,
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logger.error(f"Failed to get base schema: {response.status_code}")
-            response.raise_for_status()
-
-    def _get_sku_mapping_table_schema(self) -> Dict[str, Any]:
-        """Define SKU Mapping table schema."""
-        return {
-            "name": "SKU Mapping",
-            "description": "Maps anonymous SKU IDs to real AliExpress SKU data and variant URLs",
-            "fields": [
-                {
-                    "name": "anon_sku_id",
-                    "type": "singleLineText",
-                    "description": "Anonymous SKU ID (matches Variants.anon_sku_id)"
-                },
-                {
-                    "name": "real_sku_id",
-                    "type": "singleLineText", 
-                    "description": "Real AliExpress SKU ID"
-                },
-                {
-                    "name": "aliexpress_product_url",
-                    "type": "url",
-                    "description": "Direct AliExpress product page URL"
-                },
-                {
-                    "name": "aliexpress_main_image",
-                    "type": "url",
-                    "description": "Original AliExpress main product image URL"
-                },
-                {
-                    "name": "aliexpress_variant_image",
-                    "type": "url",
-                    "description": "Original AliExpress variant-specific image URL"
+                    "description": "Estimated delivery time"
                 },
                 {
                     "name": "sync_timestamp",
@@ -467,47 +257,47 @@ class AirtableBaseCreator:
         }
 
 
-def create_base_command(base_name: str = None, workspace_id: str = None, test_token: bool = False):
+def create_base_command(base_name: str = "Product Pipeline", workspace_id: str = None, test_token: bool = False) -> None:
     """
-    CLI command to create Airtable base.
+    Command-line interface for creating an Airtable base.
     
     Args:
         base_name: Name for the new base
-        workspace_id: Workspace ID to create base in  
-        test_token: Test token configuration
+        workspace_id: Optional workspace ID to create base in
+        test_token: Whether to test the token configuration
     """
-    creator = AirtableBaseCreator()
-    
-    if test_token:
-        print("🔍 Testing Personal Access Token...")
-        print(f"Token: {creator.token[:10]}...{creator.token[-4:] if len(creator.token) > 14 else creator.token}")
-        try:
-            # Test with a simple API call
-            response = requests.get(
-                "https://api.airtable.com/v0/meta/whoami",
-                headers=creator.headers,
-                timeout=10
-            )
-            if response.status_code == 200:
-                user_info = response.json()
-                print(f"✅ Token is valid!")
-                print(f"👤 User: {user_info.get('id', 'Unknown')}")
-                if 'scopes' in user_info:
-                    print(f"🔐 Scopes: {', '.join(user_info['scopes'])}")
-            else:
-                print(f"❌ Token test failed: {response.status_code}")
-                print(f"Response: {response.text}")
-        except Exception as e:
-            print(f"❌ Token test error: {e}")
-        return
-    
-    # Override workspace if provided
-    if workspace_id:
-        creator.workspace_id = workspace_id
-    
-    base_name = base_name or "Product Pipeline"
-    
     try:
+        creator = AirtableBaseCreator()
+        
+        if test_token:
+            print("🔍 Testing Personal Access Token configuration...")
+            try:
+                # Test by attempting to list bases (requires schema.bases:read)
+                response = requests.get(
+                    f"{creator.base_url}/bases", 
+                    headers=creator.headers,
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    print("✅ Token is valid and has required permissions!")
+                    bases = response.json().get('bases', [])
+                    print(f"📊 Found {len(bases)} existing bases")
+                elif response.status_code == 401:
+                    print("❌ Token is invalid or expired")
+                elif response.status_code == 403:
+                    print("⚠️  Token is valid but missing required scopes")
+                    print("Required scopes: schema.bases:read, schema.bases:write")
+                else:
+                    print(f"⚠️  Unexpected response: {response.status_code}")
+                return
+            except Exception as e:
+                print(f"❌ Error testing token: {e}")
+                return
+        
+        # Override workspace ID if provided
+        if workspace_id:
+            creator.workspace_id = workspace_id
+        
         result = creator.create_product_base(base_name)
         
         if result:

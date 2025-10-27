@@ -240,6 +240,7 @@ class ImageIngestionEngine:
             'hero_images': 0,
             'gallery_images': 0,
             'variant_images': 0,
+            'other_images': 0,
             'videos_processed': 0,
             'videos_downloaded': 0,
             'videos_uploaded': 0,
@@ -268,6 +269,7 @@ class ImageIngestionEngine:
                     stats['hero_images'] += images_extracted['hero']
                     stats['gallery_images'] += images_extracted['gallery']
                     stats['variant_images'] += images_extracted['variant']
+                    stats['other_images'] += images_extracted['other']
                     
                     # Process video for this product if video processing is enabled
                     if self.download_videos:
@@ -280,7 +282,9 @@ class ImageIngestionEngine:
                     stats['products_processed'] += 1
 
                     logger.info(f"Processed product {product.product_id}: "
-                              f"{images_extracted['total']} images extracted, "
+                              f"{images_extracted['total']} images extracted "
+                              f"(hero: {images_extracted['hero']}, gallery: {images_extracted['gallery']}, "
+                              f"variant: {images_extracted['variant']}, other: {images_extracted['other']}), "
                               f"{stats.get('videos_processed', 0)} videos processed")
 
                 except Exception as e:
@@ -363,22 +367,30 @@ class ImageIngestionEngine:
         ).first()
         
         if existing_video:
-            logger.info(f"Video already exists for product {product_id}")
-            return stats
-        
-        # Create new video record
-        video_record = ProductVideo(
-            product_id=product_id,
-            video_url=video_url,
-            download_status='pending'
-        )
-        
-        db.add(video_record)
-        db.flush()  # Get the ID
+            # If video exists but has no S3 URL, process it for upload
+            if not existing_video.s3_url and self.upload_to_s3 and self.s3_video_uploader:
+                logger.info(f"Video exists for product {product_id} but has no S3 URL, processing for upload")
+                video_record = existing_video
+            else:
+                logger.info(f"Video already fully processed for product {product_id}")
+                return stats
+        else:
+            # Create new video record
+            video_record = ProductVideo(
+                product_id=product_id,
+                video_url=video_url,
+                download_status='pending'
+            )
+            
+            db.add(video_record)
+            db.flush()  # Get the ID
         
         stats['processed'] = 1
         
-        # Download video if downloading is enabled
+        # Download video if downloading is enabled or use existing local path
+        local_path = video_record.local_file_path  # Use existing path if available
+        download_status = video_record.download_status or 'pending'
+        
         if self.download_videos and self.video_downloader:
             try:
                 local_path, download_status = self.video_downloader.download_video(video_url, product_id)
@@ -389,28 +401,28 @@ class ImageIngestionEngine:
                 if download_status == 'downloaded':
                     stats['downloaded'] = 1
                     logger.info(f"Video downloaded: {product_id}")
-                    
-                    # Upload to S3 if enabled and download was successful
-                    if self.upload_to_s3 and self.s3_video_uploader and local_path:
-                        try:
-                            upload_result = self.s3_video_uploader.upload_video(local_path, product_id)
-                            
-                            if upload_result['success']:
-                                video_record.s3_url = upload_result['s3_url']
-                                stats['uploaded'] = 1
-                                logger.info(f"Video uploaded to S3: {upload_result['s3_url']}")
-                            else:
-                                logger.error(f"S3 upload failed for {product_id}: {upload_result.get('error')}")
-                                stats['errors'] += 1
-                        except Exception as e:
-                            logger.error(f"Error uploading video to S3 for {product_id}: {e}")
-                            stats['errors'] += 1
-                elif download_status == 'failed':
-                    stats['errors'] += 1
+                elif download_status == 'exists':
+                    logger.info(f"Video already exists: {product_id}")
                     
             except Exception as e:
                 logger.error(f"Error processing video for {product_id}: {e}")
                 video_record.download_status = 'failed'
+                stats['errors'] += 1
+        
+        # Upload to S3 if enabled and we have a local file (for both downloaded and existing files)
+        if self.upload_to_s3 and self.s3_video_uploader and local_path and download_status in ['downloaded', 'exists']:
+            try:
+                upload_result = self.s3_video_uploader.upload_video(local_path, product_id)
+                
+                if upload_result['success']:
+                    video_record.s3_url = upload_result['s3_url']
+                    stats['uploaded'] = 1
+                    logger.info(f"Video uploaded to S3: {upload_result['s3_url']}")
+                else:
+                    logger.error(f"S3 upload failed for {product_id}: {upload_result.get('error')}")
+                    stats['errors'] += 1
+            except Exception as e:
+                logger.error(f"Error uploading video to S3 for {product_id}: {e}")
                 stats['errors'] += 1
         
         return stats
@@ -426,7 +438,7 @@ class ImageIngestionEngine:
         Returns:
             Dict with extraction statistics
         """
-        stats = {'total': 0, 'hero': 0, 'gallery': 0, 'variant': 0}
+        stats = {'total': 0, 'hero': 0, 'gallery': 0, 'variant': 0, 'other': 0}
 
         if not product.raw_json_detail:
             logger.warning(f"No raw JSON data for product {product.product_id}")
@@ -476,6 +488,25 @@ class ImageIngestionEngine:
             gallery_extracted, current_sort_index = self._extract_gallery_images(result, product.product_id, variant_context, current_sort_index, db)
             stats['gallery'] += gallery_extracted
             stats['total'] += gallery_extracted
+
+            # Collect all URLs processed so far in this session
+            processed_urls = set()
+            
+            # Get URLs from multimedia info (hero + gallery)
+            multimedia_info = result.get('ae_multimedia_info_dto', {})
+            image_urls_str = multimedia_info.get('image_urls', '')
+            if image_urls_str:
+                multimedia_urls = [url.strip() for url in image_urls_str.split(';') if url.strip()]
+                processed_urls.update(multimedia_urls)
+            
+            # Get variant URLs
+            if variant_context.get('image_to_property_map'):
+                processed_urls.update(variant_context['image_to_property_map'].keys())
+            
+            # Extract other images from detail sections, excluding already processed URLs
+            other_extracted, current_sort_index = self._extract_other_images(result, product.product_id, current_sort_index, db, processed_urls)
+            stats['other'] = other_extracted
+            stats['total'] += other_extracted
 
             logger.debug(f"Extracted images for product {product.product_id}: {stats}")
 
@@ -817,6 +848,130 @@ class ImageIngestionEngine:
 
         except Exception as e:
             logger.error(f"Error extracting variant images for product {product_id}: {e}")
+            return 0, start_sort_index
+
+    def _extract_other_images(self, result_data: Dict, product_id: str, start_sort_index: int, db, processed_urls: set = None) -> tuple[int, int]:
+        """
+        Extract additional images from detail sections (ae_item_base_info_dto.detail and mobile_detail).
+        These are images found in the product description HTML and mobile detail JSON.
+        
+        Args:
+            result_data: Product result data from API
+            product_id: Product ID
+            start_sort_index: Starting sort index for this image type
+            db: Database session
+            processed_urls: Set of URLs already processed as hero/gallery/variant images
+            
+        Returns:
+            Tuple of (number of other images extracted, next available sort index)
+        """
+        import re
+        import json
+        
+        try:
+            base_info = result_data.get('ae_item_base_info_dto', {})
+            detail_html = base_info.get('detail', '')
+            mobile_detail_json = base_info.get('mobile_detail', '')
+            
+            other_image_urls = set()  # Use set to avoid duplicates
+            
+            # Extract images from HTML detail
+            if detail_html:
+                # Find all img src URLs in the HTML
+                img_pattern = r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>'
+                img_matches = re.findall(img_pattern, detail_html, re.IGNORECASE)
+                
+                for img_url in img_matches:
+                    # Clean and validate URL
+                    cleaned_url = img_url.strip()
+                    if cleaned_url and (cleaned_url.startswith('http') or cleaned_url.startswith('//')):
+                        # Handle protocol-relative URLs
+                        if cleaned_url.startswith('//'):
+                            cleaned_url = 'https:' + cleaned_url
+                        other_image_urls.add(cleaned_url)
+            
+            # Extract images from mobile detail JSON
+            if mobile_detail_json:
+                try:
+                    mobile_data = json.loads(mobile_detail_json)
+                    
+                    # Look for images in moduleList
+                    if isinstance(mobile_data, dict) and 'moduleList' in mobile_data:
+                        for module in mobile_data['moduleList']:
+                            if isinstance(module, dict) and module.get('type') == 'image':
+                                image_data = module.get('data', {})
+                                if isinstance(image_data, dict):
+                                    img_url = image_data.get('url', '')
+                                    if img_url and (img_url.startswith('http') or img_url.startswith('//')):
+                                        # Handle protocol-relative URLs
+                                        if img_url.startswith('//'):
+                                            img_url = 'https:' + img_url
+                                        other_image_urls.add(img_url)
+                                        
+                except json.JSONDecodeError as e:
+                    logger.debug(f"Could not parse mobile_detail JSON for product {product_id}: {e}")
+            
+            # Get existing other images from database to avoid duplicating them
+            existing_other_images = db.query(ProductImage).filter(
+                ProductImage.product_id == product_id,
+                ProductImage.image_role == 'other'
+            ).all()
+            existing_other_urls = {img.image_url for img in existing_other_images}
+            
+            # Combine processed URLs from current session with existing other images
+            if processed_urls is None:
+                processed_urls = set()
+            
+            all_existing_urls = processed_urls | existing_other_urls
+            
+            # Filter out URLs that already exist as any image type
+            new_other_urls = other_image_urls - all_existing_urls
+            
+            if not new_other_urls:
+                logger.debug(f"No new other images found for product {product_id}")
+                return 0, start_sort_index
+            
+            images_added = 0
+            current_sort_index = start_sort_index
+            
+            for image_url in new_other_urls:
+                try:
+                    # Process image URL (download if enabled)
+                    image_data = self._process_image_url(image_url, product_id, None, 'other')
+
+                    other_image = ProductImage(
+                        product_id=product_id,
+                        image_url=image_url,
+                        image_role='other',
+                        sku_id=None,  # Other images don't have SKU associations
+                        variant_key=None,  # Other images don't have variant keys
+                        property_value=None,
+                        property_name=None,
+                        property_id=None,
+                        property_value_definition_name=None,
+                        local_file_path=image_data['local_file_path'],
+                        phash=image_data['phash'],
+                        download_status=image_data['download_status'],
+                        width=image_data['width'],
+                        height=image_data['height'],
+                        s3_url=image_data['s3_url'],
+                        sort_index=current_sort_index,
+                        is_primary=False
+                    )
+                    
+                    db.add(other_image)
+                    images_added += 1
+                    current_sort_index += 1
+                    logger.debug(f"Added other image for product {product_id}: {image_url}")
+
+                except Exception as e:
+                    logger.error(f"Error adding other image for product {product_id}: {e}")
+
+            logger.debug(f"Added {images_added} other images for product {product_id}")
+            return images_added, current_sort_index
+
+        except Exception as e:
+            logger.error(f"Error extracting other images for product {product_id}: {e}")
             return 0, start_sort_index
 
     def get_product_images(self, product_id: str) -> List[Dict]:

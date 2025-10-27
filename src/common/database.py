@@ -482,6 +482,33 @@ class ProductStatus(Base):
         return f"<ProductStatus(product_id='{self.product_id}', status='{self.status}', master='{self.duplicate_master_id}', cost={self.total_landed_cost})>"
 
 
+class ProductMapping(Base):
+    """
+    Model for mapping anonymous product IDs used in Airtable to real product IDs.
+    This allows us to maintain privacy while keeping track of which Airtable records
+    correspond to which actual products in our database.
+    """
+
+    __tablename__ = "product_mapping"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    anon_product_id = Column(String(255), nullable=False, unique=True)  # Anonymous ID used in Airtable
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False)  # Real product ID
+    
+    # Airtable record tracking
+    airtable_record_id = Column(String(255), nullable=True)  # Airtable record ID for updates
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="product_mapping")
+    
+    def __repr__(self):
+        return f"<ProductMapping(anon_id='{self.anon_product_id}', product_id='{self.product_id}', airtable_id='{self.airtable_record_id}')>"
+
+
 def create_tables_if_not_exist():
     """
     Create the necessary tables if they don't exist.
