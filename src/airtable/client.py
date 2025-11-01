@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class AirtableClient:
     """
     Modern Airtable client using pyairtable library and Personal Access Tokens.
-    Only handles the Products table.
+    Handles both Products and Variants tables.
     """
     
     def __init__(self):
@@ -25,6 +25,7 @@ class AirtableClient:
         self.token = get_env('AIRTABLE_PERSONAL_ACCESS_TOKEN') or get_env('AIRTABLE_API_KEY')
         self.base_id = get_env('AIRTABLE_BASE_ID')
         self.products_table_name = get_env('AIRTABLE_PRODUCTS_TABLE', 'Products')
+        self.variants_table_name = get_env('AIRTABLE_VARIANTS_TABLE', 'Variants')
         
         if not self.token or not self.base_id:
             raise ValueError("Missing Airtable config: AIRTABLE_PERSONAL_ACCESS_TOKEN and AIRTABLE_BASE_ID required")
@@ -33,8 +34,9 @@ class AirtableClient:
         self.api = Api(self.token)
         self.base = self.api.base(self.base_id)
         self.products_table = self.base.table(self.products_table_name)
+        self.variants_table = self.base.table(self.variants_table_name)
         
-        logger.info(f"Initialized Airtable client for base {self.base_id}")
+        logger.info(f"Initialized Airtable client for base {self.base_id} with Products and Variants tables")
     
     def upsert_products_by_anonymous_id(self, records: List[Dict]) -> Dict[str, Any]:
         """
@@ -88,6 +90,58 @@ class AirtableClient:
         logger.info(f"Products upsert completed: {result['created']} created, {result['updated']} updated")
         return result
     
+    def upsert_variants_by_anonymous_sku_id(self, records: List[Dict]) -> Dict[str, Any]:
+        """
+        Upsert variants using anonymous SKU ID as the key.
+        
+        Args:
+            records: List of variant records to upsert
+            
+        Returns:
+            Dict with creation/update statistics and record details
+        """
+        if not records:
+            return {'created': 0, 'updated': 0, 'records': []}
+        
+        result = {'created': 0, 'updated': 0, 'records': []}
+        
+        for record in records:
+            try:
+                # Extract fields 
+                fields = record.get('fields', record)
+                anon_sku_id = fields.get('anon_sku_id')
+                
+                if not anon_sku_id:
+                    logger.warning("Variant record missing anon_sku_id, skipping")
+                    continue
+                
+                # Search for existing record by anon_sku_id
+                existing = self.variants_table.all(
+                    formula=f"{{anon_sku_id}} = '{anon_sku_id}'", 
+                    max_records=1
+                )
+                
+                if existing:
+                    # Update existing record
+                    updated_record = self.variants_table.update(existing[0]['id'], fields)
+                    result['updated'] += 1
+                    result['records'].append(updated_record)
+                    logger.debug(f"Updated variant record: {anon_sku_id}")
+                else:
+                    # Create new record
+                    created_record = self.variants_table.create(fields)
+                    result['created'] += 1
+                    result['records'].append(created_record)
+                    logger.debug(f"Created variant record: {anon_sku_id}")
+                    
+            except PyAirtableError as e:
+                logger.error(f"Airtable error upserting variant record {fields.get('anon_sku_id', 'unknown')}: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error upserting variant record {fields.get('anon_sku_id', 'unknown')}: {e}")
+                
+        logger.info(f"Variants upsert completed: {result['created']} created, {result['updated']} updated")
+        return result
+    
     def generate_anonymous_id(self, product_id: str) -> str:
         """
         Generate anonymous ID for a product ID.
@@ -99,6 +153,18 @@ class AirtableClient:
             Anonymous ID (12-character MD5 hash)
         """
         return hashlib.md5(product_id.encode()).hexdigest()[:12]
+    
+    def generate_anonymous_sku_id(self, sku_id: str) -> str:
+        """
+        Generate anonymous SKU ID for a variant SKU ID.
+        
+        Args:
+            sku_id: Real SKU ID
+            
+        Returns:
+            Anonymous SKU ID (12-character MD5 hash)
+        """
+        return hashlib.md5(sku_id.encode()).hexdigest()[:12]
     
     def reverse_anonymous_id(self, anon_id: str) -> Optional[str]:
         """
@@ -123,6 +189,31 @@ class AirtableClient:
                 
         except Exception as e:
             logger.error(f"Error reversing anonymous ID {anon_id}: {e}")
+            return None
+    
+    def reverse_anonymous_sku_id(self, anon_sku_id: str) -> Optional[str]:
+        """
+        Reverse an anonymous SKU ID to get the real SKU ID.
+        Since MD5 is one-way, this requires a lookup in the SKUMapping table.
+        
+        Args:
+            anon_sku_id: Anonymous SKU ID to reverse
+            
+        Returns:
+            Real SKU ID if found, None otherwise
+        """
+        try:
+            from ..common.database import SKUMapping, get_db_session
+            
+            with get_db_session() as db:
+                mapping = db.query(SKUMapping).filter(
+                    SKUMapping.anon_sku_id == anon_sku_id
+                ).first()
+                
+                return mapping.sku_id if mapping else None
+                
+        except Exception as e:
+            logger.error(f"Error reversing anonymous SKU ID {anon_sku_id}: {e}")
             return None
     
     def get_all_products(self) -> List[Dict]:

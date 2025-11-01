@@ -509,6 +509,35 @@ class ProductMapping(Base):
         return f"<ProductMapping(anon_id='{self.anon_product_id}', product_id='{self.product_id}', airtable_id='{self.airtable_record_id}')>"
 
 
+class SKUMapping(Base):
+    """
+    Model for mapping anonymous SKU IDs used in Airtable to real SKU IDs.
+    This allows us to maintain privacy while keeping track of which Airtable variant records
+    correspond to which actual SKUs in our database.
+    """
+
+    __tablename__ = "sku_mapping"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    anon_sku_id = Column(String(255), nullable=False, unique=True)  # Anonymous SKU ID used in Airtable
+    sku_id = Column(String(255), ForeignKey("product_variants.sku_id"), nullable=False)  # Real SKU ID from ProductVariant
+    product_id = Column(String(255), ForeignKey("filtered_products.product_id"), nullable=False)  # Associated product
+    
+    # Airtable record tracking
+    airtable_record_id = Column(String(255), nullable=True)  # Airtable record ID for updates
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    filtered_product = relationship("FilteredProduct", backref="sku_mapping")
+    product_variant = relationship("ProductVariant", backref="sku_mapping")
+    
+    def __repr__(self):
+        return f"<SKUMapping(anon_sku_id='{self.anon_sku_id}', sku_id='{self.sku_id}', product_id='{self.product_id}')>"
+
+
 def create_tables_if_not_exist():
     """
     Create the necessary tables if they don't exist.

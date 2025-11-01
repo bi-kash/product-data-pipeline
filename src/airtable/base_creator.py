@@ -80,7 +80,7 @@ class AirtableBaseCreator:
 
     def create_product_base(self, base_name: str = "Product Pipeline") -> Dict[str, Any]:
         """
-        Create a complete Airtable base with only Products table.
+        Create a complete Airtable base with Products and Variants tables.
         
         Args:
             base_name: Name for the new base
@@ -90,11 +90,12 @@ class AirtableBaseCreator:
         """
         logger.info(f"Creating Airtable base: {base_name}")
         
-        # Define the base structure - only Products table
+        # Define the base structure - Products and Variants tables
         base_data = {
             "name": base_name,
             "tables": [
-                self._get_products_table_schema()
+                self._get_products_table_schema(),
+                self._get_variants_table_schema()
             ]
         }
         
@@ -118,8 +119,9 @@ class AirtableBaseCreator:
             print(f"Base ID: {base_id}")
             print(f"Base URL: https://airtable.com/{base_id}")
             print()
-            print("📊 Created table:")
-            print("   📦 Products - Complete product data with images and variants")
+            print("📊 Created tables:")
+            print("   📦 Products - Master/unique products with selected variant")
+            print("   🎯 Variants - Individual product variants with detailed specs")
             print()
             
             # Automatically update .env file
@@ -153,7 +155,7 @@ class AirtableBaseCreator:
         """Define Products table schema."""
         return {
             "name": "Products",
-            "description": "Master and Unique products with complete image and variant data",
+            "description": "Master and Unique products with selected variant information",
             "fields": [
                 {
                     "name": "anon_product_id",
@@ -201,6 +203,11 @@ class AirtableBaseCreator:
                     "description": "Product video (S3 URL, if available)"
                 },
                 {
+                    "name": "selected_variant",
+                    "type": "singleLineText",
+                    "description": "Selected variant specification (e.g., 'Color: Red, Size: Large')"
+                },
+                {
                     "name": "duplicate_status",
                     "type": "singleSelect",
                     "options": {
@@ -218,7 +225,7 @@ class AirtableBaseCreator:
                         "symbol": "€",
                         "precision": 2
                     },
-                    "description": "Minimum price from all variants"
+                    "description": "Price from selected variant"
                 },
                 {
                     "name": "shipping_eur", 
@@ -242,6 +249,85 @@ class AirtableBaseCreator:
                     "name": "delivery_time",
                     "type": "singleLineText",
                     "description": "Estimated delivery time"
+                },
+                {
+                    "name": "sync_timestamp",
+                    "type": "dateTime",
+                    "options": {
+                        "dateFormat": {"name": "iso"},
+                        "timeFormat": {"name": "24hour"},
+                        "timeZone": "utc"
+                    },
+                    "description": "Last sync timestamp"
+                }
+            ]
+        }
+
+    def _get_variants_table_schema(self) -> Dict[str, Any]:
+        """Define Variants table schema."""
+        return {
+            "name": "Variants",
+            "description": "Individual product variants with detailed specifications and pricing",
+            "fields": [
+                {
+                    "name": "anon_sku_id",
+                    "type": "singleLineText",
+                    "description": "Anonymized SKU ID (primary key for sync)"
+                },
+                {
+                    "name": "anon_product_id",
+                    "type": "singleLineText",
+                    "description": "Reference to parent product"
+                },
+                {
+                    "name": "variant_key",
+                    "type": "singleLineText",
+                    "description": "Variant specification (e.g., 'Color: Red, Size: Large')"
+                },
+                {
+                    "name": "hero_image",
+                    "type": "url",
+                    "description": "Main image for this variant (S3 URL)"
+                },
+                {
+                    "name": "variant_image",
+                    "type": "url",
+                    "description": "Variant-specific image (S3 URL)"
+                },
+                {
+                    "name": "price_eur",
+                    "type": "currency",
+                    "options": {
+                        "symbol": "€",
+                        "precision": 2
+                    },
+                    "description": "Variant price in EUR"
+                },
+                {
+                    "name": "shipping_eur",
+                    "type": "currency",
+                    "options": {
+                        "symbol": "€",
+                        "precision": 2
+                    },
+                    "description": "Shipping cost for this variant"
+                },
+                {
+                    "name": "total_eur",
+                    "type": "currency",
+                    "options": {
+                        "symbol": "€",
+                        "precision": 2
+                    },
+                    "description": "Total cost (price + shipping)"
+                },
+                {
+                    "name": "stock",
+                    "type": "number",
+                    "options": {
+                        "precision": 0
+                    },
+                    "description": "Available stock quantity"
                 },
                 {
                     "name": "sync_timestamp",

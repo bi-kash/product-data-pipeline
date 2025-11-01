@@ -27,6 +27,14 @@ import argparse
 import subprocess
 from pathlib import Path
 
+# Add database imports
+try:
+    from src.common.database import get_db_session, Seller, FilteredProduct, ProductStatus, ProductImage
+    from src.common.config import get_env
+    DATABASE_IMPORTS_AVAILABLE = True
+except ImportError:
+    DATABASE_IMPORTS_AVAILABLE = False
+
 def print_banner(text, char="="):
     """Print a banner with the given text."""
     width = 80
@@ -86,7 +94,7 @@ def get_env_value(key, default=None):
 
 
 def clean_database():
-    """Delete entire database file."""
+    """Delete entire database or clear all tables."""
     print_banner("🗑️  DATABASE CLEANUP", "=")
     
     print("⚠️  WARNING: This will delete the entire database!")
@@ -106,7 +114,8 @@ def clean_database():
         use_sqlite = get_env_value("USE_SQLITE", "true").lower() == "true"
         
         if use_sqlite:
-            db_path = "test.db"
+            # SQLite: Delete the entire database file
+            db_path = get_env_value("SQLITE_DB_PATH", "test.db")
             if os.path.exists(db_path):
                 print(f"🗑️  Deleting entire SQLite database: {db_path}")
                 os.remove(db_path)
@@ -114,8 +123,105 @@ def clean_database():
             else:
                 print("ℹ️  Database file doesn't exist, will be created fresh")
         else:
-            print("⚠️  PostgreSQL detected - you may need to manually drop tables")
-            print("   The pipeline will recreate tables automatically")
+            # PostgreSQL/Supabase: Drop all tables and recreate them
+            if DATABASE_IMPORTS_AVAILABLE:
+                print("🗑️  Dropping all tables in PostgreSQL/Supabase database...")
+                
+                try:
+                    from src.common.database import Base, engine, create_tables_if_not_exist
+                    from sqlalchemy import text
+                    
+                    print("   Using direct SQL approach to drop all tables...")
+                    
+                    with engine.connect() as conn:
+                        # Start a transaction
+                        trans = conn.begin()
+                        
+                        try:
+                            # Get all table names in the public schema
+                            result = conn.execute(text("""
+                                SELECT tablename 
+                                FROM pg_tables 
+                                WHERE schemaname = 'public'
+                                ORDER BY tablename
+                            """))
+                            tables = result.fetchall()
+                            
+                            if tables:
+                                table_names = [table[0] for table in tables]
+                                print(f"   Found {len(table_names)} tables to drop")
+                                
+                                # Drop tables individually with CASCADE to handle dependencies
+                                dropped_count = 0
+                                for table_name in table_names:
+                                    try:
+                                        drop_sql = f'DROP TABLE IF EXISTS "{table_name}" CASCADE'
+                                        conn.execute(text(drop_sql))
+                                        dropped_count += 1
+                                        print(f"   ✅ Dropped: {table_name}")
+                                    except Exception as te:
+                                        print(f"   ⚠️  Could not drop {table_name}: {te}")
+                                
+                                trans.commit()
+                                print(f"   ✅ Successfully dropped {dropped_count}/{len(table_names)} tables")
+                            else:
+                                print("   ℹ️  No tables found to drop")
+                                trans.commit()
+                        
+                        except Exception as e:
+                            trans.rollback()
+                            raise e
+                    
+                    # Recreate tables
+                    print("   Creating fresh tables...")
+                    create_tables_if_not_exist()
+                    print("   ✅ Fresh tables created successfully")
+                    
+                    print("✅ Database completely reset - all tables dropped and recreated")
+                        
+                except Exception as e:
+                    print(f"❌ Error resetting database: {e}")
+                    print(f"   Error details: {str(e)}")
+                    
+                    # Final fallback: Try dropping tables one by one
+                    try:
+                        print("   Trying to drop tables individually...")
+                        with engine.connect() as conn:
+                            # Get all table names
+                            result = conn.execute(text("""
+                                SELECT tablename 
+                                FROM pg_tables 
+                                WHERE schemaname = 'public'
+                            """))
+                            tables = result.fetchall()
+                            
+                            if tables:
+                                table_names = [table[0] for table in tables]
+                                dropped_count = 0
+                                
+                                for table_name in table_names:
+                                    try:
+                                        conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
+                                        conn.commit()
+                                        dropped_count += 1
+                                        print(f"   ✅ Dropped table: {table_name}")
+                                    except Exception as te:
+                                        print(f"   ⚠️  Could not drop {table_name}: {te}")
+                                
+                                if dropped_count > 0:
+                                    print(f"   ✅ Dropped {dropped_count}/{len(table_names)} tables")
+                                    # Try to recreate tables
+                                    create_tables_if_not_exist()
+                                    print("   ✅ Fresh tables created")
+                            else:
+                                print("   ℹ️  No tables found to drop")
+                                
+                    except Exception as e2:
+                        print(f"❌ All approaches failed: {e2}")
+                        print("   Please manually clear the database or check connection")
+            else:
+                print("⚠️  Database imports not available")
+                print("   You may need to manually clear the database")
         
         print("✅ Database cleanup completed")
         
@@ -192,58 +298,107 @@ def assign_seller_statuses():
         use_sqlite = get_env_value("USE_SQLITE", "true").lower() == "true"
         
         if use_sqlite:
-            db_path = "test.db"
+            # SQLite approach
+            db_path = get_env_value("SQLITE_DB_PATH", "test.db")
             conn = sqlite3.connect(db_path)
-        else:
-            print("❌ PostgreSQL support not implemented in this script")
-            print("Please assign seller statuses manually or use the main demo_pipeline.py script")
-            return
-        
-        cursor = conn.cursor()
-        
-        # Get all sellers
-        cursor.execute("SELECT shop_id FROM sellers")
-        sellers = cursor.fetchall()
-        seller_ids = [row[0] for row in sellers]
-        
-        if not seller_ids:
-            print("❌ No sellers found in database")
+            cursor = conn.cursor()
+            
+            # Get all sellers
+            cursor.execute("SELECT shop_id FROM sellers")
+            sellers = cursor.fetchall()
+            seller_ids = [row[0] for row in sellers]
+            
+            if not seller_ids:
+                print("❌ No sellers found in database")
+                conn.close()
+                return
+            
+            print(f"📊 Found {len(seller_ids)} sellers")
+            
+            # Calculate counts
+            total = len(seller_ids)
+            whitelist_count = int(total * 0.8)  # 80%
+            blacklist_count = int(total * 0.1)  # 10%
+            # Remaining stay as PENDING (10%)
+            
+            # Shuffle sellers for random assignment
+            random.shuffle(seller_ids)
+            
+            # Assign statuses
+            whitelist_sellers = seller_ids[:whitelist_count]
+            blacklist_sellers = seller_ids[whitelist_count:whitelist_count + blacklist_count]
+            pending_sellers = seller_ids[whitelist_count + blacklist_count:]
+            
+            print(f"📈 Assigning statuses:")
+            print(f"   • WHITELIST: {len(whitelist_sellers)} sellers (80%)")
+            print(f"   • BLACKLIST: {len(blacklist_sellers)} sellers (10%)")
+            print(f"   • PENDING: {len(pending_sellers)} sellers (10%)")
+            
+            # Update database
+            for seller_id in whitelist_sellers:
+                cursor.execute("UPDATE sellers SET approval_status = 'WHITELIST' WHERE shop_id = ?", (seller_id,))
+            
+            for seller_id in blacklist_sellers:
+                cursor.execute("UPDATE sellers SET approval_status = 'BLACKLIST' WHERE shop_id = ?", (seller_id,))
+            
+            # PENDING sellers keep their current status (should already be PENDING)
+            
+            conn.commit()
             conn.close()
-            return
+            print("✅ Seller statuses assigned successfully")
         
-        print(f"📊 Found {len(seller_ids)} sellers")
-        
-        # Calculate counts
-        total = len(seller_ids)
-        whitelist_count = int(total * 0.8)  # 80%
-        blacklist_count = int(total * 0.1)  # 10%
-        # Remaining stay as PENDING (10%)
-        
-        # Shuffle sellers for random assignment
-        random.shuffle(seller_ids)
-        
-        # Assign statuses
-        whitelist_sellers = seller_ids[:whitelist_count]
-        blacklist_sellers = seller_ids[whitelist_count:whitelist_count + blacklist_count]
-        pending_sellers = seller_ids[whitelist_count + blacklist_count:]
-        
-        print(f"📈 Assigning statuses:")
-        print(f"   • WHITELIST: {len(whitelist_sellers)} sellers (80%)")
-        print(f"   • BLACKLIST: {len(blacklist_sellers)} sellers (10%)")
-        print(f"   • PENDING: {len(pending_sellers)} sellers (10%)")
-        
-        # Update database
-        for seller_id in whitelist_sellers:
-            cursor.execute("UPDATE sellers SET approval_status = 'WHITELIST' WHERE shop_id = ?", (seller_id,))
-        
-        for seller_id in blacklist_sellers:
-            cursor.execute("UPDATE sellers SET approval_status = 'BLACKLIST' WHERE shop_id = ?", (seller_id,))
-        
-        # PENDING sellers keep their current status (should already be PENDING)
-        
-        conn.commit()
-        conn.close()
-        print("✅ Seller statuses assigned successfully")
+        else:
+            # PostgreSQL/Supabase approach using ORM
+            if not DATABASE_IMPORTS_AVAILABLE:
+                print("❌ Database imports not available")
+                print("Please assign seller statuses manually")
+                return
+            
+            with get_db_session() as db:
+                # Get all sellers
+                sellers = db.query(Seller).all()
+                seller_ids = [seller.shop_id for seller in sellers]
+                
+                if not seller_ids:
+                    print("❌ No sellers found in database")
+                    return
+                
+                print(f"📊 Found {len(seller_ids)} sellers")
+                
+                # Calculate counts
+                total = len(seller_ids)
+                whitelist_count = int(total * 0.8)  # 80%
+                blacklist_count = int(total * 0.1)  # 10%
+                # Remaining stay as PENDING (10%)
+                
+                # Shuffle sellers for random assignment
+                random.shuffle(seller_ids)
+                
+                # Assign statuses
+                whitelist_sellers = seller_ids[:whitelist_count]
+                blacklist_sellers = seller_ids[whitelist_count:whitelist_count + blacklist_count]
+                pending_sellers = seller_ids[whitelist_count + blacklist_count:]
+                
+                print(f"📈 Assigning statuses:")
+                print(f"   • WHITELIST: {len(whitelist_sellers)} sellers (80%)")
+                print(f"   • BLACKLIST: {len(blacklist_sellers)} sellers (10%)")
+                print(f"   • PENDING: {len(pending_sellers)} sellers (10%)")
+                
+                # Update database using ORM
+                for seller_id in whitelist_sellers:
+                    seller = db.query(Seller).filter(Seller.shop_id == seller_id).first()
+                    if seller:
+                        seller.approval_status = 'WHITELIST'
+                
+                for seller_id in blacklist_sellers:
+                    seller = db.query(Seller).filter(Seller.shop_id == seller_id).first()
+                    if seller:
+                        seller.approval_status = 'BLACKLIST'
+                
+                # PENDING sellers keep their current status (should already be PENDING)
+                
+                db.commit()
+                print("✅ Seller statuses assigned successfully")
         
     except Exception as e:
         print(f"❌ Error assigning seller statuses: {e}")
@@ -297,68 +452,116 @@ def show_final_stats():
         use_sqlite = get_env_value("USE_SQLITE", "true").lower() == "true"
         
         if use_sqlite:
-            db_path = "test.db"
+            # SQLite approach
+            db_path = get_env_value("SQLITE_DB_PATH", "test.db")
             if not os.path.exists(db_path):
                 print("❌ Database file not found")
                 return
             
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
-        else:
-            print("ℹ️  PostgreSQL stats not implemented in this script")
-            return
-        
-        # Get seller counts
-        cursor.execute("""
-            SELECT approval_status, COUNT(*) 
-            FROM sellers 
-            GROUP BY approval_status
-        """)
-        seller_stats = cursor.fetchall()
-        
-        print("👥 Sellers:")
-        for status, count in seller_stats:
-            print(f"   • {status}: {count}")
-        
-        # Get product counts
-        cursor.execute("SELECT COUNT(*) FROM products")
-        product_count = cursor.fetchone()[0]
-        
-        try:
-            cursor.execute("SELECT COUNT(*) FROM filtered_products")
-            filtered_count = cursor.fetchone()[0]
-        except:
-            filtered_count = 0
-        
-        print(f"\n📦 Products:")
-        print(f"   • Total harvested: {product_count}")
-        print(f"   • Passed filters: {filtered_count}")
-        
-        # Get duplicate detection stats
-        try:
-            cursor.execute("""
-                SELECT status, COUNT(*) 
-                FROM product_status 
-                GROUP BY status
-            """)
-            status_stats = cursor.fetchall()
             
-            if status_stats:
-                print(f"\n🔍 Duplicate Detection:")
-                for status, count in status_stats:
+            # Get seller counts
+            cursor.execute("""
+                SELECT approval_status, COUNT(*) 
+                FROM sellers 
+                GROUP BY approval_status
+            """)
+            seller_stats = cursor.fetchall()
+            
+            print("👥 Sellers:")
+            for status, count in seller_stats:
+                print(f"   • {status}: {count}")
+            
+            # Get product counts
+            cursor.execute("SELECT COUNT(*) FROM products")
+            product_count = cursor.fetchone()[0]
+            
+            try:
+                cursor.execute("SELECT COUNT(*) FROM filtered_products")
+                filtered_count = cursor.fetchone()[0]
+            except:
+                filtered_count = 0
+            
+            print(f"\n📦 Products:")
+            print(f"   • Total harvested: {product_count}")
+            print(f"   • Passed filters: {filtered_count}")
+            
+            # Get duplicate detection stats
+            try:
+                cursor.execute("""
+                    SELECT status, COUNT(*) 
+                    FROM product_status 
+                    GROUP BY status
+                """)
+                status_stats = cursor.fetchall()
+                
+                if status_stats:
+                    print(f"\n🔍 Duplicate Detection:")
+                    for status, count in status_stats:
+                        print(f"   • {status}: {count}")
+            except:
+                print(f"\n🔍 Duplicate Detection: Not run yet")
+            
+            # Get image counts
+            try:
+                cursor.execute("SELECT COUNT(*) FROM product_images WHERE s3_url IS NOT NULL")
+                image_count = cursor.fetchone()[0]
+                print(f"\n🖼️  Images processed: {image_count}")
+            except:
+                print(f"\n🖼️  Images processed: 0")
+            
+            conn.close()
+        
+        else:
+            # PostgreSQL/Supabase approach using ORM
+            if not DATABASE_IMPORTS_AVAILABLE:
+                print("ℹ️  Database imports not available for stats")
+                return
+            
+            with get_db_session() as db:
+                # Get seller counts
+                from sqlalchemy import func
+                seller_stats = db.query(
+                    Seller.approval_status, 
+                    func.count(Seller.approval_status)
+                ).group_by(Seller.approval_status).all()
+                
+                print("👥 Sellers:")
+                for status, count in seller_stats:
                     print(f"   • {status}: {count}")
-        except:
-            print(f"\n🔍 Duplicate Detection: Not run yet")
-        
-        # Get image counts
-        try:
-            cursor.execute("SELECT COUNT(*) FROM product_images WHERE s3_url IS NOT NULL")
-            image_count = cursor.fetchone()[0]
-            print(f"\n🖼️  Images processed: {image_count}")
-        except:
-            print(f"\n🖼️  Images processed: 0")
-        
-        conn.close()
+                
+                # Get product counts
+                from src.common.database import Product
+                product_count = db.query(Product).count()
+                filtered_count = db.query(FilteredProduct).count()
+                
+                print(f"\n📦 Products:")
+                print(f"   • Total harvested: {product_count}")
+                print(f"   • Passed filters: {filtered_count}")
+                
+                # Get duplicate detection stats
+                try:
+                    status_stats = db.query(
+                        ProductStatus.status,
+                        func.count(ProductStatus.status)
+                    ).group_by(ProductStatus.status).all()
+                    
+                    if status_stats:
+                        print(f"\n🔍 Duplicate Detection:")
+                        for status, count in status_stats:
+                            print(f"   • {status}: {count}")
+                except:
+                    print(f"\n🔍 Duplicate Detection: Not run yet")
+                
+                # Get image counts
+                try:
+                    image_count = db.query(ProductImage).filter(
+                        ProductImage.s3_url.isnot(None)
+                    ).count()
+                    print(f"\n🖼️  Images processed: {image_count}")
+                except:
+                    print(f"\n🖼️  Images processed: 0")
         
         print(f"\n🎉 Pipeline demo completed successfully!")
         print(f"📊 Check your Airtable base for the synchronized data")
