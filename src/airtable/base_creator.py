@@ -248,7 +248,7 @@ class AirtableBaseCreator:
                 {
                     "name": "delivery_time",
                     "type": "singleLineText",
-                    "description": "Estimated delivery time"
+                    "description": "Estimated delivery time range (e.g. 7-15 days)"
                 },
                 {
                     "name": "sync_timestamp",
@@ -301,7 +301,30 @@ class AirtableBaseCreator:
                         "symbol": "€",
                         "precision": 2
                     },
-                    "description": "Variant price in EUR"
+                    "description": "Variant price in EUR (price excluding shipping)"
+                },
+                {
+                    "name": "shipping_eur",
+                    "type": "currency",
+                    "options": {
+                        "symbol": "€",
+                        "precision": 2
+                    },
+                    "description": "Shipping cost for this variant"
+                },
+                {
+                    "name": "total_eur",
+                    "type": "currency",
+                    "options": {
+                        "symbol": "€",
+                        "precision": 2
+                    },
+                    "description": "Total cost (price + shipping)"
+                },
+                {
+                    "name": "delivery_time",
+                    "type": "singleLineText",
+                    "description": "Estimated delivery time range (e.g. 7-15 days)"
                 },
                 {
                     "name": "stock",
@@ -310,6 +333,15 @@ class AirtableBaseCreator:
                         "precision": 0
                     },
                     "description": "Available stock quantity"
+                },
+                {
+                    "name": "is_recommended",
+                    "type": "checkbox",
+                    "options": {
+                        "color": "yellowBright",
+                        "icon": "star"
+                    },
+                    "description": "Indicates if this is the recommended variant (lowest price) for the product"
                 },
                 {
                     "name": "sync_timestamp",
