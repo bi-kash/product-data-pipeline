@@ -163,7 +163,7 @@ def _process_products(
             stats["errors"] += 1
             continue
 
-        shop_id = seller_info["shop_id"]
+        shop_id = str(seller_info["shop_id"])
         product_id = str(product.get("product_id", ""))
 
         if not product_id:

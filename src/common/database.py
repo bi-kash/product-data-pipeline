@@ -710,6 +710,9 @@ def upsert_seller(shop_id, shop_url, shop_name=None, raw_json=None, note=None):
     Returns:
         Boolean indicating if this was a new record (True) or an update (False)
     """
+    # Ensure shop_id is always a string for PostgreSQL compatibility
+    shop_id = str(shop_id)
+    
     db = get_db_session()
     now = get_utc_now()
     is_new = False
@@ -865,6 +868,9 @@ def update_seller_approval(shop_id, approval_status, note=None):
     Returns:
         Boolean indicating if the update was successful
     """
+    # Ensure shop_id is always a string for PostgreSQL compatibility
+    shop_id = str(shop_id)
+    
     db = get_db_session()
 
     try:
@@ -929,6 +935,10 @@ def upsert_product(
     Returns:
         Boolean indicating if this was a new record (True) or an update (False)
     """
+    # Ensure IDs are always strings for PostgreSQL compatibility
+    product_id = str(product_id) 
+    shop_id = str(shop_id)
+    
     db = get_db_session()
     now = get_utc_now()
     is_new = False
