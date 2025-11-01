@@ -304,24 +304,6 @@ class AirtableBaseCreator:
                     "description": "Variant price in EUR"
                 },
                 {
-                    "name": "shipping_eur",
-                    "type": "currency",
-                    "options": {
-                        "symbol": "€",
-                        "precision": 2
-                    },
-                    "description": "Shipping cost for this variant"
-                },
-                {
-                    "name": "total_eur",
-                    "type": "currency",
-                    "options": {
-                        "symbol": "€",
-                        "precision": 2
-                    },
-                    "description": "Total cost (price + shipping)"
-                },
-                {
                     "name": "stock",
                     "type": "number",
                     "options": {

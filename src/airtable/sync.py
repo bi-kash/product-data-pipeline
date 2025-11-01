@@ -39,7 +39,7 @@ class AirtableDataSync:
             logger.error(f"Failed to get table schemas: {e}")
             raise
     
-    def sync_products(self, limit: Optional[int] = None, filter_status: Optional[str] = None) -> Dict[str, int]:
+    def sync_products(self, limit: Optional[int] = None, filter_status: Optional[str] = None) -> Dict[str, Any]:
         """
         Sync filtered products to Airtable Products table.
         
@@ -48,7 +48,7 @@ class AirtableDataSync:
             filter_status: Filter by product status (MASTER, UNIQUE)
             
         Returns:
-            Dict with sync statistics
+            Dict with sync statistics and synced product IDs
         """
         logger.info(f"Starting products sync (limit: {limit}, filter: {filter_status}, dry_run: {self.dry_run})")
         
@@ -72,18 +72,20 @@ class AirtableDataSync:
             logger.info(f"Found {len(products)} products to sync")
             
             if not products:
-                return {'created': 0, 'updated': 0}
+                return {'created': 0, 'updated': 0, 'synced_product_ids': []}
             
             # Prepare records for sync
             records_to_sync = []
+            synced_product_ids = []
             for product in products:
                 record = self._prepare_product_record(db, product)
                 if record:
                     records_to_sync.append(record)
+                    synced_product_ids.append(product.product_id)
             
             if self.dry_run:
                 logger.info(f"DRY RUN: Would sync {len(records_to_sync)} product records")
-                return {'created': 0, 'updated': 0}
+                return {'created': 0, 'updated': 0, 'synced_product_ids': synced_product_ids}
             
             # Perform the sync using upsert by anon_product_id
             results = self.client.upsert_products_by_anonymous_id(records_to_sync)
@@ -91,15 +93,19 @@ class AirtableDataSync:
             # Update ProductMapping table with new records
             self._update_product_mapping(db, results)
             
+            # Add synced product IDs to results
+            results['synced_product_ids'] = synced_product_ids
+            
             logger.info(f"Products sync completed: {results}")
             return results
     
-    def sync_variants(self, limit: Optional[int] = None) -> Dict[str, int]:
+    def sync_variants(self, limit: Optional[int] = None, synced_product_ids: Optional[List[str]] = None) -> Dict[str, int]:
         """
         Sync product variants to Airtable Variants table.
         
         Args:
             limit: Maximum number of variants to sync
+            synced_product_ids: List of product IDs that were synced to Products table (if None, sync all MASTER/UNIQUE)
             
         Returns:
             Dict with sync statistics
@@ -107,13 +113,22 @@ class AirtableDataSync:
         logger.info(f"Starting variants sync (limit: {limit}, dry_run: {self.dry_run})")
         
         with get_db_session() as db:
-            # Query for variants of products that are being synced (MASTER/UNIQUE only)
-            query = db.query(ProductVariant).join(
-                FilteredProduct, ProductVariant.product_id == FilteredProduct.product_id
-            ).join(ProductStatus)
-            
-            # Only sync variants for MASTER and UNIQUE products
-            query = query.filter(ProductStatus.status.in_(['MASTER', 'UNIQUE']))
+            # Query for variants
+            if synced_product_ids:
+                # Only sync variants for products that were actually synced
+                logger.info(f"Syncing variants for {len(synced_product_ids)} synced products")
+                query = db.query(ProductVariant).filter(
+                    ProductVariant.product_id.in_(synced_product_ids)
+                )
+            else:
+                # Fallback: sync variants for all MASTER/UNIQUE products
+                logger.info("No synced product IDs provided, syncing all MASTER/UNIQUE variants")
+                query = db.query(ProductVariant).join(
+                    FilteredProduct, ProductVariant.product_id == FilteredProduct.product_id
+                ).join(ProductStatus)
+                
+                # Only sync variants for MASTER and UNIQUE products
+                query = query.filter(ProductStatus.status.in_(['MASTER', 'UNIQUE']))
             
             # Apply limit if specified
             if limit:
@@ -468,8 +483,6 @@ class AirtableDataSync:
                 'hero_image': hero_image_url,
                 'variant_image': variant_image_url,
                 'price_eur': float(variant.offer_sale_price or 0),
-                'shipping_eur': 0,  # Variants inherit shipping from product
-                'total_eur': float(variant.offer_sale_price or 0),
                 'stock': variant.sku_available_stock or 0,
                 'sync_timestamp': datetime.now().isoformat()
             }
@@ -625,9 +638,12 @@ def sync_to_airtable(limit: Optional[int] = None, filter_status: Optional[str] =
         # Sync products first
         products_result = sync_engine.sync_products(limit=limit, filter_status=filter_status)
         
-        # Sync variants (limit applies to products, so variants might be more numerous)
+        # Get the list of product IDs that were actually synced
+        synced_product_ids = products_result.get('synced_product_ids', [])
+        
+        # Sync variants only for products that were actually synced
         variants_limit = limit * 10 if limit else None  # Allow more variants than products
-        variants_result = sync_engine.sync_variants(limit=variants_limit)
+        variants_result = sync_engine.sync_variants(limit=variants_limit, synced_product_ids=synced_product_ids)
         
         # Return consolidated results
         results = {
