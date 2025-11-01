@@ -117,9 +117,19 @@ class AirtableDataSync:
             if synced_product_ids:
                 # Only sync variants for products that were actually synced
                 logger.info(f"Syncing variants for {len(synced_product_ids)} synced products")
-                query = db.query(ProductVariant).filter(
-                    ProductVariant.product_id.in_(synced_product_ids)
-                )
+                
+                # Get variants in the same order as synced products
+                variants = []
+                for product_id in synced_product_ids:
+                    product_variants = db.query(ProductVariant).filter(
+                        ProductVariant.product_id == product_id
+                    ).all()
+                    variants.extend(product_variants)
+                
+                # Apply limit if specified (after ordering)
+                if limit:
+                    variants = variants[:limit]
+                    
             else:
                 # Fallback: sync variants for all MASTER/UNIQUE products
                 logger.info("No synced product IDs provided, syncing all MASTER/UNIQUE variants")
@@ -129,12 +139,12 @@ class AirtableDataSync:
                 
                 # Only sync variants for MASTER and UNIQUE products
                 query = query.filter(ProductStatus.status.in_(['MASTER', 'UNIQUE']))
-            
-            # Apply limit if specified
-            if limit:
-                query = query.limit(limit)
-            
-            variants = query.all()
+                
+                # Apply limit if specified
+                if limit:
+                    query = query.limit(limit)
+                
+                variants = query.all()
             
             logger.info(f"Found {len(variants)} variants to sync")
             
