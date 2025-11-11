@@ -13,6 +13,7 @@ from src.harvester.merchant_harvester import delta_harvest as original_delta_har
 from src.harvester.merchant_harvester import harvest_status as original_harvest_status
 from src.session.session_manager import create_session, refresh_session_token, auto_refresh_session, list_sessions, force_unlock_database, get_oauth_authorization_url
 from src.filter.product_filter import run_product_filtering
+from src.filter.scraper_filter import run_scraper_based_filtering
 from src.duplicate_detection.duplicate_detector import DuplicateDetector
 from src.common.database import get_db_session
 from src.common.logging_config import setup_logging
@@ -43,11 +44,35 @@ def harvest_status():
 
 
 def filter_products(limit=None, dry_run=False):
-    """Filter products from whitelisted sellers based on business rules."""
+    """Filter products from scraped_products table based on business rules."""
     run_product_filtering(
         limit=limit,
         dry_run=dry_run
     )
+
+
+def filter_with_scraper(seller_ids=None, limit=None):
+    """Filter products using scraper-based workflow: scrape seller stores → fetch from API → apply filters."""
+    stats = run_scraper_based_filtering(
+        seller_ids=seller_ids,
+        limit=limit
+    )
+    
+    print(f"\n✅ Scraper-based filtering completed!")
+    print(f"📊 Overall Statistics:")
+    print(f"   Sellers processed: {stats['sellers_processed']}")
+    print(f"   Sellers completed: {stats['sellers_completed']}")
+    print(f"   Sellers failed: {stats['sellers_failed']}")
+    print(f"   Total products scraped: {stats['total_products_scraped']}")
+    print(f"   Total products fetched: {stats['total_products_fetched']}")
+    print(f"   Total products filtered: {stats['total_products_filtered']}")
+    
+    if stats['errors']:
+        print(f"\n❌ Errors encountered:")
+        for error in stats['errors']:
+            print(f"   • {error}")
+    
+    return stats
 
 
 def detect_duplicates(limit=None, dry_run=False, phash_only=False):
@@ -657,13 +682,28 @@ def main():
 
     # Filter commands
     filter_parser = subparsers.add_parser(
-        "filter:products", help="Filter products from whitelisted sellers based on business rules"
+        "filter:products", help="Filter products from scraped_products table based on business rules"
     )
     filter_parser.add_argument(
-        "--limit", type=int, help="Limit the number of products to process"
+        "--limit", type=int, help="Maximum number of successful products to process (failed products don't count)"
     )
     filter_parser.add_argument(
         "--dry-run", action="store_true", help="Simulate without writing data"
+    )
+
+    # Scraper-based filter command
+    filter_scraper_parser = subparsers.add_parser(
+        "filter:scraper", help="Filter products using scraper workflow: scrape seller stores → fetch from API → apply filters"
+    )
+    filter_scraper_parser.add_argument(
+        "--seller-ids", 
+        type=str, 
+        help="Comma-separated list of seller IDs to process (e.g., '2663214,1234567'). If not provided, processes all whitelisted sellers"
+    )
+    filter_scraper_parser.add_argument(
+        "--limit", 
+        type=int, 
+        help="Limit the number of sellers to process (only used if --seller-ids is not provided)"
     )
 
     # Review commands
@@ -838,6 +878,14 @@ def main():
         filter_products(
             limit=args.limit,
             dry_run=args.dry_run
+        )
+    elif args.command == "filter:scraper":
+        seller_ids = None
+        if args.seller_ids:
+            seller_ids = [s.strip() for s in args.seller_ids.split(',')]
+        filter_with_scraper(
+            seller_ids=seller_ids,
+            limit=args.limit
         )
     elif args.command == "review:export-pending":
         export_pending_merchants(output_file=args.output)

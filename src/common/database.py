@@ -190,12 +190,10 @@ class FilteredProduct(Base):
     shop_id = Column(String(255), ForeignKey("sellers.shop_id"), nullable=False)
     product_title = Column(String(500), nullable=True)
     product_detail_url = Column(String(500), nullable=True)
+    price = Column(Float, nullable=True)  # Price of first SKU variant (in target currency)
+    currency = Column(String(10), nullable=True)  # Currency code from API response (e.g., "EUR", "USD")
     product_main_image_url = Column(String(500), nullable=True)
     product_video_url = Column(String(500), nullable=True)
-    original_price = Column(Float, nullable=True)
-    target_sale_price = Column(Float, nullable=True)
-    original_price_currency = Column(String(10), nullable=True)
-    target_sale_price_currency = Column(String(10), nullable=True)
     discount = Column(String(20), nullable=True)
     evaluate_rate = Column(String(20), nullable=True)
     category_id = Column(String(100), nullable=True)  # Store comma-separated category IDs
@@ -208,7 +206,7 @@ class FilteredProduct(Base):
     delivery_time = Column(Integer, nullable=True)  # Estimated delivery time in days
     min_delivery_days = Column(Integer, nullable=True)  # Minimum delivery time in days
     max_delivery_days = Column(Integer, nullable=True)  # Maximum delivery time in days
-    max_variant_price = Column(Float, nullable=True)  # Highest variant price found
+    max_variant_price = Column(Float, nullable=True)  # Highest variant price found (in target currency)
     min_shipping_price = Column(Float, nullable=True)  # Cheapest shipping price among all SKU variants
     
     # Product status tracking
@@ -536,6 +534,72 @@ class SKUMapping(Base):
     
     def __repr__(self):
         return f"<SKUMapping(anon_sku_id='{self.anon_sku_id}', sku_id='{self.sku_id}', product_id='{self.product_id}')>"
+
+
+class ScraperProgress(Base):
+    """
+    Model for tracking scraper progress for each seller.
+    
+    This table stores progress information for the Selenium scraper that 
+    extracts product IDs from seller store pages.
+    """
+
+    __tablename__ = "scraper_progress"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    seller_id = Column(String(255), ForeignKey("sellers.shop_id"), nullable=False)
+    
+    # Progress tracking
+    total_products_found = Column(Integer, nullable=True)  # Total products found on seller page
+    products_scraped = Column(Integer, nullable=True)  # Number of products scraped from seller page
+    products_fetched = Column(Integer, nullable=True)  # Number of products successfully fetched from API
+    products_filtered = Column(Integer, nullable=True)  # Number of products that passed filters
+    
+    # Status tracking
+    status = Column(String(50), nullable=False, default="not_started")  # 'not_started', 'in_progress', 'completed', 'failed'
+    error_message = Column(Text, nullable=True)  # Error message if status is 'failed'
+    
+    # Timestamps
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    seller = relationship("Seller", backref="scraper_progress")
+    
+    def __repr__(self):
+        return f"<ScraperProgress(seller_id='{self.seller_id}', status='{self.status}', found={self.total_products_found}, filtered={self.products_filtered})>"
+
+
+class ScrapedProduct(Base):
+    """
+    Model for tracking products discovered by the scraper.
+    
+    This table stores product IDs found during scraping and tracks whether they've
+    been extracted/processed through the filter workflow.
+    """
+
+    __tablename__ = "scraped_products"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    product_id = Column(String(255), nullable=False, index=True)
+    seller_id = Column(String(255), ForeignKey("sellers.shop_id"), nullable=False, index=True)
+    
+    # Processing status
+    is_extracted = Column(Boolean, nullable=False, default=False)  # Whether product has been processed by filter
+    is_failed = Column(Boolean, nullable=False, default=False)  # Whether product failed filtering (price/shipping)
+    
+    # Timestamps
+    scraped_at = Column(DateTime(timezone=True), default=func.now())
+    extracted_at = Column(DateTime(timezone=True), nullable=True)  # When it was processed
+    failed_at = Column(DateTime(timezone=True), nullable=True)  # When it failed filtering
+    
+    # Relationships
+    seller = relationship("Seller", backref="scraped_products")
+    
+    def __repr__(self):
+        return f"<ScrapedProduct(product_id='{self.product_id}', seller_id='{self.seller_id}', is_extracted={self.is_extracted})>"
 
 
 def create_tables_if_not_exist():
