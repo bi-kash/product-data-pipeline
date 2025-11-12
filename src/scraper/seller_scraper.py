@@ -67,6 +67,7 @@ class SellerStoreScraper:
             chrome_options.add_argument("--disable-gpu")  # Required for headless on some systems
             chrome_options.add_argument("--no-sandbox")  # Bypass OS security model
             chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
+            chrome_options.add_argument("--window-size=1920,1080")  # Set window size for headless
         
         # Other options to avoid detection
         chrome_options.add_argument("--log-level=3")
@@ -81,6 +82,11 @@ class SellerStoreScraper:
         service = Service(ChromeDriverManager().install())
         
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        
+        # Maximize window if not in headless mode
+        if not self.headless:
+            self.driver.maximize_window()
+        
         logger.info(f"Chrome driver initialized (headless={self.headless})")
 
     def _set_country_and_currency(self):
@@ -163,13 +169,24 @@ class SellerStoreScraper:
     def _accept_cookies(self):
         """Accept cookies if the dialog appears."""
         try:
-            accept_button = WebDriverWait(self.driver, 5).until(
+            accept_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Accept cookies")]'))
             )
             accept_button.click()
             logger.info("✓ Accepted cookies")
+            time.sleep(1)
         except Exception:
             logger.debug("No cookie dialog found (or already accepted)")
+    
+    def _take_screenshot(self, filename: str):
+        """Take a screenshot and save it to downloads folder."""
+        try:
+            screenshot_path = os.path.join("downloads", "screenshots", filename)
+            os.makedirs(os.path.dirname(screenshot_path), exist_ok=True)
+            self.driver.save_screenshot(screenshot_path)
+            logger.info(f"📸 Screenshot saved: {screenshot_path}")
+        except Exception as e:
+            logger.warning(f"Could not take screenshot: {e}")
 
     def scrape_seller_products(self, seller_id: str) -> List[str]:
         """
@@ -205,6 +222,7 @@ class SellerStoreScraper:
             
             # Accept cookies if needed
             self._accept_cookies()
+            
             
             # Extract products from all pages
             logger.info("Starting product extraction...")
@@ -262,6 +280,8 @@ class SellerStoreScraper:
                     break
             
             logger.info(f"✓ Extraction complete. Total products: {len(product_ids)}")
+            # Take screenshot after cookies accepted
+            self._take_screenshot(f"seller_{seller_id}.png")
             return product_ids
             
         except Exception as e:
