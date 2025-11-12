@@ -38,6 +38,7 @@ class SellerStoreScraper:
         timeout: int = None,
         country: str = None,
         currency: str = None,
+        language: str = None,
     ):
         """
         Initialize the scraper.
@@ -47,19 +48,25 @@ class SellerStoreScraper:
             timeout: Timeout for waiting for elements in seconds (default from env or 10)
             country: Target country for shipping (default from env or "Germany")
             currency: Target currency for prices (default from env or "EUR")
+            language: Target language for interface (default from env or "English")
         """
         self.headless = headless if headless is not None else os.getenv("SELENIUM_HEADLESS", "true").lower() == "true"
         self.timeout = timeout if timeout is not None else int(os.getenv("SELENIUM_TIMEOUT", "10"))
         self.country = country or os.getenv("TARGET_COUNTRY", "Germany")
         self.currency = currency or os.getenv("TARGET_CURRENCY", "EUR")
+        self.language = language or os.getenv("TARGET_LANGUAGE", "English")
         self.driver = None
 
     def _setup_driver(self):
         """Setup Chrome WebDriver with appropriate options."""
         chrome_options = webdriver.ChromeOptions()
         
-        # Headless mode configuration
-        chrome_options.headless = self.headless
+        # Headless mode configuration - use argument instead of property
+        if self.headless:
+            chrome_options.add_argument("--headless")
+            chrome_options.add_argument("--disable-gpu")  # Required for headless on some systems
+            chrome_options.add_argument("--no-sandbox")  # Bypass OS security model
+            chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
         
         # Other options to avoid detection
         chrome_options.add_argument("--log-level=3")
@@ -128,20 +135,20 @@ class SellerStoreScraper:
                 logger.info(f"✓ Selected {self.currency} currency")
                 time.sleep(1)
             
-            logger.info("Selecting Language: English")
-            # Select language (English)
+            logger.info(f"Selecting Language: {self.language}")
+            # Select language from environment variable
             select_wraps = content_wrap.find_elements(By.CSS_SELECTOR, '[class*="select--wrap"]')
             
             select_wraps[-2].click()
             time.sleep(1)
             
-            # Find and click the English language option
+            # Find and click the language option
             language_option = content_wrap.find_element(
                 By.XPATH, 
-                "//div[contains(@class, 'select--item') and contains(text(), 'English')]"
+                f"//div[contains(@class, 'select--item') and contains(text(), '{self.language}')]"
             )
             language_option.click()
-            logger.info("✓ Selected English language")
+            logger.info(f"✓ Selected {self.language} language")
             time.sleep(1)
             
             # Click save button
@@ -280,6 +287,7 @@ def scrape_seller_store(
     timeout: int = 10,
     country: str = "Germany",
     currency: str = "EUR",
+    language: str = "English",
 ) -> List[str]:
     """
     Convenience function to scrape a seller's store and return product IDs.
@@ -290,6 +298,7 @@ def scrape_seller_store(
         timeout: Timeout for waiting for elements in seconds
         country: Target country for shipping
         currency: Target currency for prices
+        language: Target language for interface
 
     Returns:
         List of product IDs found on the seller's store page
@@ -298,5 +307,5 @@ def scrape_seller_store(
         >>> product_ids = scrape_seller_store("2663214")
         >>> print(f"Found {len(product_ids)} products")
     """
-    with SellerStoreScraper(headless=headless, timeout=timeout, country=country, currency=currency) as scraper:
+    with SellerStoreScraper(headless=headless, timeout=timeout, country=country, currency=currency, language=language) as scraper:
         return scraper.scrape_seller_products(seller_id)

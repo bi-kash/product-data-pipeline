@@ -1719,6 +1719,7 @@ class ProductFilterEngine:
         Looks for sellers that:
         - Are whitelisted (approval_status = 'WHITELIST')
         - Have no scraper_progress entry OR have status != 'completed'
+        - Retries any incomplete sellers (failed, in_progress, etc.)
         
         Args:
             db: Database session
@@ -1731,20 +1732,20 @@ class ProductFilterEngine:
         from src.filter.scraper_filter import ScraperBasedFilter
         
         try:
-            # Find whitelisted sellers that haven't been scraped or failed
+            # Find whitelisted sellers that haven't been scraped or are incomplete
             # LEFT JOIN to include sellers with no scraper_progress entry
             sellers_to_scrape = db.query(Seller).outerjoin(
                 ScraperProgress,
                 Seller.shop_id == ScraperProgress.seller_id
             ).filter(
                 Seller.approval_status == 'WHITELIST',
-                # Either no progress entry OR status is not completed
+                # Either no progress entry OR status is not completed (includes 'failed', 'in_progress', etc.)
                 (ScraperProgress.seller_id.is_(None)) | 
                 (ScraperProgress.status != 'completed')
             ).order_by(
-                # Prioritize sellers with no progress entry
+                # Prioritize sellers with no progress entry (never attempted)
                 ScraperProgress.seller_id.is_(None).desc(),
-                # Then by oldest started_at
+                # Then by oldest started_at (retry oldest incomplete attempts first)
                 ScraperProgress.started_at.asc().nullsfirst()
             ).limit(1).all()
             
@@ -1753,8 +1754,20 @@ class ProductFilterEngine:
                 return False
             
             seller = sellers_to_scrape[0]
+            
+            # Check if this is a retry
+            progress = db.query(ScraperProgress).filter(
+                ScraperProgress.seller_id == seller.shop_id
+            ).first()
+            
+            is_retry = progress and progress.status != 'completed'
+            retry_status = progress.status if is_retry else None
+            
             logger.info(f"\n{'='*80}")
-            logger.info(f"🔍 No unprocessed products found - Auto-scraping next seller")
+            if is_retry:
+                logger.info(f"🔄 Retrying incomplete seller (previous status: {retry_status})")
+            else:
+                logger.info(f"🔍 No unprocessed products found - Auto-scraping next seller")
             logger.info(f"Seller: {seller.shop_id} ({seller.shop_name or 'Unknown'})")
             logger.info(f"{'='*80}\n")
             

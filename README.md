@@ -394,11 +394,13 @@ This command performs a comprehensive end-to-end product processing workflow:
 
 - Processes products **one at a time** to ensure complete processing
 - When no more products remain in `scraped_products`:
-  - Automatically identifies unscraped or failed sellers from `scraper_progress`
+  - Automatically identifies unscraped or incomplete sellers from `scraper_progress`
+  - **Retries any incomplete sellers** (failed, in_progress, etc.) before moving to new sellers
   - Scrapes the next seller's store page using Selenium
   - Populates `scraped_products` with new product IDs
   - Continues filtering automatically
 - This creates a **self-sustaining pipeline** that continuously discovers and processes products
+- **Automatic retry logic**: Any incomplete scraping attempts are automatically retried on subsequent runs
 
 ### Two-Step Workflow
 
