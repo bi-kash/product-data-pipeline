@@ -596,10 +596,6 @@ def export_suspect_duplicates(output_file):
                 master_image = master_main_image  # This is the closest match from master
                 duplicate_image = duplicate_main_image  # This is the closest match from duplicate
                 
-                # Add CLIP similarity info to indicate this is the closest match
-                if suspect.clip_similarity:
-                    master_image = f"{master_main_image} (CLIP: {suspect.clip_similarity:.4f})" if master_main_image else f"No image (CLIP: {suspect.clip_similarity:.4f})"
-                    duplicate_image = f"{duplicate_main_image} (CLIP: {suspect.clip_similarity:.4f})" if duplicate_main_image else f"No image (CLIP: {suspect.clip_similarity:.4f})"
                 
                 # Get all other images (excluding the main ones)
                 master_other_images = [img.s3_url for img in master_images if img.s3_url != master_main_image]
