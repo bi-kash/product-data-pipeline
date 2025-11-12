@@ -336,7 +336,30 @@ Recommended categories for finished jewelry:
 
 For detailed search configuration guidance, see [SEARCH_CONFIG.md](./SEARCH_CONFIG.md).
 
+## Module B: Product Filtering & Enrichment
+
+This module handles product qualification, enrichment, image/video processing, and autonomous product discovery.
+
 ### Commands
+
+**Scrape product IDs from seller stores:**
+
+```bash
+python main.py filter:scraper
+```
+
+Options:
+
+- `--limit N`: Process only the first N sellers
+- `--dry-run`: Simulate without writing to database
+
+This command:
+
+- Uses Selenium to scrape product IDs from whitelisted seller store pages
+- Populates `scraped_products` table with product IDs only (no API calls)
+- Updates `scraper_progress` table to track which sellers have been scraped
+- Marks sellers as scraped (status='scraped') or failed (status='failed')
+- Does **not** fetch product details or populate the `products` table (that's done by `filter:products`)
 
 **Filter products from whitelisted sellers:**
 
@@ -349,13 +372,59 @@ Options:
 - `--limit N`: Process only the first N products
 - `--dry-run`: Simulate without writing to database
 
-This command:
+This command performs a comprehensive end-to-end product processing workflow:
 
-- Processes products from WHITELIST approved sellers
-- Enriches products with shipping information and delivery estimates
+**1. Product Extraction & Enrichment:**
+
+- Processes products from `scraped_products` table (populated by `filter:scraper`)
+- Fetches complete product details from AliExpress API
+- Enriches products with real shipping costs and delivery time estimates
 - Applies business rules for price and delivery time filtering
 - Stores qualifying products in the `filtered_products` table
-- Automatically triggers image ingestion for processed products
+
+**2. Automatic Image & Video Processing:**
+
+- **Image Ingestion**: Downloads and categorizes all product images (hero, gallery, variant)
+- **Image Upload**: Uploads images to S3 with anonymized UUID filenames
+- **Video Processing**: Extracts video URLs from API response, downloads videos, and uploads to S3
+- **Perceptual Hashing**: Calculates pHash for duplicate detection
+- **Database Storage**: Saves image/video metadata with S3 URLs to `product_images` and `product_videos` tables
+
+**3. Autonomous Workflow:**
+
+- Processes products **one at a time** to ensure complete processing
+- When no more products remain in `scraped_products`:
+  - Automatically identifies unscraped or failed sellers from `scraper_progress`
+  - Scrapes the next seller's store page using Selenium
+  - Populates `scraped_products` with new product IDs
+  - Continues filtering automatically
+- This creates a **self-sustaining pipeline** that continuously discovers and processes products
+
+### Two-Step Workflow
+
+Module B uses a efficient two-step approach:
+
+**Step 1: ID Collection (`filter:scraper`)**
+
+- Fast Selenium-based scraping of product IDs from seller store pages
+- No API calls, no product detail fetching
+- Populates `scraped_products` with IDs for later processing
+- Can scrape multiple sellers quickly without API rate limits
+
+**Step 2: Product Processing (`filter:products`)**
+
+- Fetches complete product details from AliExpress API for each ID
+- Applies business rules and enriches with shipping data
+- Downloads and uploads images/videos to S3
+- Stores qualifying products in `filtered_products`
+- Automatically triggers Step 1 when no IDs remain (autonomous mode)
+
+**Benefits:**
+
+- **Decoupled Processing**: Scraping and API fetching are separated
+- **API Efficiency**: Only fetch details for products from whitelisted sellers
+- **Autonomous Operation**: `filter:products` runs continuously without manual intervention
+- **Progress Tracking**: `scraper_progress` table tracks which sellers have been processed
 
 ### Image Processing Features
 
@@ -1100,10 +1169,11 @@ The product data pipeline follows this modular workflow across all four modules:
 
 ### Phase 2: Module B - Product Processing & Enrichment
 
-5. **Product Filtering** - Run `filter:products` on whitelisted sellers
-6. **Image Processing** - Automatically categorizes, downloads, and analyzes images
-7. **Shipping Integration** - Calculates real shipping costs and delivery times
-8. **Business Rules** - Applies price and delivery constraints
+5. **Product ID Scraping** - Run `filter:scraper` to collect product IDs from whitelisted sellers
+6. **Product Filtering** - Run `filter:products` to fetch details and apply business rules
+7. **Image/Video Processing** - Automatically downloads, uploads to S3, and stores metadata
+8. **Autonomous Discovery** - `filter:products` automatically scrapes new sellers when needed
+9. **Business Rules** - Applies price and delivery constraints throughout
 
 ### Phase 3: Module C - Duplicate Detection & Master Selection
 

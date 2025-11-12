@@ -54,7 +54,8 @@ class ProductFilterEngine:
             self.api_client = OfficialAliExpressClient()
             logger.info("API client initialized successfully")
         except Exception as e:
-            logger.warning(f"Failed to initialize API client: {e}")
+            logger.error(f"Failed to initialize API client: {e}")
+            logger.error("Product filtering cannot proceed without API client. Please check your API credentials.")
             self.api_client = None
         
         logger.info(f"Filter engine initialized: max_price_eur={self.max_price_eur}, max_delivery_days={self.max_delivery_days}")
@@ -63,6 +64,8 @@ class ProductFilterEngine:
         """
         Process products from scraped_products table through complete filtering workflow.
         Each product is processed completely (fetch → filter → images → shipping → videos) before moving to next.
+        
+        If no unprocessed products are found, automatically scrapes the next unscraped seller.
         
         Args:
             limit: Maximum number of SUCCESSFUL products to process (failed products don't count)
@@ -80,6 +83,7 @@ class ProductFilterEngine:
             'images_extracted': 0,
             'videos_extracted': 0,
             'shipping_info_fetched': 0,
+            'sellers_scraped': 0,
             'errors': 0
         }
         
@@ -95,10 +99,20 @@ class ProductFilterEngine:
                 # Get next batch of products to process
                 batch = self._get_unextracted_scraped_products_ids(db, batch_size, offset)
                 if not batch:
-                    logger.info(f"No more unextracted products available")
-                    break
+                    logger.info(f"No more unextracted products available in scraped_products table")
+                    
+                    # Try to scrape next unscraped seller
+                    if self._scrape_next_seller(db, stats):
+                        # Successfully scraped a new seller, reset offset and continue
+                        offset = 0
+                        continue
+                    else:
+                        # No more sellers to scrape
+                        logger.info(f"No more sellers available to scrape")
+                        break
                 
-                if offset == 0:  # Only log on first batch
+                # Log progress on first iteration
+                if stats['products_processed'] == 0:
                     logger.info(f"Processing unextracted products from scraped_products table (target: {limit if limit else 'all'})")
                 
                 for scraped_product in batch:
@@ -156,9 +170,6 @@ class ProductFilterEngine:
                 # If we've reached our limit, exit the outer loop
                 if limit and stats['products_passed_filter'] >= limit:
                     break
-                
-                # Move to next batch
-                offset += batch_size
             
         except Exception as e:
             logger.error(f"Error in filter processing: {e}")
@@ -222,6 +233,11 @@ class ProductFilterEngine:
         }
         
         try:
+            # Check if API client is available
+            if not self.api_client:
+                logger.error(f"API client is not initialized. Cannot fetch product details for {product_id}")
+                return result
+            
             # Step 1: Fetch product details from API
             logger.info(f"Step 1/5: Fetching product details from API")
             product_data = self.api_client.get_product_details(product_id)
@@ -463,9 +479,9 @@ class ProductFilterEngine:
             product_video_url=video_url,
             
             # Pricing - simplified to just price and currency
-            price=first_sku_price,  # Price of first SKU
+            target_sale_price=first_sku_price,  # Price of first SKU
             max_variant_price=self._parse_float(filter_result.get('max_variant_price')),
-            currency=target_currency,  # Extracted from SKU level (EUR if requested)
+            target_sale_price_currency=target_currency,  # Extracted from SKU level (EUR if requested)
             discount=None,  # Not directly available
             
             # Rating and category
@@ -792,27 +808,89 @@ class ProductFilterEngine:
     def _extract_and_save_videos(self, product_id: str, product_data: Dict, db) -> int:
         """
         Extract and save product videos to product_videos table.
+        Downloads videos and uploads to S3 if configured.
         
         Returns:
             Number of videos extracted
         """
         from src.common.database import ProductVideo
+        from src.ingestion.video_download import VideoDownloader
+        from src.ingestion.s3_video_uploader import S3VideoUploader
         
         videos_saved = 0
         
         try:
             result = product_data.get('aliexpress_ds_product_get_response', {}).get('result', {})
-            video_url = result.get('product_video_url')
             
-            if video_url:
-                video = ProductVideo(
-                    product_id=product_id,
-                    video_url=video_url,
-                    download_status='pending'
-                )
-                db.add(video)
-                videos_saved += 1
-                logger.debug(f"Extracted video for product {product_id}")
+            # Extract video URL from ae_video_dtos.ae_video_d_t_o[0].media_url
+            multimedia = result.get('ae_multimedia_info_dto', {})
+            video_dtos = multimedia.get('ae_video_dtos', {})
+            video_list = video_dtos.get('ae_video_d_t_o', [])
+            
+            video_url = None
+            if video_list and isinstance(video_list, list) and len(video_list) > 0:
+                video_url = video_list[0].get('media_url')
+            
+            if not video_url:
+                logger.debug(f"No video URL found for product {product_id}")
+                return 0
+            
+            # Check if video already exists
+            existing_video = db.query(ProductVideo).filter(
+                ProductVideo.product_id == product_id,
+                ProductVideo.video_url == video_url
+            ).first()
+            
+            if existing_video:
+                logger.debug(f"Video already exists for product {product_id}")
+                return 0
+            
+            # Initialize video downloaders and uploaders
+            video_downloader = VideoDownloader()
+            
+            # Check if S3 credentials are available
+            s3_uploader = None
+            try:
+                s3_uploader = S3VideoUploader()
+                logger.debug("S3 video uploader initialized")
+            except Exception as e:
+                logger.warning(f"S3 video uploader not available: {e}")
+            
+            # Download the video
+            local_path, download_status = video_downloader.download_video(video_url, product_id)
+            
+            # Create video record
+            video = ProductVideo(
+                product_id=product_id,
+                video_url=video_url,
+                local_file_path=local_path,
+                download_status=download_status
+            )
+            
+            # Upload to S3 if available and download was successful
+            if s3_uploader and local_path and download_status in ['downloaded', 'exists']:
+                try:
+                    # Convert relative path to absolute for S3 upload
+                    import os
+                    if not os.path.isabs(local_path):
+                        project_root = os.getcwd()
+                        absolute_path = os.path.join(project_root, local_path)
+                    else:
+                        absolute_path = local_path
+                    
+                    upload_result = s3_uploader.upload_video(absolute_path, product_id)
+                    
+                    if upload_result['success']:
+                        video.s3_url = upload_result['s3_url']
+                        logger.info(f"✅ Video uploaded to S3: {upload_result['s3_url']}")
+                    else:
+                        logger.warning(f"⚠️  Failed to upload video to S3: {upload_result.get('error')}")
+                except Exception as e:
+                    logger.error(f"Error uploading video to S3: {e}")
+            
+            db.add(video)
+            videos_saved += 1
+            logger.info(f"Extracted and processed video for product {product_id} (download: {download_status}, s3: {'yes' if video.s3_url else 'no'})")
             
         except Exception as e:
             logger.error(f"Error extracting videos for {product_id}: {e}")
@@ -1633,6 +1711,68 @@ class ProductFilterEngine:
         if isinstance(value, str):
             return value.lower() in ('true', '1', 'yes')
         return None
+
+    def _scrape_next_seller(self, db, stats: Dict) -> bool:
+        """
+        Find and scrape the next unscraped seller.
+        
+        Looks for sellers that:
+        - Are whitelisted (approval_status = 'WHITELIST')
+        - Have no scraper_progress entry OR have status != 'completed'
+        
+        Args:
+            db: Database session
+            stats: Statistics dict to update
+            
+        Returns:
+            True if a seller was scraped, False if no sellers available
+        """
+        from src.common.database import ScraperProgress
+        from src.filter.scraper_filter import ScraperBasedFilter
+        
+        try:
+            # Find whitelisted sellers that haven't been scraped or failed
+            # LEFT JOIN to include sellers with no scraper_progress entry
+            sellers_to_scrape = db.query(Seller).outerjoin(
+                ScraperProgress,
+                Seller.shop_id == ScraperProgress.seller_id
+            ).filter(
+                Seller.approval_status == 'WHITELIST',
+                # Either no progress entry OR status is not completed
+                (ScraperProgress.seller_id.is_(None)) | 
+                (ScraperProgress.status != 'completed')
+            ).order_by(
+                # Prioritize sellers with no progress entry
+                ScraperProgress.seller_id.is_(None).desc(),
+                # Then by oldest started_at
+                ScraperProgress.started_at.asc().nullsfirst()
+            ).limit(1).all()
+            
+            if not sellers_to_scrape:
+                logger.info("No unscraped sellers found")
+                return False
+            
+            seller = sellers_to_scrape[0]
+            logger.info(f"\n{'='*80}")
+            logger.info(f"🔍 No unprocessed products found - Auto-scraping next seller")
+            logger.info(f"Seller: {seller.shop_id} ({seller.shop_name or 'Unknown'})")
+            logger.info(f"{'='*80}\n")
+            
+            # Initialize scraper and scrape this seller
+            scraper_filter = ScraperBasedFilter()
+            seller_stats = scraper_filter.process_single_seller(seller.shop_id)
+            
+            if seller_stats['status'] == 'completed':
+                stats['sellers_scraped'] += 1
+                logger.info(f"✅ Successfully scraped {seller_stats['products_scraped']} products from seller {seller.shop_id}")
+                return True
+            else:
+                logger.warning(f"⚠️  Failed to scrape seller {seller.shop_id}: {seller_stats.get('error_message')}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error auto-scraping next seller: {e}")
+            return False
 
 
 def run_product_filtering(limit: int = None, dry_run: bool = False) -> Dict[str, int]:

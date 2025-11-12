@@ -45,32 +45,50 @@ def harvest_status():
 
 def filter_products(limit=None, dry_run=False):
     """Filter products from scraped_products table based on business rules."""
-    run_product_filtering(
+    stats = run_product_filtering(
         limit=limit,
         dry_run=dry_run
     )
+    
+    # Print summary
+    print(f"\n✅ Product filtering completed!")
+    print(f"📊 Statistics:")
+    print(f"   Products processed: {stats['products_processed']}")
+    print(f"   Products passed filters: {stats['products_passed_filter']}")
+    print(f"   Products failed (price): {stats['products_failed_price_rule']}")
+    print(f"   Products failed (shipping): {stats['products_failed_shipping_rule']}")
+    print(f"   Images extracted: {stats['images_extracted']}")
+    print(f"   Videos extracted: {stats['videos_extracted']}")
+    
+    if stats.get('sellers_scraped', 0) > 0:
+        print(f"   🔍 Sellers auto-scraped: {stats['sellers_scraped']}")
+    
+    if stats.get('errors', 0) > 0:
+        print(f"\n⚠️  Errors encountered: {stats['errors']}")
+    
+    return stats
 
 
 def filter_with_scraper(seller_ids=None, limit=None):
-    """Filter products using scraper-based workflow: scrape seller stores → fetch from API → apply filters."""
+    """Scrape product IDs from seller stores and save to scraped_products table."""
     stats = run_scraper_based_filtering(
         seller_ids=seller_ids,
         limit=limit
     )
     
-    print(f"\n✅ Scraper-based filtering completed!")
-    print(f"📊 Overall Statistics:")
+    print(f"\n✅ Product ID scraping completed!")
+    print(f"📊 Statistics:")
     print(f"   Sellers processed: {stats['sellers_processed']}")
     print(f"   Sellers completed: {stats['sellers_completed']}")
     print(f"   Sellers failed: {stats['sellers_failed']}")
     print(f"   Total products scraped: {stats['total_products_scraped']}")
-    print(f"   Total products fetched: {stats['total_products_fetched']}")
-    print(f"   Total products filtered: {stats['total_products_filtered']}")
     
     if stats['errors']:
         print(f"\n❌ Errors encountered:")
         for error in stats['errors']:
             print(f"   • {error}")
+    
+    print(f"\n💡 Next step: Run 'python main.py filter:products' to fetch and filter these products")
     
     return stats
 
@@ -693,7 +711,7 @@ def main():
 
     # Scraper-based filter command
     filter_scraper_parser = subparsers.add_parser(
-        "filter:scraper", help="Filter products using scraper workflow: scrape seller stores → fetch from API → apply filters"
+        "filter:scraper", help="Scrape product IDs from seller stores and save to scraped_products table"
     )
     filter_scraper_parser.add_argument(
         "--seller-ids", 
