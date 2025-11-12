@@ -18,6 +18,7 @@ from sqlalchemy import (
     ForeignKey,
     JSON,
     Float,
+    text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -37,7 +38,15 @@ if USE_SQLITE:
 else:
     # Use PostgreSQL for production
     DATABASE_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT', 5432)}/{os.getenv('DB_NAME')}"
-    engine = create_engine(DATABASE_URL)
+    # Add connection pool settings and statement timeout
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Verify connections before using them
+        pool_recycle=3600,   # Recycle connections after 1 hour
+        connect_args={
+            "options": "-c statement_timeout=600000"  # 10 minute timeout (in milliseconds)
+        }
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -48,12 +57,17 @@ Base = declarative_base()
 def get_db_session():
     """
     Create a new database session.
+    
+    For PostgreSQL, sets a longer statement timeout to handle large operations.
 
     Returns:
         SQLAlchemy session object
     """
     db = SessionLocal()
     try:
+        # Set statement timeout for this session if using PostgreSQL
+        if not USE_SQLITE:
+            db.execute(text("SET statement_timeout = '10min'"))
         return db
     except Exception:
         db.close()
@@ -175,18 +189,19 @@ class FilteredProduct(Base):
     """
     Model representing a filtered product.
     
-    This table mirrors the products table structure and adds only:
-    - ship_to_country: Destination country for shipping
-    - delivery_time: Estimated delivery time in days  
-    - max_variant_price: Highest variant price found
+    This table is independent from products table and stores:
+    - Complete product data from AliExpress API
+    - Shipping information (ship_to_country, delivery time)
+    - Price and variant information
+    - Product status tracking (duplicates, active status)
     """
 
     __tablename__ = "filtered_products"
 
-    # Primary key - use product_id as primary key
-    product_id = Column(String(255), ForeignKey("products.product_id"), primary_key=True)
+    # Primary key - independent product_id (no foreign key relationship)
+    product_id = Column(String(255), primary_key=True)
     
-    # Mirror all fields from products table
+    # Product information from API
     shop_id = Column(String(255), ForeignKey("sellers.shop_id"), nullable=False)
     product_title = Column(String(500), nullable=True)
     product_detail_url = Column(String(500), nullable=True)
@@ -216,8 +231,7 @@ class FilteredProduct(Base):
     # Timestamps for filtering
     filtered_at = Column(DateTime(timezone=True), default=func.now())
     
-    # Relationships
-    product = relationship("Product", backref="filtered_entries")
+    # Relationships - only with sellers, not with products table
     seller = relationship("Seller", backref="filtered_products")
 
     def __repr__(self):

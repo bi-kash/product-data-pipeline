@@ -212,7 +212,12 @@ class SellerStoreScraper:
             
             while True:
                 # Find all product links on the current page
+                time.sleep(3)
+                WebDriverWait(self.driver, self.timeout).until(
+                    EC.presence_of_all_elements_located((By.XPATH, "//a[contains(@ae_object_type, 'product')]"))
+                )
                 products = self.driver.find_elements(By.XPATH, "//a[contains(@ae_object_type, 'product')]")
+                
                 
                 # Extract product IDs from links
                 page_products = []
@@ -231,6 +236,7 @@ class SellerStoreScraper:
                 
                 # Check if there are more pages
                 try:
+                    time.sleep(3)
                     page_info = self.driver.find_element(By.XPATH, "//div[@currentpage]")
                     current_page = page_info.get_attribute("currentpage")
                     total_page = page_info.get_attribute("totalpage")
@@ -239,6 +245,7 @@ class SellerStoreScraper:
                     # Check if we've reached the last page
                     if current_page == total_page or len(product_ids) >= int(total_items):
                         logger.info(f"✓ Reached last page")
+                        logger.info(f"Total items expected: {total_items}, extracted: {len(product_ids)}")
                         break
                     
                     # Click next page button
