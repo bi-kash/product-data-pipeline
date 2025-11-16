@@ -702,7 +702,10 @@ class ProductFilterEngine:
                     logger.info(f"✅ [OTHER] Uploaded and cached: URL={base_url}, phash={phash} -> {s3_url}")
                 else:
                     url_cache[image_url] = s3_url
-                    logger.info(f"✅ [{role.upper()}] Uploaded and cached: {image_url} -> {s3_url}")
+                    # Also cache phash for non-other roles so "other" images can find them
+                    if phash:
+                        phash_cache[phash] = s3_url
+                    logger.info(f"✅ [{role.upper()}] Uploaded and cached: {image_url}, phash={phash} -> {s3_url}")
             return s3_url
         
         try:
