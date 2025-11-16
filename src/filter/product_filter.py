@@ -614,6 +614,97 @@ class ProductFilterEngine:
         image_downloader = ImageDownloader()
         s3_uploader = S3ImageUploader()
         
+        # Phash cache for current product to prevent duplicate uploads
+        phash_cache = {}
+        url_cache = {}  # Cache for URL-based deduplication
+        
+        def normalize_url(url):
+            """Extract base URL before query parameters."""
+            if not url:
+                return url
+            return url.split('?')[0]
+        
+        def get_or_upload_to_s3(local_path, phash, image_url, product_id, role):
+            """
+            Helper to check for existing images and reuse S3 URL or upload new.
+            
+            For variant/hero/gallery: Only check exact image_url match (no phash check)
+            For other images: Check both URL (before ?) and phash for deduplication
+            """
+            if not local_path:
+                return None
+            
+            # Normalize URL (remove query parameters)
+            base_url = normalize_url(image_url)
+            
+            # For other images: use aggressive deduplication (URL base + phash)
+            if role == 'other':
+                # Check URL cache first (base URL without query params)
+                if base_url in url_cache:
+                    logger.info(f"⚠️ [OTHER] Reusing S3 URL for same base URL: {base_url}")
+                    return url_cache[base_url]
+                
+                # Check database for same base URL
+                existing_by_url = db.query(ProductImage).filter(
+                    ProductImage.image_url.like(f"{base_url}%"),
+                    ProductImage.s3_url.isnot(None)
+                ).first()
+                
+                if existing_by_url:
+                    logger.info(f"⚠️ [OTHER] Reusing S3 URL from DB for base URL {base_url}: {existing_by_url.s3_url}")
+                    url_cache[base_url] = existing_by_url.s3_url
+                    return existing_by_url.s3_url
+                
+                # Check phash cache
+                if phash and phash in phash_cache:
+                    logger.info(f"⚠️ [OTHER] Reusing S3 URL from cache for phash {phash}: {phash_cache[phash]}")
+                    url_cache[base_url] = phash_cache[phash]
+                    return phash_cache[phash]
+                
+                # Check database for existing phash
+                if phash:
+                    existing_by_phash = db.query(ProductImage).filter(
+                        ProductImage.phash == phash,
+                        ProductImage.s3_url.isnot(None)
+                    ).first()
+                    
+                    if existing_by_phash:
+                        logger.info(f"⚠️ [OTHER] Reusing S3 URL for phash {phash}: {existing_by_phash.s3_url}")
+                        phash_cache[phash] = existing_by_phash.s3_url
+                        url_cache[base_url] = existing_by_phash.s3_url
+                        return existing_by_phash.s3_url
+            
+            else:
+                # For variant/hero/gallery: Only check exact image_url match
+                # Check URL cache first
+                if image_url in url_cache:
+                    logger.info(f"⚠️ [{role.upper()}] Reusing S3 URL for exact URL match: {image_url}")
+                    return url_cache[image_url]
+                
+                # Check database for exact URL match
+                existing_by_url = db.query(ProductImage).filter(
+                    ProductImage.image_url == image_url,
+                    ProductImage.s3_url.isnot(None)
+                ).first()
+                
+                if existing_by_url:
+                    logger.info(f"⚠️ [{role.upper()}] Reusing S3 URL from DB for exact URL: {existing_by_url.s3_url}")
+                    url_cache[image_url] = existing_by_url.s3_url
+                    return existing_by_url.s3_url
+            
+            # Upload new image
+            s3_url = s3_uploader.upload_image(local_path, product_id, role)
+            if s3_url:
+                if role == 'other':
+                    url_cache[base_url] = s3_url
+                    if phash:
+                        phash_cache[phash] = s3_url
+                    logger.info(f"✅ [OTHER] Uploaded and cached: URL={base_url}, phash={phash} -> {s3_url}")
+                else:
+                    url_cache[image_url] = s3_url
+                    logger.info(f"✅ [{role.upper()}] Uploaded and cached: {image_url} -> {s3_url}")
+            return s3_url
+        
         try:
             result = product_data.get('aliexpress_ds_product_get_response', {}).get('result', {})
             multimedia = result.get('ae_multimedia_info_dto', {})
@@ -632,19 +723,10 @@ class ProductFilterEngine:
                     image_url, product_id, image_role='hero'
                 )
                 
-                # Upload to S3 (will skip if s3_url already exists)
+                # Upload to S3 with phash deduplication
                 s3_url = None
                 if local_path and status == 'downloaded':
-                    # Check if already uploaded by looking for existing record
-                    existing = db.query(ProductImage).filter(
-                        ProductImage.product_id == product_id,
-                        ProductImage.image_url == image_url
-                    ).first()
-                    
-                    if existing and existing.s3_url:
-                        s3_url = existing.s3_url
-                    else:
-                        s3_url = s3_uploader.upload_image(local_path, product_id, 'hero')
+                    s3_url = get_or_upload_to_s3(local_path, phash, image_url, product_id, 'hero')
                 
                 image = ProductImage(
                     product_id=product_id,
@@ -670,17 +752,10 @@ class ProductFilterEngine:
                         image_url, product_id, image_role='gallery'
                     )
                     
+                    # Upload to S3 with phash deduplication
                     s3_url = None
                     if local_path and status == 'downloaded':
-                        existing = db.query(ProductImage).filter(
-                            ProductImage.product_id == product_id,
-                            ProductImage.image_url == image_url
-                        ).first()
-                        
-                        if existing and existing.s3_url:
-                            s3_url = existing.s3_url
-                        else:
-                            s3_url = s3_uploader.upload_image(local_path, product_id, 'gallery')
+                        s3_url = get_or_upload_to_s3(local_path, phash, image_url, product_id, 'gallery')
                     
                     image = ProductImage(
                         product_id=product_id,
@@ -713,17 +788,10 @@ class ProductFilterEngine:
                                     sku_image, product_id, sku_id, image_role='variant'
                                 )
                                 
+                                # Upload to S3 with phash deduplication
                                 s3_url = None
                                 if local_path and status == 'downloaded':
-                                    existing = db.query(ProductImage).filter(
-                                        ProductImage.product_id == product_id,
-                                        ProductImage.image_url == sku_image
-                                    ).first()
-                                    
-                                    if existing and existing.s3_url:
-                                        s3_url = existing.s3_url
-                                    else:
-                                        s3_url = s3_uploader.upload_image(local_path, product_id, 'variant')
+                                    s3_url = get_or_upload_to_s3(local_path, phash, sku_image, product_id, 'variant')
                                 
                                 # Build variant_key: property_name:property_value_definition_name or property_name:property_value
                                 prop_name = prop.get('sku_property_name')
@@ -770,17 +838,10 @@ class ProductFilterEngine:
                             image_url, product_id, image_role='other'
                         )
                         
+                        # Upload to S3 with phash deduplication
                         s3_url = None
                         if local_path and status == 'downloaded':
-                            existing = db.query(ProductImage).filter(
-                                ProductImage.product_id == product_id,
-                                ProductImage.image_url == image_url
-                            ).first()
-                            
-                            if existing and existing.s3_url:
-                                s3_url = existing.s3_url
-                            else:
-                                s3_url = s3_uploader.upload_image(local_path, product_id, 'other')
+                            s3_url = get_or_upload_to_s3(local_path, phash, image_url, product_id, 'other')
                         
                         image = ProductImage(
                             product_id=product_id,

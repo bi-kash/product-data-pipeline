@@ -250,10 +250,25 @@ class AirtableDataSync:
                 elif img.image_role == 'variant':
                     variant_images.append(img.s3_url)
             
+            # Deduplicate images with priority: variant > gallery > other
+            # 1. Make variant_images unique
+            variant_images_unique = list(dict.fromkeys(variant_images))  # Preserves order
+            variant_images_set = set(variant_images_unique)
+            
+            # 2. Remove gallery_images that are in variant_images
+            gallery_images_filtered = [img for img in gallery_images if img not in variant_images_set]
+            gallery_images_unique = list(dict.fromkeys(gallery_images_filtered))
+            gallery_images_set = set(gallery_images_unique)
+            
+            # 3. Remove other_images that are in variant_images or gallery_images
+            other_images_filtered = [img for img in other_images 
+                                    if img not in variant_images_set and img not in gallery_images_set]
+            other_images_unique = list(dict.fromkeys(other_images_filtered))
+            
             # Convert lists to comma-separated strings
-            gallery_images_str = ', '.join(gallery_images) if gallery_images else ''
-            other_images_str = ', '.join(other_images) if other_images else ''
-            variant_images_str = ', '.join(variant_images) if variant_images else ''
+            gallery_images_str = ', '.join(gallery_images_unique) if gallery_images_unique else ''
+            other_images_str = ', '.join(other_images_unique) if other_images_unique else ''
+            variant_images_str = ', '.join(variant_images_unique) if variant_images_unique else ''
             
             # Get video
             video = db.query(ProductVideo).filter(

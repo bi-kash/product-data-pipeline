@@ -62,6 +62,10 @@ class ImageIngestionEngine:
         else:
             self.s3_uploader = None
             self.s3_video_uploader = None
+        
+        # In-memory cache for phash-to-s3url mapping during current processing session
+        # This prevents duplicate S3 uploads for images with same phash within the same batch
+        self.phash_cache = {}
             
         logger.info(f"Image and video ingestion engine initialized (download_images: {download_images}, download_videos: {download_videos}, upload_to_s3: {self.upload_to_s3})")
 
@@ -102,6 +106,67 @@ class ImageIngestionEngine:
                     return existing_image.s3_url
         except Exception as e:
             logger.debug(f"Error checking existing S3 URL: {e}")
+        
+        return None
+    
+    def _get_existing_image_metadata(self, image_url: str) -> Optional[Dict]:
+        """
+        Get complete metadata for an existing image from the database.
+        
+        Args:
+            image_url: The image URL to check
+            
+        Returns:
+            Dict with s3_url, phash, width, height, local_file_path if found, None otherwise
+        """
+        try:
+            with get_db_session() as db:
+                existing_image = db.query(ProductImage).filter(
+                    ProductImage.image_url == image_url,
+                    ProductImage.s3_url.isnot(None)
+                ).first()
+                
+                if existing_image:
+                    return {
+                        's3_url': existing_image.s3_url,
+                        'phash': existing_image.phash,
+                        'width': existing_image.width,
+                        'height': existing_image.height,
+                        'local_file_path': existing_image.local_file_path
+                    }
+        except Exception as e:
+            logger.debug(f"Error checking existing image metadata: {e}")
+        
+        return None
+    
+    def _get_existing_metadata_by_phash(self, phash: str) -> Optional[Dict]:
+        """
+        Get complete metadata for an existing image by phash from the database.
+        This allows reusing S3 URLs for images with identical phash values.
+        
+        Args:
+            phash: The perceptual hash to check
+            
+        Returns:
+            Dict with s3_url, phash, width, height, local_file_path if found, None otherwise
+        """
+        try:
+            with get_db_session() as db:
+                existing_image = db.query(ProductImage).filter(
+                    ProductImage.phash == phash,
+                    ProductImage.s3_url.isnot(None)
+                ).first()
+                
+                if existing_image:
+                    return {
+                        's3_url': existing_image.s3_url,
+                        'phash': existing_image.phash,
+                        'width': existing_image.width,
+                        'height': existing_image.height,
+                        'local_file_path': existing_image.local_file_path
+                    }
+        except Exception as e:
+            logger.debug(f"Error checking existing metadata by phash: {e}")
         
         return None
 
@@ -145,6 +210,7 @@ class ImageIngestionEngine:
         """
         Process an image URL, optionally downloading it and uploading to S3.
         Smart reuse: checks for existing local files and S3 URLs to avoid re-processing.
+        Also reuses S3 URLs for images with identical phash values.
         
         Args:
             image_url: URL of the image
@@ -164,27 +230,16 @@ class ImageIngestionEngine:
             's3_url': None
         }
         
-        # First check if this image already exists in the database with S3 URL
-        existing_s3_url = self._get_existing_s3_url(image_url)
-        if existing_s3_url:
-            logger.debug(f"Reusing existing S3 URL for {image_url}: {existing_s3_url}")
-            result['s3_url'] = existing_s3_url
+        # First check if this image already exists in the database with complete metadata
+        existing_metadata = self._get_existing_image_metadata(image_url)
+        if existing_metadata and existing_metadata.get('s3_url'):
+            logger.debug(f"Reusing existing data from database for {image_url}: {existing_metadata['s3_url']}")
+            result['s3_url'] = existing_metadata['s3_url']
+            result['phash'] = existing_metadata.get('phash')
+            result['width'] = existing_metadata.get('width')
+            result['height'] = existing_metadata.get('height')
+            result['local_file_path'] = existing_metadata.get('local_file_path')
             result['download_status'] = 'reused'
-            # Still try to get local file info if available
-            if self.image_downloader:
-                existing_local_path = self._get_existing_local_path(image_url, product_id)
-                if existing_local_path:
-                    result['local_file_path'] = existing_local_path
-                    # Get metadata from existing file
-                    try:
-                        if os.path.exists(os.path.join(os.getcwd(), existing_local_path)):
-                            abs_path = os.path.join(os.getcwd(), existing_local_path)
-                            with open(abs_path, 'rb') as f:
-                                image_data = f.read()
-                            result['phash'] = self.image_downloader.calculate_phash(image_data)
-                            result['width'], result['height'] = self.image_downloader.get_image_dimensions(image_data)
-                    except Exception as e:
-                        logger.debug(f"Could not read metadata from existing file: {e}")
             return result
         
         if self.download_images and self.image_downloader:
@@ -200,6 +255,29 @@ class ImageIngestionEngine:
                 'height': height
             })
             
+            logger.debug(f"Downloaded image {image_url} with phash: {phash}, status: {status}")
+            
+            # Check if an image with the same phash already exists in the database
+            # First check in-memory cache for current session
+            if phash and phash in self.phash_cache:
+                logger.warning(f"⚠️ PHASH CACHE HIT - Reusing S3 URL from session cache for phash {phash}: {self.phash_cache[phash]} (image_url: {image_url})")
+                result['s3_url'] = self.phash_cache[phash]
+                result['download_status'] = 'reused_by_phash_cache'
+                return result
+            
+            # Then check database for previously processed images
+            if phash:
+                existing_phash_metadata = self._get_existing_metadata_by_phash(phash)
+                if existing_phash_metadata and existing_phash_metadata.get('s3_url'):
+                    logger.warning(f"⚠️ PHASH DB HIT - Reusing S3 URL for identical image (phash: {phash}): {existing_phash_metadata['s3_url']} (image_url: {image_url})")
+                    result['s3_url'] = existing_phash_metadata['s3_url']
+                    result['download_status'] = 'reused_by_phash'
+                    # Cache it for faster lookup in current session
+                    self.phash_cache[phash] = existing_phash_metadata['s3_url']
+                    return result
+                else:
+                    logger.debug(f"Phash {phash} not found in database, will upload new")
+            
             # Upload to S3 if enabled and download was successful
             if (self.upload_to_s3 and self.s3_uploader and 
                 status == 'downloaded' and local_path):
@@ -214,13 +292,25 @@ class ImageIngestionEngine:
                 else:
                     absolute_path = local_path
                 
+                # Check once more before upload if phash now exists in cache (race condition protection)
+                if phash and phash in self.phash_cache:
+                    logger.warning(f"⚠️ PHASH RACE CONDITION - Phash appeared in cache during processing, reusing: {self.phash_cache[phash]} (image_url: {image_url})")
+                    result['s3_url'] = self.phash_cache[phash]
+                    result['download_status'] = 'reused_by_phash_cache'
+                    return result
+                
                 # Upload to S3
+                logger.debug(f"Uploading to S3: {image_url} with phash {phash}")
                 s3_url = self.s3_uploader.upload_image(
                     absolute_path, product_id, image_role or 'unknown'
                 )
                 
                 if s3_url:
                     result['s3_url'] = s3_url
+                    # Cache the phash-to-s3url mapping IMMEDIATELY after upload
+                    if phash:
+                        self.phash_cache[phash] = s3_url
+                        logger.warning(f"✅ PHASH CACHED - Stored phash {phash} -> {s3_url} (image_url: {image_url})")
                     logger.info(f"Successfully uploaded image to S3: {s3_url}")
                 else:
                     logger.warning(f"Failed to upload image to S3: {local_path}")
