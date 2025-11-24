@@ -212,7 +212,13 @@ class IntelligentCascadeAnalyzer:
         
         if phash_diff <= self.config.phash_duplicate_threshold:
             # Definitely duplicate - skip CLIP analysis
-            confidence = 1.0 - (phash_diff / self.config.phash_duplicate_threshold * 0.2)  # 0.8-1.0 range
+            # Calculate confidence (protect against division by zero)
+            if self.config.phash_duplicate_threshold > 0:
+                confidence = 1.0 - (phash_diff / self.config.phash_duplicate_threshold * 0.2)  # 0.8-1.0 range
+            else:
+                print("Warning: phash_duplicate_threshold is 0, setting confidence to 1.0")
+                confidence = 1.0 if phash_diff == 0 else 0.95  # Perfect match or very close
+            
             return CascadeDecision(
                 product1_id=product1_id,
                 product2_id=product2_id,
