@@ -146,6 +146,39 @@ class IntelligentCascadeAnalyzer:
         # Simplified approach: skip all metadata shortcuts, use only pHash -> CLIP cascade
         return None
     
+    def _get_allowed_roles(self) -> List[str]:
+        """
+        Get allowed image roles from environment configuration.
+        
+        Returns:
+            List of allowed image roles
+        """
+        import os
+        
+        # Check if specific roles should be skipped
+        skip_roles_config = os.getenv("CLIP_SKIP_ROLES", "").strip().lower()
+        skip_roles = [r.strip() for r in skip_roles_config.split(",") if r.strip()]
+        
+        # Get role configuration
+        roles_config = os.getenv("CLIP_IMAGE_ROLES", "all").strip().lower()
+        
+        if roles_config == "all":
+            # Use all roles except skipped ones
+            all_roles = ['hero', 'variant', 'gallery', 'other']
+            allowed_roles = [r for r in all_roles if r not in skip_roles]
+        else:
+            # Use specific roles, excluding skipped ones
+            allowed_roles = [r.strip() for r in roles_config.split(",") if r.strip()]
+            allowed_roles = [r for r in allowed_roles if r not in skip_roles]
+        
+        if not allowed_roles:
+            # Default to hero and variant if no valid roles
+            logger.warning("No valid image roles configured, defaulting to hero and variant")
+            allowed_roles = ['hero', 'variant']
+        
+        logger.debug(f"Using image roles for duplicate detection: {allowed_roles}")
+        return allowed_roles
+    
     def _analyze_phash_cascade(self, product1_id: str, product2_id: str, db: Session) -> CascadeDecision:
         """
         Perform pHash analysis with cascade decision logic.
@@ -158,17 +191,20 @@ class IntelligentCascadeAnalyzer:
         Returns:
             CascadeDecision with pHash results and next steps
         """
+        # Get allowed roles from configuration
+        allowed_roles = self._get_allowed_roles()
+        
         # Get images for both products with quality filtering
         images1 = db.query(ProductImage).filter(
             ProductImage.product_id == product1_id,
             ProductImage.phash.isnot(None),
-            ProductImage.image_role.in_(['hero', 'variant'])  # Focus on key images
+            ProductImage.image_role.in_(allowed_roles)
         ).limit(self.config.max_images_per_product).all()
         
         images2 = db.query(ProductImage).filter(
             ProductImage.product_id == product2_id,
             ProductImage.phash.isnot(None),
-            ProductImage.image_role.in_(['hero', 'variant'])
+            ProductImage.image_role.in_(allowed_roles)
         ).limit(self.config.max_images_per_product).all()
         
         # Filter by quality
@@ -326,17 +362,20 @@ class IntelligentCascadeAnalyzer:
             CLIP similarity score (0-1) or None if comparison failed
         """
         try:
+            # Get allowed roles from configuration
+            allowed_roles = self._get_allowed_roles()
+            
             # Get images for both products
             images1 = db.query(ProductImage).filter(
                 ProductImage.product_id == product1_id,
                 ProductImage.local_file_path.isnot(None),
-                ProductImage.image_role.in_(['hero', 'variant'])
+                ProductImage.image_role.in_(allowed_roles)
             ).limit(self.config.max_images_per_product).all()
             
             images2 = db.query(ProductImage).filter(
                 ProductImage.product_id == product2_id,
                 ProductImage.local_file_path.isnot(None),
-                ProductImage.image_role.in_(['hero', 'variant'])
+                ProductImage.image_role.in_(allowed_roles)
             ).limit(self.config.max_images_per_product).all()
             
             # Filter by quality

@@ -9,6 +9,7 @@ import os
 import logging
 import time
 from typing import List, Dict, Set, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -327,71 +328,102 @@ class DuplicateDetector:
             
             total_pairs = len(all_product_ids) * (len(all_product_ids) - 1) // 2
             cascade_stats['total_pairs'] = total_pairs
-            logger.info(f"Analyzing {total_pairs} product pairs...")
             
-            # Analyze all pairs using cascade
-            for i, product1_id in enumerate(all_product_ids):
-                for j, product2_id in enumerate(all_product_ids[i+1:], start=i+1):
-                    decision = self.cascade_analyzer.analyze_product_pair(product1_id, product2_id, db)
-                    cascade_decisions.append(decision)
-                    
-                    # Update statistics
-                    stage = decision.decision_stage.lower()
-                    if 'metadata' in stage:
-                        cascade_stats['metadata_shortcuts'] += 1
-                    elif stage == 'phash_duplicate':
-                        # Further categorize by exact vs near duplicates
-                        if decision.phash_difference == 0:
-                            cascade_stats['phash_exact'] += 1
-                        else:
-                            cascade_stats['phash_near'] += 1
-                    elif stage == 'phash_different':
-                        cascade_stats['phash_different'] += 1
-                    elif stage == 'phash_ambiguous':
-                        cascade_stats['phash_ambiguous'] += 1
-                    elif 'clip' in stage:
-                        # Count as both ambiguous (went to CLIP) and CLIP analyzed
-                        cascade_stats['phash_ambiguous'] += 1
-                        cascade_stats['clip_analyzed'] += 1
-                        # Track unique products that had CLIP analysis
-                        cascade_stats['products_passed_to_clip'].add(decision.product1_id)
-                        cascade_stats['products_passed_to_clip'].add(decision.product2_id)
+            # Get max workers from environment (default to CPU count)
+            max_workers = int(os.getenv('MAX_WORKERS', os.cpu_count() or 4))
+            logger.info(f"Analyzing {total_pairs} product pairs using {max_workers} workers...")
+            
+            # Generate all product pairs to analyze
+            product_pairs = [
+                (all_product_ids[i], all_product_ids[j])
+                for i in range(len(all_product_ids))
+                for j in range(i+1, len(all_product_ids))
+            ]
+            
+            # Analyze pairs in parallel using thread pool
+            completed_pairs = 0
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all tasks
+                future_to_pair = {
+                    executor.submit(
+                        self.cascade_analyzer.analyze_product_pair,
+                        p1, p2, db
+                    ): (p1, p2)
+                    for p1, p2 in product_pairs
+                }
+                
+                # Process results as they complete
+                for future in as_completed(future_to_pair):
+                    try:
+                        decision = future.result()
+                        cascade_decisions.append(decision)
                         
-                        # Count specific CLIP outcomes
-                        if decision.decision_stage == 'CLIP_DUPLICATE':
-                            cascade_stats['clip_confirmed'] += 1
+                        completed_pairs += 1
+                        if completed_pairs % 100 == 0 or completed_pairs == total_pairs:
+                            logger.info(f"Progress: {completed_pairs}/{total_pairs} pairs analyzed ({completed_pairs*100//total_pairs}%)")
+                        
+                        # Update statistics
+                        stage = decision.decision_stage.lower()
+                        if 'metadata' in stage:
+                            cascade_stats['metadata_shortcuts'] += 1
+                        elif stage == 'phash_duplicate':
+                            # Further categorize by exact vs near duplicates
+                            if decision.phash_difference == 0:
+                                cascade_stats['phash_exact'] += 1
+                            else:
+                                cascade_stats['phash_near'] += 1
+                        elif stage == 'phash_different':
+                            cascade_stats['phash_different'] += 1
+                        elif stage == 'phash_ambiguous':
+                            cascade_stats['phash_ambiguous'] += 1
+                        elif 'clip' in stage:
+                            # Count as both ambiguous (went to CLIP) and CLIP analyzed
+                            cascade_stats['phash_ambiguous'] += 1
+                            cascade_stats['clip_analyzed'] += 1
+                            # Track unique products that had CLIP analysis
+                            cascade_stats['products_passed_to_clip'].add(decision.product1_id)
+                            cascade_stats['products_passed_to_clip'].add(decision.product2_id)
+                            
+                            # Count specific CLIP outcomes
+                            if decision.decision_stage == 'CLIP_DUPLICATE':
+                                cascade_stats['clip_confirmed'] += 1
+                            elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
+                                cascade_stats['clip_review_suspect'] += 1
+                        
+                        # Count images analyzed in this pair
+                        if decision.phash_difference is not None:
+                            # This pair had pHash analysis, so images were processed
+                            cascade_stats['total_images_phash'] += 2  # Approximate, could be more
+                        
+                        if decision.clip_similarity is not None:
+                            # This pair had CLIP analysis
+                            cascade_stats['total_images_clip'] += 2  # Approximate, could be more
+                        
+                        # Collect pairs for grouping and review
+                        if decision.is_duplicate:
+                            duplicate_pairs.append({
+                                'product1_id': decision.product1_id,
+                                'product2_id': decision.product2_id,
+                                'phash_difference': decision.phash_difference,
+                                'clip_similarity': decision.clip_similarity,
+                                'confidence': decision.confidence,
+                                'stage': decision.decision_stage
+                            })
                         elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
-                            cascade_stats['clip_review_suspect'] += 1
+                            # Collect review suspect pairs for manual review
+                            review_suspect_pairs.append({
+                                'product1_id': decision.product1_id,
+                                'product2_id': decision.product2_id,
+                                'phash_difference': decision.phash_difference,
+                                'clip_similarity': decision.clip_similarity,
+                                'confidence': decision.confidence,
+                                'stage': decision.decision_stage
+                            })
                     
-                    # Count images analyzed in this pair
-                    if decision.phash_difference is not None:
-                        # This pair had pHash analysis, so images were processed
-                        cascade_stats['total_images_phash'] += 2  # Approximate, could be more
-                    
-                    if decision.clip_similarity is not None:
-                        # This pair had CLIP analysis
-                        cascade_stats['total_images_clip'] += 2  # Approximate, could be more
-                    
-                    # Collect pairs for grouping and review
-                    if decision.is_duplicate:
-                        duplicate_pairs.append({
-                            'product1_id': decision.product1_id,
-                            'product2_id': decision.product2_id,
-                            'phash_difference': decision.phash_difference,
-                            'clip_similarity': decision.clip_similarity,
-                            'confidence': decision.confidence,
-                            'stage': decision.decision_stage
-                        })
-                    elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
-                        # Collect review suspect pairs for manual review
-                        review_suspect_pairs.append({
-                            'product1_id': decision.product1_id,
-                            'product2_id': decision.product2_id,
-                            'phash_difference': decision.phash_difference,
-                            'clip_similarity': decision.clip_similarity,
-                            'confidence': decision.confidence,
-                            'stage': decision.decision_stage
-                        })
+                    except Exception as e:
+                        p1, p2 = future_to_pair[future]
+                        logger.error(f"Error analyzing pair ({p1}, {p2}): {e}")
+                        # Continue with other pairs
             
             logger.info(f"Cascade analysis complete: {len(duplicate_pairs)} duplicate pairs, {len(review_suspect_pairs)} review suspect pairs found")
             logger.info(f"📊 Products analyzed: {cascade_stats['total_products_analyzed']} total products (all via pHash)")

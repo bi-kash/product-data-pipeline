@@ -114,11 +114,68 @@ class CLIPAnalyzer:
                 logger.warning(f"Failed to load cached embedding for {os.path.basename(image_path)}: {e}")
         
         try:
-            # Load and preprocess image
+            # Check if image file exists locally
             if not os.path.exists(image_path):
-                logger.error(f"Image file not found: {image_path}")
-                return None
+                logger.warning(f"Image file not found locally: {image_path}, attempting to download...")
+                
+                # Try to download the image from database
+                from src.common.database import get_db_session, ProductImage
+                from src.ingestion.image_download import ImageDownloader
+                import re
+                
+                # Extract product_id from path (e.g., downloads/images/1005006461132681/...)
+                match = re.search(r'(\d{16})', image_path)
+                if match:
+                    product_id = match.group(1)
+                    
+                    # Get image URL from database
+                    with get_db_session() as db:
+                        # Try to match by local_file_path
+                        img_record = db.query(ProductImage).filter(
+                            ProductImage.product_id == product_id,
+                            ProductImage.local_file_path.like(f"%{os.path.basename(image_path)}")
+                        ).first()
+                        
+                        if img_record and img_record.image_url:
+                            logger.info(f"Found image URL in database: {img_record.image_url}")
+                            
+                            # Download the image
+                            downloader = ImageDownloader()
+                            local_path, phash, status, width, height = downloader.download_image(
+                                img_record.image_url,
+                                product_id,
+                                img_record.sku_id,
+                                img_record.image_role
+                            )
+                            
+                            if status == 'downloaded' and local_path:
+                                # Update image_path to the newly downloaded file
+                                # Convert relative to absolute if needed
+                                if not os.path.isabs(local_path):
+                                    current_file = os.path.abspath(__file__)
+                                    src_dir = os.path.dirname(os.path.dirname(current_file))
+                                    project_root = os.path.dirname(src_dir)
+                                    image_path = os.path.join(project_root, local_path)
+                                else:
+                                    image_path = local_path
+                                    
+                                logger.info(f"Successfully downloaded image to: {image_path}")
+                            else:
+                                logger.error(f"Failed to download image: {img_record.image_url}")
+                                return None
+                        else:
+                            logger.error(f"Could not find image record in database for: {image_path}")
+                            return None
+                else:
+                    logger.error(f"Could not extract product_id from path: {image_path}")
+                    return None
+                
+                # Final check after download attempt
+                if not os.path.exists(image_path):
+                    logger.error(f"Image file still not found after download attempt: {image_path}")
+                    return None
             
+            # Load and preprocess image
             image = Image.open(image_path).convert('RGB')
             image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
             
