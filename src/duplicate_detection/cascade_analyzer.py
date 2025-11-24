@@ -373,9 +373,15 @@ class IntelligentCascadeAnalyzer:
             
             for emb1 in embeddings1:
                 for emb2 in embeddings2:
-                    # Cosine similarity
-                    similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
-                    max_similarity = max(max_similarity, similarity)
+                    # Cosine similarity (with zero-norm protection)
+                    norm1 = np.linalg.norm(emb1)
+                    norm2 = np.linalg.norm(emb2)
+                    
+                    if norm1 > 0 and norm2 > 0:
+                        similarity = np.dot(emb1, emb2) / (norm1 * norm2)
+                        max_similarity = max(max_similarity, similarity)
+                    else:
+                        logger.warning(f"Skipping similarity calculation due to zero norm embedding")
             
             logger.debug(f"CLIP similarity for {product1_id} vs {product2_id}: {max_similarity:.3f}")
             return float(max_similarity)

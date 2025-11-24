@@ -80,7 +80,6 @@ class MasterSelector:
                 'seller_id': product.shop_id or '',
                 'created_at': product.first_seen_at,
                 'final_price_eur': float(product.target_sale_price or 0),
-                'original_price_eur': float(product.original_price or 0),
                 'rating': float(product.evaluate_rate or 0),
                 'order_count': 0  # Not available in FilteredProduct
             }
@@ -114,15 +113,13 @@ class MasterSelector:
         sorted_candidates = sorted(candidates, key=lambda x: (
             -x.get('rating', 0),           # Higher rating first (descending)
             -x.get('order_count', 0),      # Higher order count first (descending)  
-            x.get('original_price_eur', float('inf')),  # Lower original price first (ascending)
             x.get('product_id', '')        # Lexicographically first (ascending)
         ))
         
         selected = sorted_candidates[0]
         logger.debug(f"Tie-breaker selected: {selected['product_id']} "
                     f"(rating: {selected.get('rating', 0)}, "
-                    f"orders: {selected.get('order_count', 0)}, "
-                    f"orig_price: {selected.get('original_price_eur', 0)})")
+                    f"orders: {selected.get('order_count', 0)})")
         
         return selected['product_id']
 

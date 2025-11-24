@@ -209,3 +209,4 @@ __marimo__/
 *.ipynb
 embeddings/
 data/
+*.db

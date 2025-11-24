@@ -127,8 +127,13 @@ class CLIPAnalyzer:
                 embedding = self.model.encode_image(image_tensor)
                 embedding = embedding.cpu().numpy().flatten()
                 
-                # Normalize embedding
-                embedding = embedding / np.linalg.norm(embedding)
+                # Normalize embedding (handle zero norm)
+                norm = np.linalg.norm(embedding)
+                if norm > 0:
+                    embedding = embedding / norm
+                else:
+                    logger.warning(f"Zero norm embedding for {image_path}, returning zero vector")
+                    return np.zeros_like(embedding)
             
             # Cache embedding using filename-based key
             try:
@@ -156,10 +161,17 @@ class CLIPAnalyzer:
             Cosine similarity score (0-1), clamped to valid range to handle floating-point precision
         """
         try:
+            # Calculate norms
+            norm1 = np.linalg.norm(embedding1)
+            norm2 = np.linalg.norm(embedding2)
+            
+            # Handle zero norms
+            if norm1 == 0 or norm2 == 0:
+                logger.warning("One or both embeddings have zero norm, returning 0 similarity")
+                return 0.0
+            
             # Calculate cosine similarity
-            similarity = np.dot(embedding1, embedding2) / (
-                np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
-            )
+            similarity = np.dot(embedding1, embedding2) / (norm1 * norm2)
             # Clamp to valid range [-1, 1] to handle floating-point precision errors
             similarity = np.clip(similarity, -1.0, 1.0)
             return float(similarity)
