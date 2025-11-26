@@ -93,16 +93,18 @@ def filter_with_scraper(seller_ids=None, limit=None):
     return stats
 
 
-def detect_duplicates(limit=None, dry_run=False, phash_only=False):
+def detect_duplicates(limit=None, dry_run=False, phash_only=False, full=False):
     """Run duplicate detection and master selection."""
-    logger.info(f"Starting duplicate detection (limit: {limit}, dry_run: {dry_run}, phash_only: {phash_only})")
+    mode = "full" if full else "incremental"
+    logger.info(f"Starting duplicate detection (limit: {limit}, dry_run: {dry_run}, phash_only: {phash_only}, mode: {mode})")
     
     try:
         # Initialize detector with optional CLIP disable
         detector = DuplicateDetector(clip_enabled=not phash_only)
         
         with get_db_session() as db:
-            results = detector.detect_duplicates(db, limit=limit, dry_run=dry_run)
+            # Use incremental mode by default (incremental=True unless --full flag)
+            results = detector.detect_duplicates(db, limit=limit, dry_run=dry_run, incremental=not full)
             
             print(f"\n🔍 Duplicate Detection Results:")
             print(f"  ⏱️  Processing time: {results['total_time']:.2f} seconds")
@@ -792,6 +794,11 @@ def main():
         action="store_true",
         help="Use only pHash analysis, skip CLIP"
     )
+    detect_duplicates_parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Full analysis mode - reanalyze all products (default: incremental mode)"
+    )
 
     detect_status_parser = subparsers.add_parser(
         "detect:status", help="Show duplicate detection status and statistics"
@@ -988,7 +995,8 @@ def main():
         detect_duplicates(
             limit=args.limit,
             dry_run=args.dry_run,
-            phash_only=args.phash_only
+            phash_only=args.phash_only,
+            full=args.full
         )
     elif args.command == "detect:status":
         detect_status()

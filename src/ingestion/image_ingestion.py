@@ -342,12 +342,16 @@ class ImageIngestionEngine:
             filtered_products = db.query(FilteredProduct).all()
             logger.info(f"Found {len(filtered_products)} filtered products to process")
 
+            # Batch load all products in single query
+            product_ids = [fp.product_id for fp in filtered_products]
+            products = db.query(Product).filter(Product.product_id.in_(product_ids)).all()
+            products_map = {p.product_id: p for p in products}
+            logger.info(f"Loaded {len(products_map)} products for processing")
+
             for filtered_product in filtered_products:
                 try:
-                    # Get the original product data
-                    product = db.query(Product).filter(
-                        Product.product_id == filtered_product.product_id
-                    ).first()
+                    # Get the original product data from preloaded map
+                    product = products_map.get(filtered_product.product_id)
 
                     if not product:
                         logger.warning(f"Product {filtered_product.product_id} not found in products table")

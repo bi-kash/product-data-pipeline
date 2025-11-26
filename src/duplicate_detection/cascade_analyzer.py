@@ -146,34 +146,113 @@ class IntelligentCascadeAnalyzer:
         # Simplified approach: skip all metadata shortcuts, use only pHash -> CLIP cascade
         return None
     
-    def _analyze_phash_cascade(self, product1_id: str, product2_id: str, db: Session) -> CascadeDecision:
+    def _get_allowed_roles(self) -> List[str]:
+        """
+        Get allowed image roles from environment configuration.
+        
+        Returns:
+            List of allowed image roles
+        """
+        import os
+        
+        # Check if specific roles should be skipped
+        skip_roles_config = os.getenv("CLIP_SKIP_ROLES", "").strip().lower()
+        skip_roles = [r.strip() for r in skip_roles_config.split(",") if r.strip()]
+        
+        # Get role configuration
+        roles_config = os.getenv("CLIP_IMAGE_ROLES", "all").strip().lower()
+        
+        if roles_config == "all":
+            # Use all roles except skipped ones
+            all_roles = ['hero', 'variant', 'gallery', 'other']
+            allowed_roles = [r for r in all_roles if r not in skip_roles]
+        else:
+            # Use specific roles, excluding skipped ones
+            allowed_roles = [r.strip() for r in roles_config.split(",") if r.strip()]
+            allowed_roles = [r for r in allowed_roles if r not in skip_roles]
+        
+        if not allowed_roles:
+            # Default to hero and variant if no valid roles
+            logger.warning("No valid image roles configured, defaulting to hero and variant")
+            allowed_roles = ['hero', 'variant']
+        
+        logger.debug(f"Using image roles for duplicate detection: {allowed_roles}")
+        return allowed_roles
+    
+    def preload_product_images(self, product_ids: List[str], db: Session) -> Dict[str, List]:
+        """
+        Preload all product images once for efficient batch processing.
+        
+        Args:
+            product_ids: List of product IDs to load images for
+            db: Database session
+            
+        Returns:
+            Dict mapping product_id to list of ProductImage objects
+        """
+        logger.info(f"Preloading images for {len(product_ids)} products...")
+        
+        # Get allowed roles from configuration
+        allowed_roles = self._get_allowed_roles()
+        
+        # Load all images in one query
+        all_images = db.query(ProductImage).filter(
+            ProductImage.product_id.in_(product_ids),
+            ProductImage.phash.isnot(None),
+            ProductImage.image_role.in_(allowed_roles)
+        ).all()
+        
+        # Organize by product_id
+        product_images = {}
+        for img in all_images:
+            if img.product_id not in product_images:
+                product_images[img.product_id] = []
+            # Filter by quality
+            if self._check_image_quality(img):
+                product_images[img.product_id].append(img)
+        
+        # Limit images per product
+        for product_id in product_images:
+            product_images[product_id] = product_images[product_id][:self.config.max_images_per_product]
+        
+        logger.info(f"Preloaded {len(all_images)} images for {len(product_images)} products")
+        return product_images
+    
+    def _analyze_phash_cascade(self, product1_id: str, product2_id: str, 
+                               product_images: Dict[str, List] = None, db: Session = None) -> CascadeDecision:
         """
         Perform pHash analysis with cascade decision logic.
         
         Args:
             product1_id: First product ID
             product2_id: Second product ID
-            db: Database session
+            product_images: Preloaded dict of product_id -> list of ProductImage objects
+            db: Database session (for backwards compatibility, will be removed)
             
         Returns:
             CascadeDecision with pHash results and next steps
         """
-        # Get images for both products with quality filtering
-        images1 = db.query(ProductImage).filter(
-            ProductImage.product_id == product1_id,
-            ProductImage.phash.isnot(None),
-            ProductImage.image_role.in_(['hero', 'variant'])  # Focus on key images
-        ).limit(self.config.max_images_per_product).all()
-        
-        images2 = db.query(ProductImage).filter(
-            ProductImage.product_id == product2_id,
-            ProductImage.phash.isnot(None),
-            ProductImage.image_role.in_(['hero', 'variant'])
-        ).limit(self.config.max_images_per_product).all()
-        
-        # Filter by quality
-        images1 = [img for img in images1 if self._check_image_quality(img)]
-        images2 = [img for img in images2 if self._check_image_quality(img)]
+        # Get images from preloaded data or query database (backwards compatibility)
+        if product_images is not None:
+            images1 = product_images.get(product1_id, [])
+            images2 = product_images.get(product2_id, [])
+        else:
+            # Fallback to database query (old behavior)
+            images1 = db.query(ProductImage).filter(
+                ProductImage.product_id == product1_id,
+                ProductImage.phash.isnot(None),
+                ProductImage.image_role.in_(['hero', 'variant'])
+            ).limit(self.config.max_images_per_product).all()
+            
+            images2 = db.query(ProductImage).filter(
+                ProductImage.product_id == product2_id,
+                ProductImage.phash.isnot(None),
+                ProductImage.image_role.in_(['hero', 'variant'])
+            ).limit(self.config.max_images_per_product).all()
+            
+            # Filter by quality
+            images1 = [img for img in images1 if self._check_image_quality(img)]
+            images2 = [img for img in images2 if self._check_image_quality(img)]
         
         if not images1 or not images2:
             return CascadeDecision(
@@ -256,13 +335,16 @@ class IntelligentCascadeAnalyzer:
                 skipped_clip=False
             )
     
-    def _analyze_clip_decision(self, decision: CascadeDecision, db: Session) -> CascadeDecision:
+    def _analyze_clip_decision(self, decision: CascadeDecision, 
+                              product_images: Dict[str, List] = None, 
+                              db: Session = None) -> CascadeDecision:
         """
         Perform CLIP analysis for ambiguous cases.
         
         Args:
             decision: Existing cascade decision from pHash stage
-            db: Database session
+            product_images: Preloaded dict of product_id -> list of ProductImage objects
+            db: Database session (for backwards compatibility)
             
         Returns:
             Updated CascadeDecision with CLIP results
@@ -276,7 +358,7 @@ class IntelligentCascadeAnalyzer:
         # Get CLIP similarity for the product pair using dedicated pairwise comparison
         try:
             clip_similarity = self._calculate_clip_similarity_for_pair(
-                decision.product1_id, decision.product2_id, db
+                decision.product1_id, decision.product2_id, product_images, db
             )
             
             if clip_similarity is None:
@@ -316,7 +398,9 @@ class IntelligentCascadeAnalyzer:
         
         return decision
 
-    def _calculate_clip_similarity_for_pair(self, product1_id: str, product2_id: str, db: Session) -> Optional[float]:
+    def _calculate_clip_similarity_for_pair(self, product1_id: str, product2_id: str, 
+                                            product_images: Dict[str, List] = None,
+                                            db: Session = None) -> Optional[float]:
         """
         Calculate CLIP similarity for a specific product pair only.
         
@@ -326,28 +410,34 @@ class IntelligentCascadeAnalyzer:
         Args:
             product1_id: First product ID
             product2_id: Second product ID
-            db: Database session
+            product_images: Preloaded dict of product_id -> list of ProductImage objects
+            db: Database session (for backwards compatibility)
             
         Returns:
             CLIP similarity score (0-1) or None if comparison failed
         """
         try:
-            # Get images for both products
-            images1 = db.query(ProductImage).filter(
-                ProductImage.product_id == product1_id,
-                ProductImage.local_file_path.isnot(None),
-                ProductImage.image_role.in_(['hero', 'variant'])
-            ).limit(self.config.max_images_per_product).all()
-            
-            images2 = db.query(ProductImage).filter(
-                ProductImage.product_id == product2_id,
-                ProductImage.local_file_path.isnot(None),
-                ProductImage.image_role.in_(['hero', 'variant'])
-            ).limit(self.config.max_images_per_product).all()
-            
-            # Filter by quality
-            images1 = [img for img in images1 if self._check_image_quality(img)]
-            images2 = [img for img in images2 if self._check_image_quality(img)]
+            # Get images from preloaded data or database
+            if product_images is not None:
+                images1 = [img for img in product_images.get(product1_id, []) if img.local_file_path]
+                images2 = [img for img in product_images.get(product2_id, []) if img.local_file_path]
+            else:
+                # Fallback to database query
+                images1 = db.query(ProductImage).filter(
+                    ProductImage.product_id == product1_id,
+                    ProductImage.local_file_path.isnot(None),
+                    ProductImage.image_role.in_(['hero', 'variant'])
+                ).limit(self.config.max_images_per_product).all()
+                
+                images2 = db.query(ProductImage).filter(
+                    ProductImage.product_id == product2_id,
+                    ProductImage.local_file_path.isnot(None),
+                    ProductImage.image_role.in_(['hero', 'variant'])
+                ).limit(self.config.max_images_per_product).all()
+                
+                # Filter by quality
+                images1 = [img for img in images1 if self._check_image_quality(img)]
+                images2 = [img for img in images2 if self._check_image_quality(img)]
             
             if not images1 or not images2:
                 logger.debug(f"Insufficient images for CLIP comparison: {product1_id} ({len(images1)} imgs) vs {product2_id} ({len(images2)} imgs)")
@@ -396,21 +486,32 @@ class IntelligentCascadeAnalyzer:
             logger.error(f"Error calculating CLIP similarity for {product1_id} vs {product2_id}: {e}")
             return None
     
-    def analyze_product_pair(self, product1_id: str, product2_id: str, db: Session) -> CascadeDecision:
+    def analyze_product_pair(self, product1_id: str, product2_id: str, 
+                            product_images: Dict[str, List] = None,
+                            products_metadata: Dict[str, any] = None,
+                            db: Session = None) -> CascadeDecision:
         """
         Analyze a product pair using the intelligent cascade.
         
         Args:
             product1_id: First product ID
             product2_id: Second product ID
-            db: Database session
+            product_images: Preloaded dict of product_id -> list of ProductImage objects
+            products_metadata: Preloaded dict of product_id -> FilteredProduct objects
+            db: Database session (for backwards compatibility)
             
         Returns:
             CascadeDecision with final duplicate determination
         """
-        # Get product metadata
-        product1 = db.query(FilteredProduct).filter(FilteredProduct.product_id == product1_id).first()
-        product2 = db.query(FilteredProduct).filter(FilteredProduct.product_id == product2_id).first()
+        # Get product metadata from preloaded data or database
+        if products_metadata:
+            product1 = products_metadata.get(product1_id)
+            product2 = products_metadata.get(product2_id)
+        elif db:
+            product1 = db.query(FilteredProduct).filter(FilteredProduct.product_id == product1_id).first()
+            product2 = db.query(FilteredProduct).filter(FilteredProduct.product_id == product2_id).first()
+        else:
+            product1 = product2 = None
         
         if not product1 or not product2:
             return CascadeDecision(
@@ -429,12 +530,12 @@ class IntelligentCascadeAnalyzer:
             return metadata_decision
         
         # Stage 2: pHash cascade analysis
-        phash_decision = self._analyze_phash_cascade(product1_id, product2_id, db)
+        phash_decision = self._analyze_phash_cascade(product1_id, product2_id, product_images, db)
         
         # Stage 3: CLIP analysis if needed
         if not phash_decision.skipped_clip:
             logger.debug(f"Escalating to CLIP: {product1_id} vs {product2_id} (pHash: {phash_decision.phash_difference})")
-            return self._analyze_clip_decision(phash_decision, db)
+            return self._analyze_clip_decision(phash_decision, product_images, db)
         else:
             logger.debug(f"Skipping CLIP: {product1_id} vs {product2_id} (pHash: {phash_decision.phash_difference}, stage: {phash_decision.decision_stage})")
         

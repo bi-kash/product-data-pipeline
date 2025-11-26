@@ -118,15 +118,12 @@ class AirtableDataSync:
                 # Only sync variants for products that were actually synced
                 logger.info(f"Syncing variants for {len(synced_product_ids)} synced products")
                 
-                # Get variants in the same order as synced products
-                variants = []
-                for product_id in synced_product_ids:
-                    product_variants = db.query(ProductVariant).filter(
-                        ProductVariant.product_id == product_id
-                    ).all()
-                    variants.extend(product_variants)
+                # Batch load all variants in single query
+                variants = db.query(ProductVariant).filter(
+                    ProductVariant.product_id.in_(synced_product_ids)
+                ).all()
                 
-                # Apply limit if specified (after ordering)
+                # Apply limit if specified (after loading)
                 if limit:
                     variants = variants[:limit]
                     

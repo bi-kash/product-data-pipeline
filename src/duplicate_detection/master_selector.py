@@ -55,6 +55,47 @@ class MasterSelector:
             logger.error(f"Error getting target sale price for {product_id}: {e}")
             return None
 
+    def calculate_lowest_prices_batch(self, db: Session, product_ids: List[str]) -> Dict[str, Optional[float]]:
+        """
+        Get the target sale prices for multiple products in a single batch query.
+        
+        Args:
+            db: Database session
+            product_ids: List of product IDs to get prices for
+            
+        Returns:
+            Dict mapping product_id to target sale price
+        """
+        try:
+            if not product_ids:
+                return {}
+            
+            # Batch load all products in single query
+            products = db.query(FilteredProduct).filter(
+                FilteredProduct.product_id.in_(product_ids)
+            ).all()
+            
+            # Create price map
+            prices_map = {}
+            for product in products:
+                try:
+                    prices_map[product.product_id] = float(product.target_sale_price or 0)
+                except (TypeError, ValueError):
+                    prices_map[product.product_id] = None
+            
+            # Add None for products not found
+            for product_id in product_ids:
+                if product_id not in prices_map:
+                    logger.warning(f"Product {product_id} not found in filtered_products")
+                    prices_map[product_id] = None
+            
+            logger.debug(f"Batch loaded prices for {len(prices_map)} products")
+            return prices_map
+            
+        except Exception as e:
+            logger.error(f"Error batch loading prices: {e}")
+            return {pid: None for pid in product_ids}
+
     def get_product_metadata(self, db: Session, product_id: str) -> Dict:
         """
         Get metadata for a product to use in tie-breaking.

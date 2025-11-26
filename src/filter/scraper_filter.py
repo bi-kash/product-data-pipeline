@@ -271,15 +271,17 @@ class ScraperBasedFilter:
         """
         new_count = 0
         
+        # Batch check existing scraped products in single query
+        existing_products = db.query(ScrapedProduct).filter(
+            ScrapedProduct.product_id.in_(product_ids),
+            ScrapedProduct.seller_id == seller_id
+        ).all()
+        existing_product_ids = {sp.product_id for sp in existing_products}
+        logger.debug(f"Found {len(existing_product_ids)} existing scraped products")
+        
         for product_id in product_ids:
             try:
-                # Check if this product is already in scraped_products
-                existing = db.query(ScrapedProduct).filter(
-                    ScrapedProduct.product_id == product_id,
-                    ScrapedProduct.seller_id == seller_id
-                ).first()
-                
-                if not existing:
+                if product_id not in existing_product_ids:
                     # Create new scraped product entry
                     scraped_product = ScrapedProduct(
                         product_id=product_id,

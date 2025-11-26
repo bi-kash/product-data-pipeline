@@ -87,6 +87,7 @@ class DuplicateDetector:
                             duplicate_product_ids: Set[str]):
         """
         Mark products that are not duplicates as UNIQUE.
+        Uses upsert logic: updates existing records or inserts new ones.
         
         Args:
             db: Database session
@@ -97,19 +98,46 @@ class DuplicateDetector:
         
         logger.info(f"Marking {len(unique_product_ids)} products as UNIQUE")
         
+        # Check which products already exist in product_status
+        existing_statuses = db.query(ProductStatus).filter(
+            ProductStatus.product_id.in_(unique_product_ids)
+        ).all()
+        existing_product_ids = {status.product_id for status in existing_statuses}
+        
+        # Batch calculate prices for all unique products at once
+        prices_map = self.master_selector.calculate_lowest_prices_batch(db, list(unique_product_ids))
+        
+        updates = 0
+        inserts = 0
+        
         for product_id in unique_product_ids:
-            # Calculate total landed cost for unique products too
-            price = self.master_selector.calculate_lowest_price(db, product_id)
+            price = prices_map.get(product_id)
             
-            unique_status = ProductStatus(
-                product_id=product_id,
-                status='UNIQUE',
-                duplicate_master_id=None,
-                total_landed_cost=price
-            )
-            db.add(unique_status)
+            if product_id in existing_product_ids:
+                # Update existing record
+                db.query(ProductStatus).filter(
+                    ProductStatus.product_id == product_id
+                ).update({
+                    'status': 'UNIQUE',
+                    'duplicate_master_id': None,
+                    'total_landed_cost': price,
+                    'phash_difference': None,
+                    'clip_similarity': None
+                }, synchronize_session=False)
+                updates += 1
+            else:
+                # Insert new record
+                unique_status = ProductStatus(
+                    product_id=product_id,
+                    status='UNIQUE',
+                    duplicate_master_id=None,
+                    total_landed_cost=price
+                )
+                db.add(unique_status)
+                inserts += 1
         
         db.commit()
+        logger.info(f"UNIQUE products: {inserts} inserted, {updates} updated")
 
     def mark_review_suspect_products(self, db: Session, review_suspect_product_ids: Set[str], 
                                    review_suspect_pairs: List[Dict] = None):
@@ -179,9 +207,21 @@ class DuplicateDetector:
                         else:
                             master_id_lookup[product1_id] = product2_id
         
+        # Check which products already exist in product_status
+        existing_statuses = db.query(ProductStatus).filter(
+            ProductStatus.product_id.in_(review_suspect_product_ids)
+        ).all()
+        existing_product_ids = {status.product_id for status in existing_statuses}
+        
+        # Batch calculate prices for all review suspect products at once
+        prices_map = self.master_selector.calculate_lowest_prices_batch(db, list(review_suspect_product_ids))
+        
+        updates = 0
+        inserts = 0
+        
         for product_id in review_suspect_product_ids:
-            # Calculate total landed cost for review suspect products
-            price = self.master_selector.calculate_lowest_price(db, product_id)
+            # Get price from preloaded map
+            price = prices_map.get(product_id)
             
             # Get master assignment, find cheapest existing master if not found (orphaned review suspect)
             master_id = master_id_lookup.get(product_id)
@@ -195,17 +235,33 @@ class DuplicateDetector:
                     logger.error(f"No existing masters found for orphaned REVIEW_SUSPECT product {product_id}, skipping")
                     continue  # Skip this product if no masters exist
             
-            review_status = ProductStatus(
-                product_id=product_id,
-                status='REVIEW_SUSPECT',
-                duplicate_master_id=master_id,
-                total_landed_cost=price,
-                phash_difference=phash_difference_lookup.get(product_id),
-                clip_similarity=clip_similarity_lookup.get(product_id)
-            )
-            db.add(review_status)
+            if product_id in existing_product_ids:
+                # Update existing record
+                db.query(ProductStatus).filter(
+                    ProductStatus.product_id == product_id
+                ).update({
+                    'status': 'REVIEW_SUSPECT',
+                    'duplicate_master_id': master_id,
+                    'total_landed_cost': price,
+                    'phash_difference': phash_difference_lookup.get(product_id),
+                    'clip_similarity': clip_similarity_lookup.get(product_id)
+                }, synchronize_session=False)
+                updates += 1
+            else:
+                # Insert new record
+                review_status = ProductStatus(
+                    product_id=product_id,
+                    status='REVIEW_SUSPECT',
+                    duplicate_master_id=master_id,
+                    total_landed_cost=price,
+                    phash_difference=phash_difference_lookup.get(product_id),
+                    clip_similarity=clip_similarity_lookup.get(product_id)
+                )
+                db.add(review_status)
+                inserts += 1
         
         db.commit()
+        logger.info(f"REVIEW_SUSPECT products: {inserts} inserted, {updates} updated")
 
     def _find_existing_master_for_product(self, db: Session, product_id: str) -> Optional[str]:
         """
@@ -253,6 +309,7 @@ class DuplicateDetector:
     def save_status_assignments(self, db: Session, status_assignments: List[Dict]):
         """
         Save status assignments to the database.
+        Uses upsert logic: updates existing records or inserts new ones.
         
         Args:
             db: Database session
@@ -260,15 +317,110 @@ class DuplicateDetector:
         """
         logger.info(f"Saving {len(status_assignments)} status assignments to database")
         
+        # Collect all product IDs to check which already exist
+        product_ids = [a['product_id'] for a in status_assignments]
+        existing_statuses = db.query(ProductStatus).filter(
+            ProductStatus.product_id.in_(product_ids)
+        ).all()
+        existing_product_ids = {status.product_id for status in existing_statuses}
+        
+        updates = 0
+        inserts = 0
+        
         for assignment in status_assignments:
-            status_entry = ProductStatus(**assignment)
-            db.add(status_entry)
+            product_id = assignment['product_id']
+            
+            if product_id in existing_product_ids:
+                # Update existing record
+                db.query(ProductStatus).filter(
+                    ProductStatus.product_id == product_id
+                ).update({
+                    'status': assignment['status'],
+                    'duplicate_master_id': assignment.get('duplicate_master_id'),
+                    'total_landed_cost': assignment.get('total_landed_cost'),
+                    'phash_difference': assignment.get('phash_difference'),
+                    'clip_similarity': assignment.get('clip_similarity')
+                }, synchronize_session=False)
+                updates += 1
+            else:
+                # Insert new record
+                status_entry = ProductStatus(**assignment)
+                db.add(status_entry)
+                inserts += 1
         
         db.commit()
-        logger.info("Status assignments saved successfully")
+        logger.info(f"Status assignments saved: {inserts} inserted, {updates} updated")
+    
+    def _update_cascade_stats(self, decision, cascade_stats, duplicate_pairs, review_suspect_pairs):
+        """
+        Update cascade statistics and collect duplicate/review pairs.
+        
+        Args:
+            decision: CascadeDecision object
+            cascade_stats: Statistics dictionary to update
+            duplicate_pairs: List to append duplicate pairs to
+            review_suspect_pairs: List to append review suspect pairs to
+        """
+        # Update statistics
+        stage = decision.decision_stage.lower()
+        if 'metadata' in stage:
+            cascade_stats['metadata_shortcuts'] += 1
+        elif stage == 'phash_duplicate':
+            # Further categorize by exact vs near duplicates
+            if decision.phash_difference == 0:
+                cascade_stats['phash_exact'] += 1
+            else:
+                cascade_stats['phash_near'] += 1
+        elif stage == 'phash_different':
+            cascade_stats['phash_different'] += 1
+        elif stage == 'phash_ambiguous':
+            cascade_stats['phash_ambiguous'] += 1
+        elif 'clip' in stage:
+            # Count as both ambiguous (went to CLIP) and CLIP analyzed
+            cascade_stats['phash_ambiguous'] += 1
+            cascade_stats['clip_analyzed'] += 1
+            # Track unique products that had CLIP analysis
+            cascade_stats['products_passed_to_clip'].add(decision.product1_id)
+            cascade_stats['products_passed_to_clip'].add(decision.product2_id)
+            
+            # Count specific CLIP outcomes
+            if decision.decision_stage == 'CLIP_DUPLICATE':
+                cascade_stats['clip_confirmed'] += 1
+            elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
+                cascade_stats['clip_review_suspect'] += 1
+        
+        # Count images analyzed in this pair
+        if decision.phash_difference is not None:
+            # This pair had pHash analysis, so images were processed
+            cascade_stats['total_images_phash'] += 2  # Approximate, could be more
+        
+        if decision.clip_similarity is not None:
+            # This pair had CLIP analysis
+            cascade_stats['total_images_clip'] += 2  # Approximate, could be more
+        
+        # Collect pairs for grouping and review
+        if decision.is_duplicate:
+            duplicate_pairs.append({
+                'product1_id': decision.product1_id,
+                'product2_id': decision.product2_id,
+                'phash_difference': decision.phash_difference,
+                'clip_similarity': decision.clip_similarity,
+                'confidence': decision.confidence,
+                'stage': decision.decision_stage
+            })
+        elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
+            # Collect review suspect pairs for manual review
+            review_suspect_pairs.append({
+                'product1_id': decision.product1_id,
+                'product2_id': decision.product2_id,
+                'phash_difference': decision.phash_difference,
+                'clip_similarity': decision.clip_similarity,
+                'confidence': decision.confidence,
+                'stage': decision.decision_stage
+            })
 
     def detect_duplicates(self, db: Session, limit: int = None, 
-                         dry_run: bool = False) -> Dict:
+                         dry_run: bool = False, incremental: bool = True) -> Dict:
         """
         Run the intelligent cascade duplicate detection pipeline.
         
@@ -276,19 +428,20 @@ class DuplicateDetector:
             db: Database session
             limit: Limit number of products to process (for testing)
             dry_run: If True, don't save results to database
+            incremental: If True, only compare new products (not in product_status)
             
         Returns:
             Dict with complete detection results
         """
         start_time = time.time()
-        logger.info(f"Starting cascade duplicate detection (limit: {limit}, dry_run: {dry_run})")
+        logger.info(f"Starting cascade duplicate detection (limit: {limit}, dry_run: {dry_run}, incremental: {incremental})")
         
         try:
             # Ensure tables exist
             self.ensure_tables_exist()
             
             # Get all products to analyze
-            logger.info("� Getting products for analysis...")
+            logger.info("📊 Getting products for analysis...")
             query = db.query(FilteredProduct.product_id).join(ProductImage, 
                 FilteredProduct.product_id == ProductImage.product_id).distinct()
             
@@ -301,6 +454,28 @@ class DuplicateDetector:
             if len(all_product_ids) < 2:
                 logger.info("Not enough products for duplicate detection")
                 return self._create_empty_results(start_time, all_product_ids)
+            
+            # Identify new vs existing products for incremental detection
+            new_product_ids = []
+            existing_product_ids = []
+            
+            if incremental:
+                # Get products that already have status (already analyzed)
+                existing_statuses = db.query(ProductStatus.product_id).filter(
+                    ProductStatus.product_id.in_(all_product_ids)
+                ).all()
+                existing_product_ids = [row.product_id for row in existing_statuses]
+                new_product_ids = [pid for pid in all_product_ids if pid not in existing_product_ids]
+                
+                logger.info(f"🔍 Incremental mode: {len(new_product_ids)} new products, {len(existing_product_ids)} existing products")
+                
+                if len(new_product_ids) == 0:
+                    logger.info("✅ No new products to analyze - all products already have status")
+                    return self._create_empty_results(start_time, all_product_ids)
+            else:
+                # Full reanalysis mode - treat all as new
+                new_product_ids = all_product_ids
+                logger.info(f"🔄 Full analysis mode: analyzing all {len(all_product_ids)} products")
             
             # Cascade analysis - compare all pairs efficiently
             logger.info("🧬 Running intelligent cascade analysis...")
@@ -325,73 +500,99 @@ class DuplicateDetector:
                 'total_images_clip': 0
             }
             
-            total_pairs = len(all_product_ids) * (len(all_product_ids) - 1) // 2
-            cascade_stats['total_pairs'] = total_pairs
-            logger.info(f"Analyzing {total_pairs} product pairs...")
+            # Cascade analysis - compare all pairs efficiently
+            logger.info("🧬 Running intelligent cascade analysis...")
+            cascade_decisions = []
+            duplicate_pairs = []
+            review_suspect_pairs = []  # New: track review suspect pairs
             
-            # Analyze all pairs using cascade
-            for i, product1_id in enumerate(all_product_ids):
-                for j, product2_id in enumerate(all_product_ids[i+1:], start=i+1):
-                    decision = self.cascade_analyzer.analyze_product_pair(product1_id, product2_id, db)
-                    cascade_decisions.append(decision)
-                    
-                    # Update statistics
-                    stage = decision.decision_stage.lower()
-                    if 'metadata' in stage:
-                        cascade_stats['metadata_shortcuts'] += 1
-                    elif stage == 'phash_duplicate':
-                        # Further categorize by exact vs near duplicates
-                        if decision.phash_difference == 0:
-                            cascade_stats['phash_exact'] += 1
-                        else:
-                            cascade_stats['phash_near'] += 1
-                    elif stage == 'phash_different':
-                        cascade_stats['phash_different'] += 1
-                    elif stage == 'phash_ambiguous':
-                        cascade_stats['phash_ambiguous'] += 1
-                    elif 'clip' in stage:
-                        # Count as both ambiguous (went to CLIP) and CLIP analyzed
-                        cascade_stats['phash_ambiguous'] += 1
-                        cascade_stats['clip_analyzed'] += 1
-                        # Track unique products that had CLIP analysis
-                        cascade_stats['products_passed_to_clip'].add(decision.product1_id)
-                        cascade_stats['products_passed_to_clip'].add(decision.product2_id)
-                        
-                        # Count specific CLIP outcomes
-                        if decision.decision_stage == 'CLIP_DUPLICATE':
-                            cascade_stats['clip_confirmed'] += 1
-                        elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
-                            cascade_stats['clip_review_suspect'] += 1
-                    
-                    # Count images analyzed in this pair
-                    if decision.phash_difference is not None:
-                        # This pair had pHash analysis, so images were processed
-                        cascade_stats['total_images_phash'] += 2  # Approximate, could be more
-                    
-                    if decision.clip_similarity is not None:
-                        # This pair had CLIP analysis
-                        cascade_stats['total_images_clip'] += 2  # Approximate, could be more
-                    
-                    # Collect pairs for grouping and review
-                    if decision.is_duplicate:
-                        duplicate_pairs.append({
-                            'product1_id': decision.product1_id,
-                            'product2_id': decision.product2_id,
-                            'phash_difference': decision.phash_difference,
-                            'clip_similarity': decision.clip_similarity,
-                            'confidence': decision.confidence,
-                            'stage': decision.decision_stage
-                        })
-                    elif decision.decision_stage == 'CLIP_REVIEW_SUSPECT':
-                        # Collect review suspect pairs for manual review
-                        review_suspect_pairs.append({
-                            'product1_id': decision.product1_id,
-                            'product2_id': decision.product2_id,
-                            'phash_difference': decision.phash_difference,
-                            'clip_similarity': decision.clip_similarity,
-                            'confidence': decision.confidence,
-                            'stage': decision.decision_stage
-                        })
+            # Track cascade stage statistics
+            cascade_stats = {
+                'metadata_shortcuts': 0,
+                'phash_exact': 0,
+                'phash_near': 0,
+                'phash_different': 0,
+                'phash_ambiguous': 0,
+                'clip_analyzed': 0,
+                'clip_confirmed': 0,
+                'clip_review_suspect': 0,  # New: track review suspect cases
+                'total_pairs': 0,
+                'total_products_analyzed': len(all_product_ids),  # All products get pHash analysis
+                'products_passed_to_clip': set(),  # Track unique products that had CLIP analysis
+                'total_images_phash': 0,
+                'total_images_clip': 0,
+                'new_products': len(new_product_ids),
+                'existing_products': len(existing_product_ids),
+                'skipped_pairs': 0  # Pairs skipped due to incremental mode
+            }
+            
+            # Calculate pairs to analyze based on mode
+            if incremental and len(new_product_ids) > 0:
+                # Incremental: only compare new vs new, and new vs existing
+                # Pairs: new vs new
+                new_vs_new_pairs = len(new_product_ids) * (len(new_product_ids) - 1) // 2
+                # Pairs: new vs existing
+                new_vs_existing_pairs = len(new_product_ids) * len(existing_product_ids)
+                total_pairs = new_vs_new_pairs + new_vs_existing_pairs
+                
+                # Pairs we're skipping (existing vs existing)
+                skipped_pairs = len(existing_product_ids) * (len(existing_product_ids) - 1) // 2
+                cascade_stats['skipped_pairs'] = skipped_pairs
+                
+                logger.info(f"📊 Incremental analysis: {total_pairs} pairs to analyze "
+                           f"({new_vs_new_pairs} new-new, {new_vs_existing_pairs} new-existing), "
+                           f"skipping {skipped_pairs} existing pairs")
+            else:
+                total_pairs = len(all_product_ids) * (len(all_product_ids) - 1) // 2
+                logger.info(f"📊 Full analysis: {total_pairs} pairs to analyze")
+            
+            cascade_stats['total_pairs'] = total_pairs
+            
+            # Preload all product images and metadata once (for all products involved)
+            logger.info("⚡ Preloading all product data...")
+            product_images = self.cascade_analyzer.preload_product_images(all_product_ids, db)
+            
+            # Preload product metadata
+            products_list = db.query(FilteredProduct).filter(
+                FilteredProduct.product_id.in_(all_product_ids)
+            ).all()
+            products_metadata = {p.product_id: p for p in products_list}
+            logger.info(f"✅ Preloaded {len(product_images)} products with images and {len(products_metadata)} product metadata")
+            
+            # Analyze pairs based on mode
+            if incremental and len(new_product_ids) > 0:
+                # Compare new products among themselves
+                for i, product1_id in enumerate(new_product_ids):
+                    for j, product2_id in enumerate(new_product_ids[i+1:], start=i+1):
+                        decision = self.cascade_analyzer.analyze_product_pair(
+                            product1_id, product2_id, 
+                            product_images=product_images,
+                            products_metadata=products_metadata
+                        )
+                        cascade_decisions.append(decision)
+                        self._update_cascade_stats(decision, cascade_stats, duplicate_pairs, review_suspect_pairs)
+                
+                # Compare new products against existing products
+                for new_id in new_product_ids:
+                    for existing_id in existing_product_ids:
+                        decision = self.cascade_analyzer.analyze_product_pair(
+                            new_id, existing_id,
+                            product_images=product_images,
+                            products_metadata=products_metadata
+                        )
+                        cascade_decisions.append(decision)
+                        self._update_cascade_stats(decision, cascade_stats, duplicate_pairs, review_suspect_pairs)
+            else:
+                # Full analysis - compare all pairs
+                for i, product1_id in enumerate(all_product_ids):
+                    for j, product2_id in enumerate(all_product_ids[i+1:], start=i+1):
+                        decision = self.cascade_analyzer.analyze_product_pair(
+                            product1_id, product2_id, 
+                            product_images=product_images,
+                            products_metadata=products_metadata
+                        )
+                        cascade_decisions.append(decision)
+                        self._update_cascade_stats(decision, cascade_stats, duplicate_pairs, review_suspect_pairs)
             
             logger.info(f"Cascade analysis complete: {len(duplicate_pairs)} duplicate pairs, {len(review_suspect_pairs)} review suspect pairs found")
             logger.info(f"📊 Products analyzed: {cascade_stats['total_products_analyzed']} total products (all via pHash)")
@@ -404,6 +605,32 @@ class DuplicateDetector:
                        f"CLIP_analyzed={cascade_stats['clip_analyzed']}, "
                        f"CLIP_confirmed={cascade_stats['clip_confirmed']}, "
                        f"CLIP_review_suspect={cascade_stats['clip_review_suspect']}")
+            
+            # In incremental mode, load existing duplicate relationships to preserve them
+            if incremental and len(existing_product_ids) > 0:
+                logger.info("🔗 Loading existing duplicate relationships...")
+                existing_duplicates = db.query(ProductStatus).filter(
+                    ProductStatus.product_id.in_(existing_product_ids),
+                    ProductStatus.status.in_(['MASTER', 'DUPLICATE']),
+                    ProductStatus.duplicate_master_id.isnot(None)
+                ).all()
+                
+                # Add existing duplicate pairs to our duplicate_pairs list
+                existing_pairs_added = 0
+                for dup_status in existing_duplicates:
+                    if dup_status.status == 'DUPLICATE' and dup_status.duplicate_master_id:
+                        # Add the existing relationship as a "pair"
+                        duplicate_pairs.append({
+                            'product1_id': dup_status.product_id,
+                            'product2_id': dup_status.duplicate_master_id,
+                            'phash_difference': dup_status.phash_difference,
+                            'clip_similarity': dup_status.clip_similarity,
+                            'confidence': 1.0,
+                            'stage': 'EXISTING'
+                        })
+                        existing_pairs_added += 1
+                
+                logger.info(f"✅ Loaded {existing_pairs_added} existing duplicate relationships")
             
             # Group duplicate pairs into connected components
             duplicate_groups = self._group_duplicate_pairs(duplicate_pairs)
@@ -468,10 +695,13 @@ class DuplicateDetector:
             if not dry_run:
                 logger.info("💾 Saving results to database...")
                 
-                # Clear existing status for analyzed products to avoid conflicts
-                if all_product_ids:
-                    logger.info(f"Clearing existing status for {len(all_product_ids)} analyzed products")
-                    self.clear_existing_status(db, all_product_ids)
+                # In incremental mode, only clear status for NEW products
+                # In full mode, clear status for ALL analyzed products
+                products_to_clear = new_product_ids if (incremental and len(new_product_ids) > 0) else all_product_ids
+                
+                if products_to_clear:
+                    logger.info(f"Clearing existing status for {len(products_to_clear)} products")
+                    self.clear_existing_status(db, products_to_clear)
                 
                 # Generate and save status assignments
                 if master_results:
@@ -485,9 +715,13 @@ class DuplicateDetector:
                         all_duplicate_products.add(result['master_id'])
                         all_duplicate_products.update(result['duplicate_ids'])
                 
-                # Mark remaining products as unique (excluding review suspects)
-                unique_products = set(all_product_ids) - all_duplicate_products - review_suspect_product_ids
+                # In incremental mode: only mark NEW products as unique (don't touch existing products)
+                # In full mode: mark all analyzed products as unique
+                products_to_mark_unique = new_product_ids if (incremental and len(new_product_ids) > 0) else all_product_ids
+                unique_products = set(products_to_mark_unique) - all_duplicate_products - review_suspect_product_ids
+                
                 if unique_products:
+                    logger.info(f"Marking {len(unique_products)} products as UNIQUE")
                     self.mark_unique_products(db, unique_products, all_duplicate_products)
                 
                 # Mark review suspect products (exclude products already assigned as duplicates)
@@ -689,6 +923,14 @@ class DuplicateDetector:
         if 'cascade_stats' in results:
             stats = results['cascade_stats']
             print(f"\n🔍 Cascade Stage Breakdown:")
+            
+            # Show incremental mode stats if available
+            if stats.get('new_products', 0) > 0 or stats.get('existing_products', 0) > 0:
+                print(f"  🆕 New products: {stats.get('new_products', 0)}")
+                print(f"  📦 Existing products: {stats.get('existing_products', 0)}")
+                if stats.get('skipped_pairs', 0) > 0:
+                    print(f"  ⏭️  Skipped pairs (already compared): {stats.get('skipped_pairs', 0)}")
+            
             print(f"  📊 Total pairs analyzed: {stats['total_pairs']}")
             print(f"  🏷️  Metadata shortcuts: {stats['metadata_shortcuts']}")
             print(f"  🎯 pHash exact matches: {stats['phash_exact']}")
