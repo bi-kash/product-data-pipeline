@@ -253,13 +253,13 @@ class AirtableDataSync:
             variant_images_set = set(variant_images_unique)
             
             # 2. Remove gallery_images that are in variant_images
-            gallery_images_filtered = [img for img in gallery_images if img not in variant_images_set]
+            gallery_images_filtered = [img for img in gallery_images if img not in variant_images_set and img != hero_image]
             gallery_images_unique = list(dict.fromkeys(gallery_images_filtered))
             gallery_images_set = set(gallery_images_unique)
             
             # 3. Remove other_images that are in variant_images or gallery_images
             other_images_filtered = [img for img in other_images 
-                                    if img not in variant_images_set and img not in gallery_images_set]
+                                    if img not in variant_images_set and img not in gallery_images_set and img != hero_image]
             other_images_unique = list(dict.fromkeys(other_images_filtered))
             
             # Convert lists to comma-separated strings
@@ -423,10 +423,20 @@ class AirtableDataSync:
             result = product.raw_json_detail.get('aliexpress_ds_product_get_response', {}).get('result', {})
             base_info = result.get('ae_item_base_info_dto', {})
             
-            # Try to get subject (title) as description if no detail available
-            subject = base_info.get('subject', '')
+            # Try to get the detail field (HTML description)
+            detail = base_info.get('detail', '')
             
-            return subject or ''
+            # If detail exists and is not empty, return it
+            if detail:
+                return detail
+            
+            # Fallback to mobile_detail if detail is not available
+            mobile_detail = base_info.get('mobile_detail', '')
+            if mobile_detail:
+                return mobile_detail
+            
+            # Last fallback: return empty string
+            return ''
             
         except Exception as e:
             logger.debug(f"Error extracting description: {e}")

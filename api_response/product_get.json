@@ -4,162 +4,373 @@
       "ae_item_sku_info_dtos": {
         "ae_item_sku_info_d_t_o": [
           {
-            "sku_attr": "14:350853#SilverBlue",
-            "offer_sale_price": "58.99",
-            "sku_id": "12000050621257760",
+            "sku_attr": "200000226:691#Gold-Moissanite;200000639:1437#18CM 7inch",
+            "offer_sale_price": "82.39",
+            "sku_id": "12000034730558964",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "347.00",
-            "offer_bulk_sale_price": "58.99",
-            "sku_available_stock": 260,
-            "id": "14:350853#SilverBlue",
+            "sku_price": "183.09",
+            "offer_bulk_sale_price": "82.39",
+            "sku_available_stock": 999,
+            "id": "200000226:691#Gold-Moissanite;200000639:1437#18CM 7inch",
+            "sku_bulk_order": 2,
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "Silver",
-                  "sku_image": "https://ae01.alicdn.com/kf/S5364cd2fe84e48c7bf59d570daea3fa0N.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "SilverBlue",
-                  "property_value_id": 350853,
-                  "sku_property_id": 14
+                  "sku_property_value": "GRAY",
+                  "sku_image": "https://ae01.alicdn.com/kf/S54babccd07754bf69f3dc7475e65d26eF.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Gold-Moissanite",
+                  "property_value_id": 691,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "18cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "18CM 7inch",
+                  "property_value_id": 1437,
+                  "sku_property_id": 200000639
                 }
               ]
             }
           },
           {
-            "sku_attr": "14:10#SilverBlack",
-            "offer_sale_price": "58.99",
-            "sku_id": "12000050621257761",
+            "sku_attr": "200000226:10#Silver-Moissanite;200000639:1437#18CM 7inch",
+            "offer_sale_price": "82.39",
+            "sku_id": "12000034730558961",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "347.00",
-            "offer_bulk_sale_price": "58.99",
-            "sku_available_stock": 367,
-            "id": "14:10#SilverBlack",
+            "sku_price": "183.09",
+            "offer_bulk_sale_price": "82.39",
+            "sku_available_stock": 996,
+            "id": "200000226:10#Silver-Moissanite;200000639:1437#18CM 7inch",
+            "sku_bulk_order": 2,
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
                   "sku_property_value": "Red",
-                  "sku_image": "https://ae01.alicdn.com/kf/S33c56263382a490eb768b4d50f2df572E.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "SilverBlack",
+                  "sku_image": "https://ae01.alicdn.com/kf/S3c92ec5871b94a9b84e7ec6fa7db83abP.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Silver-Moissanite",
                   "property_value_id": 10,
-                  "sku_property_id": 14
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "18cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "18CM 7inch",
+                  "property_value_id": 1437,
+                  "sku_property_id": 200000639
                 }
               ]
             }
           },
           {
-            "sku_attr": "14:193#LeatherStrap",
-            "offer_sale_price": "16.89",
-            "sku_id": "12000050621257762",
+            "sku_attr": "200000226:10#Silver-Moissanite;200000639:967#17CM 6.7inch",
+            "offer_sale_price": "82.39",
+            "sku_id": "12000034730558960",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "99.35",
-            "offer_bulk_sale_price": "16.89",
-            "sku_available_stock": 8,
-            "id": "14:193#LeatherStrap",
+            "sku_price": "183.09",
+            "offer_bulk_sale_price": "82.39",
+            "sku_available_stock": 991,
+            "id": "200000226:10#Silver-Moissanite;200000639:967#17CM 6.7inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Red",
+                  "sku_image": "https://ae01.alicdn.com/kf/S3c92ec5871b94a9b84e7ec6fa7db83abP.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Silver-Moissanite",
+                  "property_value_id": 10,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "17cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "17CM 6.7inch",
+                  "property_value_id": 967,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:691#Gold-Moissanite;200000639:967#17CM 6.7inch",
+            "offer_sale_price": "82.39",
+            "sku_id": "12000034730558963",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "183.09",
+            "offer_bulk_sale_price": "82.39",
+            "sku_available_stock": 998,
+            "id": "200000226:691#Gold-Moissanite;200000639:967#17CM 6.7inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "GRAY",
+                  "sku_image": "https://ae01.alicdn.com/kf/S54babccd07754bf69f3dc7475e65d26eF.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Gold-Moissanite",
+                  "property_value_id": 691,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "17cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "17CM 6.7inch",
+                  "property_value_id": 967,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:691#Gold-Moissanite;200000639:1436#16CM 6inch",
+            "offer_sale_price": "82.39",
+            "sku_id": "12000034730558962",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "183.09",
+            "offer_bulk_sale_price": "82.39",
+            "sku_available_stock": 993,
+            "id": "200000226:691#Gold-Moissanite;200000639:1436#16CM 6inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "GRAY",
+                  "sku_image": "https://ae01.alicdn.com/kf/S54babccd07754bf69f3dc7475e65d26eF.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Gold-Moissanite",
+                  "property_value_id": 691,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "16cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "16CM 6inch",
+                  "property_value_id": 1436,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:175#Gold-Zircon;200000639:967#17CM 6.7inch",
+            "offer_sale_price": "50.39",
+            "sku_id": "12000034730558957",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "111.98",
+            "offer_bulk_sale_price": "50.39",
+            "sku_available_stock": 999,
+            "id": "200000226:175#Gold-Zircon;200000639:967#17CM 6.7inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "green",
+                  "sku_image": "https://ae01.alicdn.com/kf/S874fa60d824547fe81bfa49e2704582eD.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Gold-Zircon",
+                  "property_value_id": 175,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "17cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "17CM 6.7inch",
+                  "property_value_id": 967,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:175#Gold-Zircon;200000639:1436#16CM 6inch",
+            "offer_sale_price": "50.39",
+            "sku_id": "12000034730558956",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "111.98",
+            "offer_bulk_sale_price": "50.39",
+            "sku_available_stock": 997,
+            "id": "200000226:175#Gold-Zircon;200000639:1436#16CM 6inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "green",
+                  "sku_image": "https://ae01.alicdn.com/kf/S874fa60d824547fe81bfa49e2704582eD.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Gold-Zircon",
+                  "property_value_id": 175,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "16cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "16CM 6inch",
+                  "property_value_id": 1436,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:10#Silver-Moissanite;200000639:1436#16CM 6inch",
+            "offer_sale_price": "82.39",
+            "sku_id": "12000034730558959",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "183.09",
+            "offer_bulk_sale_price": "82.39",
+            "sku_available_stock": 992,
+            "id": "200000226:10#Silver-Moissanite;200000639:1436#16CM 6inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "Red",
+                  "sku_image": "https://ae01.alicdn.com/kf/S3c92ec5871b94a9b84e7ec6fa7db83abP.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Silver-Moissanite",
+                  "property_value_id": 10,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "16cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "16CM 6inch",
+                  "property_value_id": 1436,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:175#Gold-Zircon;200000639:1437#18CM 7inch",
+            "offer_sale_price": "50.39",
+            "sku_id": "12000034730558958",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "111.98",
+            "offer_bulk_sale_price": "50.39",
+            "sku_available_stock": 999,
+            "id": "200000226:175#Gold-Zircon;200000639:1437#18CM 7inch",
+            "sku_bulk_order": 2,
+            "ae_sku_property_dtos": {
+              "ae_sku_property_d_t_o": [
+                {
+                  "sku_property_value": "green",
+                  "sku_image": "https://ae01.alicdn.com/kf/S874fa60d824547fe81bfa49e2704582eD.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Gold-Zircon",
+                  "property_value_id": 175,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "18cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "18CM 7inch",
+                  "property_value_id": 1437,
+                  "sku_property_id": 200000639
+                }
+              ]
+            }
+          },
+          {
+            "sku_attr": "200000226:193#Silver-Zircon;200000639:1436#16CM 6inch",
+            "offer_sale_price": "47.19",
+            "sku_id": "12000034730558953",
+            "price_include_tax": true,
+            "currency_code": "EUR",
+            "sku_price": "104.87",
+            "offer_bulk_sale_price": "47.19",
+            "sku_available_stock": 995,
+            "id": "200000226:193#Silver-Zircon;200000639:1436#16CM 6inch",
+            "sku_bulk_order": 2,
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
                   "sku_property_value": "black",
-                  "sku_image": "https://ae01.alicdn.com/kf/Sd6116744180d460faed601be0d20280cu.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "LeatherStrap",
+                  "sku_image": "https://ae01.alicdn.com/kf/S08a8fe781d8e41aaae19d38257d14fb6k.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Silver-Zircon",
                   "property_value_id": 193,
-                  "sku_property_id": 14
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "16cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "16CM 6inch",
+                  "property_value_id": 1436,
+                  "sku_property_id": 200000639
                 }
               ]
             }
           },
           {
-            "sku_attr": "14:366#SilverWhiteL",
-            "offer_sale_price": "58.99",
-            "sku_id": "12000050621257763",
+            "sku_attr": "200000226:193#Silver-Zircon;200000639:1437#18CM 7inch",
+            "offer_sale_price": "47.19",
+            "sku_id": "12000034730558955",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "347.00",
-            "offer_bulk_sale_price": "58.99",
-            "sku_available_stock": 409,
-            "id": "14:366#SilverWhiteL",
+            "sku_price": "104.87",
+            "offer_bulk_sale_price": "47.19",
+            "sku_available_stock": 997,
+            "id": "200000226:193#Silver-Zircon;200000639:1437#18CM 7inch",
+            "sku_bulk_order": 2,
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "Yellow",
-                  "sku_image": "https://ae01.alicdn.com/kf/Sbb684d344e1c40aa9378fb35fa62169e9.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "SilverWhiteL",
-                  "property_value_id": 366,
-                  "sku_property_id": 14
+                  "sku_property_value": "black",
+                  "sku_image": "https://ae01.alicdn.com/kf/S08a8fe781d8e41aaae19d38257d14fb6k.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Silver-Zircon",
+                  "property_value_id": 193,
+                  "sku_property_id": 200000226
+                },
+                {
+                  "sku_property_value": "18cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "18CM 7inch",
+                  "property_value_id": 1437,
+                  "sku_property_id": 200000639
                 }
               ]
             }
           },
           {
-            "sku_attr": "14:496#SilverBlackL",
-            "offer_sale_price": "58.99",
-            "sku_id": "12000050621257764",
+            "sku_attr": "200000226:193#Silver-Zircon;200000639:967#17CM 6.7inch",
+            "offer_sale_price": "47.19",
+            "sku_id": "12000034730558954",
             "price_include_tax": true,
             "currency_code": "EUR",
-            "sku_price": "347.00",
-            "offer_bulk_sale_price": "58.99",
-            "sku_available_stock": 398,
-            "id": "14:496#SilverBlackL",
+            "sku_price": "104.87",
+            "offer_bulk_sale_price": "47.19",
+            "sku_available_stock": 998,
+            "id": "200000226:193#Silver-Zircon;200000639:967#17CM 6.7inch",
+            "sku_bulk_order": 2,
             "ae_sku_property_dtos": {
               "ae_sku_property_d_t_o": [
                 {
-                  "sku_property_value": "PURPLE",
-                  "sku_image": "https://ae01.alicdn.com/kf/Sc805709f527a4901a58142fa1a2ebef9X.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "SilverBlackL",
-                  "property_value_id": 496,
-                  "sku_property_id": 14
-                }
-              ]
-            }
-          },
-          {
-            "sku_attr": "14:350686#SilverBlueL",
-            "offer_sale_price": "58.99",
-            "sku_id": "12000050621257758",
-            "price_include_tax": true,
-            "currency_code": "EUR",
-            "sku_price": "347.00",
-            "offer_bulk_sale_price": "58.99",
-            "sku_available_stock": 352,
-            "id": "14:350686#SilverBlueL",
-            "ae_sku_property_dtos": {
-              "ae_sku_property_d_t_o": [
+                  "sku_property_value": "black",
+                  "sku_image": "https://ae01.alicdn.com/kf/S08a8fe781d8e41aaae19d38257d14fb6k.jpg",
+                  "sku_property_name": "Gem Color",
+                  "property_value_definition_name": "Silver-Zircon",
+                  "property_value_id": 193,
+                  "sku_property_id": 200000226
+                },
                 {
-                  "sku_property_value": "Brown",
-                  "sku_image": "https://ae01.alicdn.com/kf/Aede53e6854d7400ebe5a79974fa28495V.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "SilverBlueL",
-                  "property_value_id": 350686,
-                  "sku_property_id": 14
-                }
-              ]
-            }
-          },
-          {
-            "sku_attr": "14:350850#SilverWhite",
-            "offer_sale_price": "58.99",
-            "sku_id": "12000050621257759",
-            "price_include_tax": true,
-            "currency_code": "EUR",
-            "sku_price": "347.00",
-            "offer_bulk_sale_price": "58.99",
-            "sku_available_stock": 370,
-            "id": "14:350850#SilverWhite",
-            "ae_sku_property_dtos": {
-              "ae_sku_property_d_t_o": [
-                {
-                  "sku_property_value": "Gold",
-                  "sku_image": "https://ae01.alicdn.com/kf/S88d34b3e148c490895b58284a213b893L.jpg",
-                  "sku_property_name": "Color",
-                  "property_value_definition_name": "SilverWhite",
-                  "property_value_id": 350850,
-                  "sku_property_id": 14
+                  "sku_property_value": "17cm",
+                  "sku_property_name": "Length",
+                  "property_value_definition_name": "17CM 6.7inch",
+                  "property_value_id": 967,
+                  "sku_property_id": 200000639
                 }
               ]
             }
@@ -167,13 +378,25 @@
         ]
       },
       "ae_multimedia_info_dto": {
-        "image_urls": "https://ae01.alicdn.com/kf/Sb1fd8c9c08c94891816edf2e9629006b2.jpg;https://ae01.alicdn.com/kf/S1e6f15139cbd425890f3f9fcee5e53feg.jpg;https://ae01.alicdn.com/kf/Sf0717858e260499897f976f8ca811934u.jpg;https://ae01.alicdn.com/kf/Sb28ea316cb67414b9bc9b09e61ad2242g.jpg;https://ae01.alicdn.com/kf/S6a456550e4d9470998ec7868b7efa39ea.jpg;https://ae01.alicdn.com/kf/S9db53cc800504810b3e8f65a0a5605d6r.jpg"
+        "ae_video_dtos": {
+          "ae_video_d_t_o": [
+            {
+              "media_status": "approved",
+              "media_type": "video",
+              "poster_url": "https://ae01.alicdn.com/kf/Sfeaf40d0599848a7b3f394ccca54ca33R.jpg",
+              "ali_member_id": 2670721146,
+              "media_id": 1100166933116,
+              "media_url": "https://video.aliexpress-media.com/play/1100166933116.mp4"
+            }
+          ]
+        },
+        "image_urls": "https://ae01.alicdn.com/kf/Sed40863a2986483a904141edff3257a6e.jpg;https://ae01.alicdn.com/kf/Sda5b258e971943de8e3be0624ee8f902p.jpg;https://ae01.alicdn.com/kf/S4fba956240644524be386462e90b1324v.jpg;https://ae01.alicdn.com/kf/S521d5c5909a242928aeabcdee4fa462c6.jpg;https://ae01.alicdn.com/kf/Scaef85764cde49ae9e721f4dc2621f96j.jpg;https://ae01.alicdn.com/kf/S9d41a358cbb540628664f771e2634f57x.jpg"
       },
       "package_info_dto": {
-        "package_width": 10,
-        "package_height": 10,
-        "package_length": 10,
-        "gross_weight": "0.300",
+        "package_width": 15,
+        "package_height": 5,
+        "package_length": 25,
+        "gross_weight": "0.100",
         "package_type": false,
         "product_unit": 100000015
       },
@@ -182,119 +405,54 @@
         "ship_to_country": "DE"
       },
       "product_id_converter_result": {
-        "main_product_id": 1005009935381354,
-        "sub_product_id": "{\"US\":3256809749066602}"
+        "main_product_id": 1005005892056789,
+        "sub_product_id": "{\"US\":3256805705742037}"
       },
       "ae_item_base_info_dto": {
-        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/A0a1f4a5820334a11969161bcdd31759cz.png\",\"style\":{\"height\":1027}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sa9fc9755409d4213ad8024a966a827b8j.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S2f4abc394161498da2ad06ba3672c7deT.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S99744df9df9849c6891ebc6a1fb3fab3a.jpg\",\"style\":{\"height\":1800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd778f1ffaf384af1a64616b7913c73edl.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Scb4eeb5324ac4a13a363f27790f78558q.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sc6e3d56a93414ff7afc16bb7875e359ev.jpg\",\"style\":{\"height\":419}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S3a31b855decf4c78af059228b9c4d80dj.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S77a8a1e2f7b84a0fafc5f4aa14860ee3q.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S3c72580bab3c48649345b4562749944cC.jpg\",\"style\":{\"height\":802}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S4389fea409744673acbae7f211f3958aM.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S156cf4776a174b5ca731db1409a29b61C.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S01473191e9404c8e94b6f0a085a57e06H.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S455e5ecce9514f87b5c8b34a8e5c4fbfR.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S9fef0fdaabb946198cee8c6a75269bcdX.jpg\",\"style\":{\"height\":1200}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S413fff1400ab4292a8ab0ef199b291368.jpg\",\"style\":{\"height\":1380}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sbedbac1cbb904a24b46851f4c419ea2ef.jpg\",\"style\":{\"height\":786}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sbda0e5482fd7413db8e1b832fa2eae63X.jpg\",\"style\":{\"height\":4420}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S5048cc8ad05e4e968b4fa1369b90627bt.jpg\",\"style\":{\"height\":624}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S071d0105069b48fbb82604043ea99198v.jpeg\",\"style\":{\"height\":808}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sab98a22c610847d3b8e675228e7f1dbbu.jpg\",\"style\":{\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sb4ce8aca96f94e6d835aaeb48ac3cdc8e.jpg\",\"style\":{\"height\":1000}}},{\"type\":\"text\",\"data\":{\"content\":\"FAQ\"}},{\"type\":\"text\",\"data\":{\"content\":\"1) Q: When can I make the payment and how many hours can I send it?\"}},{\"type\":\"text\",\"data\":{\"content\":\"A: Ship within 48 hours and provide track number.\"}},{\"type\":\"text\",\"data\":{\"content\":\"2) Q: How long will it take me to receive the package? If not, what should I do?\"}},{\"type\":\"text\",\"data\":{\"content\":\"A: According to your country, 7-60 days. If it has not been received for more than 60 days, we will refund you.\"}},{\"type\":\"text\",\"data\":{\"content\":\"3) Q: What should I do if there is a quality issue with the product?\"}},{\"type\":\"text\",\"data\":{\"content\":\"A: Contact us and we will solve the problem.\"}},{\"type\":\"text\",\"data\":{\"content\":\"If the buyer wants to know more about the shipping cost, please contact us and we will provide a reasonable shipping option.\"}},{\"type\":\"text\",\"data\":{\"content\":\"\u2728shipment\"}},{\"type\":\"text\",\"data\":{\"content\":\"1) Consignment\"}},{\"type\":\"text\",\"data\":{\"content\":\"We support drop shipping and can send your order to your customers. Please leave your licensed address when you place your order.\"}},{\"type\":\"text\",\"data\":{\"content\":\"2) Delivery time\"}},{\"type\":\"text\",\"data\":{\"content\":\"AliExpress standard transportation: 15-60 days\"}},{\"type\":\"text\",\"data\":{\"content\":\"Please note that due to customer and weather reasons, there may be some delays, but we will extend the delivery time for you, so please be patient and wait for a period of time.\"}},{\"type\":\"text\",\"data\":{\"content\":\"\u2728payment\"}},{\"type\":\"text\",\"data\":{\"content\":\"1) We accept third-party hosting, Boleto, Visa, MasterCard, QIWI, Western Union remittance, Maestro debit card, WebMoney, bank transfer, credit card, and any payment method that can be made on Global AliExpress.\"}},{\"type\":\"text\",\"data\":{\"content\":\"2) Custody is the safest payment method.\"}},{\"type\":\"text\",\"data\":{\"content\":\"\u2728Guarantee and Guarantee\"}},{\"type\":\"text\",\"data\":{\"content\":\"1) If there is quality damage to the goods, we will provide a 12 month warranty period and purchase with confidence\"}},{\"type\":\"text\",\"data\":{\"content\":\"2) All products are brand new and have passed quality inspection.\"}},{\"type\":\"text\",\"data\":{\"content\":\"3) If you are not satisfied after receiving it and want to return it, please return or refund within 3 days.\"}},{\"type\":\"text\",\"data\":{\"content\":\"Please contact us before returning the item. But the item must be in the original state we sent you\"}},{\"type\":\"text\",\"data\":{\"content\":\"4) We accept good suggestions from buyers and strive to provide a better shopping experience.\"}},{\"type\":\"text\",\"data\":{\"content\":\"We constantly provide discounts for buyers!\"}},{\"type\":\"text\",\"data\":{\"content\":\"\u2728If you have any questions, please contact us and we will reply to you within 24 hours. If you are satisfied with our service, please give us a five-star review. Thank you and wish you a pleasant day!\"}}]}",
-        "subject": "Pagani Design 2025 New Vk63 Fashionable Men\\'s Quartz Chronograph Luxury Sapphire Stainless Steel Waterproof Sport 20Bar Luminou",
-        "evaluation_count": "0",
-        "sales_count": "0",
+        "mobile_detail": "{\"version\":\"2.0.0\",\"moduleList\":[{\"type\":\"text\",\"data\":{\"content\":\"NKHOG 100% S925 Silver 2mm Full Moissanite Bangle Pass Diamond Test GRA Certificed Plated 18K Gold Bracelet Luxury Jewelry Gift\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Material:100% S925 silver+18K plated\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Main stone:2MM each stome moissaanite \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Moissanite Color:D color\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Moissanite Clarity:VVS1\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Moissanite Cut: excellent\",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"\\n       \\n     \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Free GRA certification include:YES,1 piece GRA\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"Package:1*moissanite Bracelets with gift box\",\"style\":{\"color\":\"rgb(0, 0, 0)\"}}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sde911e895f3b4c71b8f1276653d057a4S.jpg\",\"style\":{\"width\":900,\"height\":1125}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd0cdab90b9904c24a605221cc99f2b124.jpg\",\"style\":{\"width\":1000,\"height\":69}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S163f24cc08ad408f9fed2210f2f6409eb.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S9409f4608c6d4e53bf1037e421307edd7.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S890b5516edab4945a58335a4cbea9b2eG.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S0f52e52175194b2b8ce2956be79173b2F.jpg\",\"style\":{\"width\":1000,\"height\":1000}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S6decd85914fb4c96abe494a19a56864fy.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sc171ed1afc1f43c3ad4dc45b890eed3cU.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S48ead999bc6a4f50b43979dc60d3a49ew.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S29248685f6c7476ab99b7fc4e44af4eaN.jpg\",\"style\":{\"width\":1080,\"height\":1080}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd54b372b0f6c4f6b92e854f02457f5e3t.jpg\",\"style\":{\"width\":800,\"height\":800}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S3539a7cc340c4a7ba263abd0d259371dD.jpg\",\"style\":{\"width\":900,\"height\":86}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S90b82e30a1da411caf604cd9df2b7e74C.jpg\",\"style\":{\"width\":900,\"height\":407},\"targetUrl\":\"http://www.aliexpress.com/store/group/Moissanite-Earrings/1102349396_40000003051500.html?spm=a2g0o.detail.0.0.127141d1YYjtDg\"}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/Sd85d751b654c4c2bb11798fcd82b6e13u.jpg\",\"style\":{\"width\":900,\"height\":407},\"targetUrl\":\"http://www.aliexpress.com/store/group/Moissanite-Rings/1102349396_40000002914112.html?spm=a2g0o.store_pc_groupList.pcShopHead_2003856034507.1_1\"}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S68ba750d0c0a4bd3b63a0e82bdc737f0o.jpg\",\"style\":{\"width\":900,\"height\":407},\"targetUrl\":\"http://www.aliexpress.com/store/group/Moissanite-Bracelets/1102349396_40000002910604.html?spm=a2g0o.store_pc_groupList.pcShopHead_2003856034507.1_2\"}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S4621452896834ed08f69c6c628e0c88cC.jpg\",\"style\":{\"width\":900,\"height\":407},\"targetUrl\":\"http://www.aliexpress.com/store/group/Moissanite-Necklaces/1102349396_40000002869484.html?spm=a2g0o.store_pc_groupList.pcShopHead_2003856034507.1_3\"}},{\"type\":\"image\",\"data\":{\"url\":\"https://ae01.alicdn.com/kf/S865de880772c48c8b68afe962e36772fu.jpg\",\"style\":{\"width\":900,\"height\":2578}}},{\"type\":\"text\",\"data\":{\"content\":\"\\n      \\n    \",\"style\":{\"paddingLeft\":16,\"paddingRight\":16,\"paddingTop\":10,\"paddingBottom\":10,\"fontSize\":14,\"fontWeight\":\"regular\",\"align\":\"left\",\"color\":\"#666666\",\"fontFamily\":\"OpenSans\",\"backgroundColor\":\"#FFFFFF\"}}}]}",
+        "subject": "NKHOG 100% S925 Silver 2mm Full Moissanite Bangle Pass Diamond Test GRA Certificed Plated 18K Gold Bracelet Luxury Jewelry Gift",
+        "evaluation_count": "4",
+        "sales_count": "14",
         "product_status_type": "onSelling",
-        "avg_evaluation_rating": "0.0",
+        "avg_evaluation_rating": "5.0",
         "currency_code": "USD",
-        "category_id": 200034143,
-        "product_id": 1005009935381354,
-        "detail": "<div class=\"detailmodule_html\"><div class=\"detail-desc-decorate-richtext\"><div class=\"detailmodule_image\"><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/A0a1f4a5820334a11969161bcdd31759cz.png\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sa9fc9755409d4213ad8024a966a827b8j.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S2f4abc394161498da2ad06ba3672c7deT.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img style=\"margin-bottom:10px\" class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S99744df9df9849c6891ebc6a1fb3fab3a.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sd778f1ffaf384af1a64616b7913c73edl.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Scb4eeb5324ac4a13a363f27790f78558q.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sc6e3d56a93414ff7afc16bb7875e359ev.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S3a31b855decf4c78af059228b9c4d80dj.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S77a8a1e2f7b84a0fafc5f4aa14860ee3q.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S3c72580bab3c48649345b4562749944cC.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_image\"><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S4389fea409744673acbae7f211f3958aM.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_image\"><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S156cf4776a174b5ca731db1409a29b61C.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S01473191e9404c8e94b6f0a085a57e06H.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S455e5ecce9514f87b5c8b34a8e5c4fbfR.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S9fef0fdaabb946198cee8c6a75269bcdX.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S413fff1400ab4292a8ab0ef199b291368.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sbedbac1cbb904a24b46851f4c419ea2ef.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sbda0e5482fd7413db8e1b832fa2eae63X.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S5048cc8ad05e4e968b4fa1369b90627bt.jpg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/S071d0105069b48fbb82604043ea99198v.jpeg\" slate-data-type=\"image\"/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sab98a22c610847d3b8e675228e7f1dbbu.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_image\"><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><img class=\"detail-desc-decorate-image\" src=\"https://ae01.alicdn.com/kf/Sb4ce8aca96f94e6d835aaeb48ac3cdc8e.jpg\" slate-data-type=\"image\"/></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">FAQ</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">1) Q: When can I make the payment and how many hours can I send it?</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">A: Ship within 48 hours and provide track number.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">2) Q: How long will it take me to receive the package? If not, what should I do?</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">A: According to your country, 7-60 days. If it has not been received for more than 60 days, we will refund you.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">3) Q: What should I do if there is a quality issue with the product?</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">A: Contact us and we will solve the problem.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">If the buyer wants to know more about the shipping cost, please contact us and we will provide a reasonable shipping option.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">\u2728shipment</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">1) Consignment</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">We support drop shipping and can send your order to your customers. Please leave your licensed address when you place your order.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">2) Delivery time</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">AliExpress standard transportation: 15-60 days</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">Please note that due to customer and weather reasons, there may be some delays, but we will extend the delivery time for you, so please be patient and wait for a period of time.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">\u2728payment</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">1) We accept third-party hosting, Boleto, Visa, MasterCard, QIWI, Western Union remittance, Maestro debit card, WebMoney, bank transfer, credit card, and any payment method that can be made on Global AliExpress.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">2) Custody is the safest payment method.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">\u2728Guarantee and Guarantee</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">1) If there is quality damage to the goods, we will provide a 12 month warranty period and purchase with confidence</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">2) All products are brand new and have passed quality inspection.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">3) If you are not satisfied after receiving it and want to return it, please return or refund within 3 days.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">Please contact us before returning the item. But the item must be in the original state we sent you</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">4) We accept good suggestions from buyers and strive to provide a better shopping experience.</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">We constantly provide discounts for buyers!</p></div><div class=\"detailmodule_text\"><div><br/><br/><br/><br/><br/><br/><br/><br/></div><p style=\"font-family:OpenSans;font-size:14px;font-weight:300;line-height:20px;white-space:pre-wrap;color:rgb(0, 0, 0);margin-bottom:12px\" class=\"detail-desc-decorate-content\">\u2728If you have any questions, please contact us and we will reply to you within 24 hours. If you are satisfied with our service, please give us a five-star review. Thank you and wish you a pleasant day!</p></div><div><br/></div></div></div><p><br/></p>"
+        "category_id": 200001687,
+        "product_id": 1005005892056789,
+        "detail": "<div class=\"detailmodule_html\"><div class=\"detail-desc-decorate-richtext\"><div><div><p><span style=\"background-color:rgb(255, 255, 255);color:rgb(34, 34, 34);font-size:20px\"><span style=\"background-color:rgb(255, 255, 255);color:rgb(0, 0, 0);font-size:20px\">NKHOG 100% S925 Silver 2mm Full Moissanite Bangle Pass Diamond Test GRA Certificed Plated 18K Gold Bracelet Luxury Jewelry Gift</span></span></p><div> </div><div style=\"font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;font-weight:400;color:#222222;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-style:initial;text-decoration-color:initial;padding:0px;font-size:14px;box-sizing:content-box;&quot;\"><p style=\"font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;font-weight:400;color:#000000;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;;font-size:14px;box-sizing:border-box\">Material:100% S925 silver+18K plated<br/><span style=\"font-size:14px;font-family:&quot;color:#000000;outline-width:0px;outline-style:none;margin:0px;outline-color:invert;background-color:#FFFFFF;-webkit-tap-highlight-color:transparent;padding:0px;&quot;\"><span style=\"background-color:rgb(255, 255, 255)\"><span style=\"color:rgb(0, 0, 0)\"><span style=\"font-family:&quot;outline-width:0px;outline-style:none;margin:0px;outline-color:invert;-webkit-tap-highlight-color:transparent;padding:0px;&quot;\"><span>Main stone:2MM each stome moissaanite <br/>Moissanite Color:D color</span></span></span></span></span></p><p style=\"font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;font-weight:400;color:#000000;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;;font-size:14px;box-sizing:border-box\"><span style=\"font-size:14px;font-family:&quot;color:#000000;outline-width:0px;outline-style:none;margin:0px;outline-color:invert;background-color:#FFFFFF;-webkit-tap-highlight-color:transparent;padding:0px;&quot;\"><span style=\"background-color:rgb(255, 255, 255)\"><span style=\"color:rgb(0, 0, 0)\"><span style=\"font-family:&quot;outline-width:0px;outline-style:none;margin:0px;outline-color:invert;-webkit-tap-highlight-color:transparent;padding:0px;&quot;\"><span>Moissanite Clarity:VVS1</span></span></span></span></span><br/><span style=\"font-size:14px;font-family:&quot;color:#000000;outline-width:0px;outline-style:none;margin:0px;outline-color:invert;background-color:#FFFFFF;-webkit-tap-highlight-color:transparent;padding:0px;&quot;\"><span style=\"background-color:rgb(255, 255, 255)\"><span style=\"color:rgb(0, 0, 0)\"><span style=\"font-family:&quot;outline-width:0px;outline-style:none;margin:0px;outline-color:invert;-webkit-tap-highlight-color:transparent;padding:0px;&quot;\"><span>Moissanite Cut: excellent</span></span></span></span></span></p><div> </div><p style=\"font-size:14px;font-weight:400;color:rgb(0, 0, 0);margin:0px;margin-bottom:0px;margin-top:0px;margin-left:0px;margin-right:0px;padding:0px;padding-bottom:0px;padding-top:0px;padding-left:0px;padding-right:0px;box-sizing:border-box\"><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;float:none;font-weight:400;color:#222222;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;display:inline !important;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;\"><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;font-weight:700 !important;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;&quot;\"><strong><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;float:none;font-weight:400;color:#000000;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;display:inline !important;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;\">Free GRA certification include:</span></strong></span></span><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;float:none;font-weight:400;color:#222222;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;display:inline !important;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;\"><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;font-weight:700 !important;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;&quot;\"><strong><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;float:none;font-weight:400;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;display:inline !important;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;\"><span style=\"color:rgb(192, 57, 43)\">YES,1 piece GRA</span></span></strong></span></span><br/><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;float:none;font-weight:400;color:#222222;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;display:inline !important;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;\"><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;font-weight:700 !important;color:#000000;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;&quot;\"><strong><span style=\"font-size:14px;font-family:&quot;white-space:normal;word-spacing:0px;text-transform:none;float:none;font-weight:400;color:#000000;outline-width:0px;font-style:normal;outline-style:none;orphans:2;widows:2;margin:0px;display:inline !important;letter-spacing:normal;outline-color:invert;background-color:#FFFFFF;text-indent:0px;-webkit-tap-highlight-color:transparent;font-variant-ligatures:normal;font-variant-caps:normal;-webkit-text-stroke-width:0px;text-decoration-thickness:initial;text-decoration-style:initial;text-decoration-color:initial;padding:0px;&quot;\">Package:1*moissanite Bracelets with gift box</span></strong></span></span></p></div><div> </div><div> </div><div style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/Sde911e895f3b4c71b8f1276653d057a4S.jpg\" slate-data-type=\"image\"/></div><div style=\"text-align:center\" align=\"center\"></div><p style=\"text-align:center\" align=\"center\"><img style=\"width:1000px\" width=\"1000px\" src=\"https://ae01.alicdn.com/kf/Sd0cdab90b9904c24a605221cc99f2b124.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S163f24cc08ad408f9fed2210f2f6409eb.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S9409f4608c6d4e53bf1037e421307edd7.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S890b5516edab4945a58335a4cbea9b2eG.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S0f52e52175194b2b8ce2956be79173b2F.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S6decd85914fb4c96abe494a19a56864fy.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/Sc171ed1afc1f43c3ad4dc45b890eed3cU.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S48ead999bc6a4f50b43979dc60d3a49ew.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/S29248685f6c7476ab99b7fc4e44af4eaN.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img style=\"width:900px\" width=\"900px\" src=\"https://ae01.alicdn.com/kf/Sd54b372b0f6c4f6b92e854f02457f5e3t.jpg\" slate-data-type=\"image\"/></p><p style=\"text-align:center\" align=\"center\"><img src=\"https://ae01.alicdn.com/kf/S3539a7cc340c4a7ba263abd0d259371dD.jpg\" slate-data-type=\"image\"/><a href=\"http://www.aliexpress.com/store/group/Moissanite-Earrings/1102349396_40000003051500.html?spm=a2g0o.detail.0.0.127141d1YYjtDg\" target=\"_self\" class=\"\"><img width=\"900\" height=\"407\" src=\"https://ae01.alicdn.com/kf/S90b82e30a1da411caf604cd9df2b7e74C.jpg\" slate-data-type=\"image\"/></a></p><div> </div><p style=\"text-align:center\" align=\"center\"><a href=\"http://www.aliexpress.com/store/group/Moissanite-Rings/1102349396_40000002914112.html?spm=a2g0o.store_pc_groupList.pcShopHead_2003856034507.1_1\" target=\"_self\" class=\"\"><img width=\"900\" height=\"407\" src=\"https://ae01.alicdn.com/kf/Sd85d751b654c4c2bb11798fcd82b6e13u.jpg\" slate-data-type=\"image\"/></a></p><div> </div><p style=\"text-align:center\" align=\"center\"><a href=\"http://www.aliexpress.com/store/group/Moissanite-Bracelets/1102349396_40000002910604.html?spm=a2g0o.store_pc_groupList.pcShopHead_2003856034507.1_2\" target=\"_self\" class=\"\"><img width=\"900\" height=\"407\" src=\"https://ae01.alicdn.com/kf/S68ba750d0c0a4bd3b63a0e82bdc737f0o.jpg\" slate-data-type=\"image\"/></a></p><div> </div><p style=\"text-align:center\" align=\"center\"><a href=\"http://www.aliexpress.com/store/group/Moissanite-Necklaces/1102349396_40000002869484.html?spm=a2g0o.store_pc_groupList.pcShopHead_2003856034507.1_3\" target=\"_self\" class=\"\"><img width=\"900\" height=\"407\" src=\"https://ae01.alicdn.com/kf/S4621452896834ed08f69c6c628e0c88cC.jpg\" slate-data-type=\"image\"/></a></p><p style=\"text-align:center\" align=\"center\"><img src=\"https://ae01.alicdn.com/kf/S865de880772c48c8b68afe962e36772fu.jpg\" slate-data-type=\"image\"/></p><div> </div></div></div><div><br/></div></div></div><p><br/></p>"
+      },
+      "manufacturer_info": {
+        "address": "Room 201, 2nd Floor, 398 Fenghuang Avenue, Pinghu Street, Longgang District, Shenzhen",
+        "phone": "18319029331",
+        "country_name": "China",
+        "email": "2784123756@qq.com",
+        "phone_prefix": "86"
       },
       "has_whole_sale": false,
       "ae_item_properties": {
         "ae_item_property": [
           {
             "attr_name_id": 2,
-            "attr_value_id": 201547972,
+            "attr_value_id": 398581342,
             "attr_name": "Brand Name",
-            "attr_value": "PAGANI DESIGN"
+            "attr_value": "NKHOG"
           },
           {
-            "attr_name_id": 200000050,
-            "attr_value_id": 206,
-            "attr_name": "Band Material Type",
-            "attr_value": "Stainless Steel"
+            "attr_name_id": 200000220,
+            "attr_value_id": 100014216,
+            "attr_name": "Bracelets Type",
+            "attr_value": "Charm Bracelets"
           },
           {
-            "attr_name_id": 905,
-            "attr_value_id": 1981769804,
-            "attr_name": "Display Type",
-            "attr_value": "Numberless"
+            "attr_name_id": 20252,
+            "attr_value_id": 361066,
+            "attr_name": "Main Stone",
+            "attr_value": "Moissanite"
           },
           {
-            "attr_name_id": 400000603,
-            "attr_value_id": 23399591357,
-            "attr_name": "High-concerned chemical",
-            "attr_value": "None"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 200005846,
-            "attr_name": "Feature",
-            "attr_value": "Stop Watch"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 200005847,
-            "attr_name": "Feature",
-            "attr_value": "Back Light"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 200000112,
-            "attr_name": "Feature",
-            "attr_value": "Luminous"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 361687,
-            "attr_name": "Feature",
-            "attr_value": "Auto Date"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 361691,
-            "attr_name": "Feature",
-            "attr_value": "DIVER"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 361699,
-            "attr_name": "Feature",
-            "attr_value": "Water-Resistance"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 200001706,
-            "attr_name": "Feature",
-            "attr_value": "swim"
-          },
-          {
-            "attr_name_id": 217,
-            "attr_value_id": 202779806,
-            "attr_name": "Feature",
-            "attr_value": "Luminous Hands"
-          },
-          {
-            "attr_name_id": 400030258,
-            "attr_value_id": 9442072771,
-            "attr_name": "Movement origin",
-            "attr_value": "Jp(origin)"
-          },
-          {
-            "attr_name_id": 200000052,
-            "attr_value_id": -1,
-            "attr_name": "Band Length",
-            "attr_value": "22cmcmcmcmcm cminch"
-          },
-          {
-            "attr_name_id": 326,
-            "attr_value_id": 200004494,
-            "attr_name": "Style",
-            "attr_value": "Fashion & Casual"
-          },
-          {
-            "attr_name_id": 200000053,
-            "attr_value_id": 200000081,
-            "attr_name": "Clasp Type",
-            "attr_value": "Bracelet Clasp"
+            "attr_name_id": 200000085,
+            "attr_value_id": 200572190,
+            "attr_name": "Certificate Type",
+            "attr_value": "NGSTC"
           },
           {
             "attr_name_id": 219,
@@ -303,121 +461,145 @@
             "attr_value": "Mainland China"
           },
           {
-            "attr_name_id": 278442389,
+            "attr_name_id": 920,
             "attr_value_id": 2468,
-            "attr_name": "Battery Included",
+            "attr_name": "Certificate",
             "attr_value": "Yes"
           },
           {
-            "attr_name_id": 581,
-            "attr_value_id": 1568,
-            "attr_name": "Movement",
-            "attr_value": "Quartz"
-          },
-          {
-            "attr_name_id": 200000057,
-            "attr_value_id": 201599829,
-            "attr_name": "Water Resistance Depth",
-            "attr_value": "20Bar"
-          },
-          {
-            "attr_name_id": 20280,
-            "attr_value_id": 206,
-            "attr_name": "Case Material",
-            "attr_value": "Stainless Steel"
-          },
-          {
-            "attr_name_id": 200009205,
+            "attr_name_id": 200000195,
             "attr_value_id": -1,
-            "attr_name": "Case Thickness",
-            "attr_value": "11mmmmmmmmmm mmmm"
+            "attr_name": "Item Weight",
+            "attr_value": "about g"
           },
           {
-            "attr_name_id": 100005870,
-            "attr_value_id": 436,
-            "attr_name": "Boxes & Cases Material",
-            "attr_value": "Paper"
+            "attr_name_id": 400000603,
+            "attr_value_id": 23399591357,
+            "attr_name": "High-concerned chemical",
+            "attr_value": "None"
+          },
+          {
+            "attr_name_id": 100005859,
+            "attr_value_id": 347,
+            "attr_name": "Metals Type",
+            "attr_value": "Silver"
+          },
+          {
+            "attr_name_id": 200000086,
+            "attr_value_id": 200000167,
+            "attr_name": "Metal Stamp",
+            "attr_value": "925,Sterling"
+          },
+          {
+            "attr_name_id": 284,
+            "attr_value_id": 100006040,
+            "attr_name": "Gender",
+            "attr_value": "Women"
+          },
+          {
+            "attr_name_id": 1186,
+            "attr_value_id": 200002407,
+            "attr_name": "Occasion",
+            "attr_value": "Party"
+          },
+          {
+            "attr_name_id": 200000785,
+            "attr_value_id": 200003777,
+            "attr_name": "Fine or Fashion",
+            "attr_value": "Fine"
+          },
+          {
+            "attr_name_id": 326,
+            "attr_value_id": 200572194,
+            "attr_name": "Style",
+            "attr_value": "Cute/Romantic"
+          },
+          {
+            "attr_name_id": 200000137,
+            "attr_value_id": 200000868,
+            "attr_name": "Item Type",
+            "attr_value": "BRACELETS"
+          },
+          {
+            "attr_name_id": 166,
+            "attr_value_id": -1,
+            "attr_name": "Diameter",
+            "attr_value": "*"
+          },
+          {
+            "attr_name_id": 200103261,
+            "attr_value_id": 350525,
+            "attr_name": "Side Stone",
+            "attr_value": "None"
+          },
+          {
+            "attr_name_id": 200000087,
+            "attr_value_id": -1,
+            "attr_name": "Certificate Number",
+            "attr_value": "*"
+          },
+          {
+            "attr_name_id": 200000631,
+            "attr_value_id": 349907,
+            "attr_name": "is_customized",
+            "attr_value": "Yes"
+          },
+          {
+            "attr_name_id": 200000784,
+            "attr_value_id": 353,
+            "attr_name": "Shape\\pattern",
+            "attr_value": "Round"
           },
           {
             "attr_name_id": 3,
             "attr_value_id": -1,
             "attr_name": "Model Number",
-            "attr_value": "PD1707 pagani designs watch  reloj hombre"
-          },
-          {
-            "attr_name_id": 200000051,
-            "attr_value_id": 1981786433,
-            "attr_name": "Band Width",
-            "attr_value": "20 to 24 mm"
-          },
-          {
-            "attr_name_id": 200000046,
-            "attr_value_id": 1981786434,
-            "attr_name": "Dial Diameter",
-            "attr_value": "40 to 44 mm"
-          },
-          {
-            "attr_name_id": 348,
-            "attr_value_id": 351626,
-            "attr_name": "Certification",
-            "attr_value": "CE"
-          },
-          {
-            "attr_name_id": 200000047,
-            "attr_value_id": 353,
-            "attr_name": "Case Shape",
-            "attr_value": "Round"
-          },
-          {
-            "attr_name_id": 200000041,
-            "attr_value_id": 201566806,
-            "attr_name": "Dial Window Material Type",
-            "attr_value": "Sapphire Crystal"
-          },
-          {
-            "attr_name_id": 200000137,
-            "attr_value_id": 201564807,
-            "attr_name": "Item Type",
-            "attr_value": "Quartz Wristwatches"
+            "attr_value": "WB011"
           },
           {
             "attr_name_id": -1,
             "attr_value_id": -1,
-            "attr_name": "type1",
-            "attr_value": "pagani design"
+            "attr_name": "Model Number",
+            "attr_value": "Cuban bracelet"
           },
           {
             "attr_name_id": -1,
             "attr_value_id": -1,
-            "attr_name": "type2",
-            "attr_value": "watch"
+            "attr_name": "Length",
+            "attr_value": "16cm-18cm"
           },
           {
             "attr_name_id": -1,
             "attr_value_id": -1,
-            "attr_name": "type3",
-            "attr_value": "reloj hombre"
+            "attr_name": "Type",
+            "attr_value": "New in"
           },
           {
             "attr_name_id": -1,
             "attr_value_id": -1,
-            "attr_name": "Warranty",
-            "attr_value": "2 Year"
+            "attr_name": "Shipping",
+            "attr_value": "Free Shipping Offers"
+          },
+          {
+            "attr_name_id": -1,
+            "attr_value_id": -1,
+            "attr_name": "Model",
+            "attr_value": "Silver 925 Jewelry"
           }
         ]
       },
       "ae_store_info": {
-        "store_id": 5794125,
-        "shipping_speed_rating": "4.7",
-        "communication_rating": "4.7",
-        "store_name": "PAGANI DESIGN Ali Global Store",
+        "store_id": 1102346399,
+        "shipping_speed_rating": "4.8",
+        "communication_rating": "4.8",
+        "store_name": "NKHOG Official Store",
         "store_country_code": "CN",
-        "item_as_described_rating": "4.7"
+        "item_as_described_rating": "4.8"
       }
     },
     "rsp_code": 200,
     "rsp_msg": "Call succeeds",
-    "request_id": "0b1bf21f17628719977412229",
-    "_trace_id_": "21413d5a17628719977356910e6f50"
+    "request_id": "0babf54017641784616063081",
+    "_trace_id_": "210173a317641784616055351e89c3"
   }
 }
