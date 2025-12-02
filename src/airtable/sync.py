@@ -415,31 +415,72 @@ class AirtableDataSync:
             return None
     
     def _extract_description(self, product: FilteredProduct) -> str:
-        """Extract product description from raw JSON data."""
+        """Extract product description from raw JSON data as plain text."""
         try:
             if not product.raw_json_detail:
+                logger.warning(f"Product {product.product_id} has no raw_json_detail")
                 return ''
             
             result = product.raw_json_detail.get('aliexpress_ds_product_get_response', {}).get('result', {})
             base_info = result.get('ae_item_base_info_dto', {})
             
-            # Try to get the detail field (HTML description)
-            detail = base_info.get('detail', '')
+            # Try to get the detail field (HTML description) or mobile_detail
+            detail_html = base_info.get('detail', '')
+            mobile_detail_json = base_info.get('mobile_detail', '')
             
-            # If detail exists and is not empty, return it
-            if detail:
-                return detail
+            logger.debug(f"Product {product.product_id}: detail_html length={len(detail_html)}, mobile_detail length={len(mobile_detail_json)}")
             
-            # Fallback to mobile_detail if detail is not available
-            mobile_detail = base_info.get('mobile_detail', '')
-            if mobile_detail:
-                return mobile_detail
+            # Extract text from HTML detail
+            if detail_html:
+                text = self._extract_text_from_html(detail_html)
+                logger.debug(f"Extracted {len(text)} chars from HTML for product {product.product_id}")
+                return text
             
-            # Last fallback: return empty string
+            # Extract text from mobile_detail JSON
+            if mobile_detail_json:
+                text = self._extract_text_from_mobile_detail(mobile_detail_json)
+                logger.debug(f"Extracted {len(text)} chars from mobile_detail for product {product.product_id}")
+                return text
+            
+            logger.warning(f"Product {product.product_id} has no detail or mobile_detail")
             return ''
             
         except Exception as e:
-            logger.debug(f"Error extracting description: {e}")
+            logger.error(f"Error extracting description for product {product.product_id}: {e}")
+            return ''
+    
+    def _extract_text_from_html(self, html: str) -> str:
+        """Extract plain text from HTML, removing all tags and keeping only text content."""
+        from bs4 import BeautifulSoup
+        
+        # Parse HTML and extract text
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # Get text content
+        text = soup.get_text(separator='\n', strip=True)
+        
+        # Clean up excessive newlines
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        
+        return '\n'.join(lines)
+    
+    def _extract_text_from_mobile_detail(self, mobile_detail_json: str) -> str:
+        """Extract text content from mobile_detail JSON format."""
+        import json
+        
+        try:
+            data = json.loads(mobile_detail_json)
+            module_list = data.get('moduleList', [])
+            
+            text_parts = []
+            for module in module_list:
+                if module.get('type') == 'text':
+                    content = module.get('data', {}).get('content', '')
+                    if content:
+                        text_parts.append(content)
+            
+            return '\n'.join(text_parts).strip()
+        except:
             return ''
     
     def _extract_specifications(self, product: FilteredProduct) -> str:
