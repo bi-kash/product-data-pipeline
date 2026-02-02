@@ -21,6 +21,7 @@ This project implements a modular pipeline to identify jewelry products from Ali
 - **Shipping Cost Integration:** Real shipping costs and delivery time calculations
 - **Duplicate Detection:** Advanced pHash + CLIP analysis for identifying duplicate products
 - **Business Rule Filtering:** Configurable price and delivery time constraints
+- **Stock Check:** Automated stock checking for Online products with Airtable sync
 - **Airtable Integration:** Automated export with data anonymization and structured three-table schema
 - **VA Workflow Support:** CSV export/import for merchant verification
 
@@ -1140,6 +1141,87 @@ python main.py airtable:create-base --test-token
 - **Large Dataset Support**: Handles thousands of products efficiently
 - **Incremental Updates**: Supports ongoing sync operations
 - **Performance Monitoring**: Tracks sync performance and success rates
+
+## Stock Check
+
+The stock check feature allows you to monitor and update inventory status for products marked as "Online". It automatically refreshes variant stock data from the AliExpress API and syncs the results to Airtable.
+
+### Overview
+
+The stock check system provides:
+
+1. **Status-Based Filtering**: Only checks variants for products marked as "Online"
+2. **Automatic API Refresh**: Calls `product_get` API to fetch latest variant data
+3. **Stock Status Calculation**: Determines availability based on `sku_available_stock`
+4. **Database Updates**: Updates local database with fresh stock information
+5. **Airtable Sync**: Automatically syncs updated data to Airtable
+
+### Workflow
+
+**1. Initial Setup** (One-time):
+
+Run the database migration to add the new columns:
+```bash
+python migrations/add_stock_check_columns.py
+```
+
+**2. Mark Products as Online**:
+
+Set product status to "Online" in your database:
+```sql
+UPDATE filtered_products SET status = 'Online' WHERE product_id = 'YOUR_PRODUCT_ID';
+```
+
+**3. Run Stock Check**:
+
+```bash
+python main.py check_stock
+```
+
+Options:
+- `--limit N`: Check only the first N products (for testing)
+- `--dry-run`: Simulate without updating the database
+
+This command:
+- Queries all products with `status = "Online"`
+- For each product, calls the AliExpress API to fetch fresh variant data
+- Updates variant stock information in the local database
+- Calculates stock status: "available" (stock > 0) or "out_of_stock" (stock = 0)
+- Automatically syncs updates to Airtable
+
+**Example output:**
+```
+✅ Stock check completed!
+📊 Statistics:
+   Products checked: 50
+   Products updated: 50
+   Variants checked: 237
+   Variants updated: 189
+   Variants available: 180
+   Variants out of stock: 9
+```
+
+### Database Schema
+
+**Products Table** (`filtered_products`):
+- **`status`**: Listing status (e.g., "Online", "Todo", "Offline")
+
+**Variants Table** (`product_variants`):
+- **`stock_status`**: Stock check result ("available", "out_of_stock", "unknown")
+
+### Airtable Integration
+
+The stock check automatically syncs to Airtable:
+- **Products table**: Includes `status` field
+- **Variants table**: Includes `stock` (quantity) and `stock_status` fields
+
+### Best Practices
+
+- **Regular Checks**: Set up cron jobs to run stock checks periodically (e.g., every 6 hours)
+- **Status Management**: Use "Online" for active products, "Todo" for review queue, "Offline" for discontinued items
+- **Monitoring**: Check logs in `logs/` directory for detailed information
+
+For complete documentation, see [docs/STOCK_CHECK_WORKFLOW.md](./docs/STOCK_CHECK_WORKFLOW.md).
 
 ## Search Configuration
 
