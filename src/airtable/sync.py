@@ -296,6 +296,7 @@ class AirtableDataSync:
                 'variant_images': variant_images_str,
                 'video': video_url,
                 'duplicate_status': status_info.status,
+                'status': product.status or '',  # Product listing status (Online, Todo, Offline)
                 'price_eur': price_info.get('min_price', float(product.target_sale_price or 0)),
                 'shipping_eur': float(product.min_shipping_price or 0),
                 'total_eur': price_info.get('min_price', float(product.target_sale_price or 0)) + float(product.min_shipping_price or 0),
@@ -370,6 +371,7 @@ class AirtableDataSync:
                 'shipping_eur': shipping_price,
                 'total_eur': total_price,
                 'stock': variant.sku_available_stock or 0,
+                'stock_status': variant.stock_status or '',  # Stock check result (available, out_of_stock)
                 'variant_image': variant_image_url,
                 'hero_image': hero_image_url,
                 'delivery_time': f"{product.min_delivery_days or 0}-{product.max_delivery_days or 0} days" if product else "0-0 days",

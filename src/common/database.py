@@ -227,6 +227,7 @@ class FilteredProduct(Base):
     # Product status tracking
     is_active = Column(Boolean, nullable=False, default=True)  # Whether product is currently active
     replaced_product_id = Column(String(255), nullable=True)  # ID of product that replaced this one (for duplicates)
+    status = Column(String(20), nullable=True)  # Listing status: Online, Todo, Offline, etc.
     
     # Timestamps for filtering
     filtered_at = Column(DateTime(timezone=True), default=func.now())
@@ -264,6 +265,7 @@ class ProductVariant(Base):
     
     # Stock information
     sku_available_stock = Column(Integer, nullable=True)
+    stock_status = Column(String(20), nullable=True)  # Stock check result: available, out_of_stock
     
     # Multiple properties support (JSON array of all properties)
     properties = Column(JSON, nullable=True)  # Array of {name, value, id, value_id} objects

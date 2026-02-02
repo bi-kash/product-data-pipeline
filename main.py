@@ -19,6 +19,7 @@ from src.common.database import get_db_session
 from src.common.logging_config import setup_logging
 from src.airtable.sync import sync_to_airtable
 from src.airtable.base_creator import create_base_command
+from src.stock.stock_checker import run_stock_check
 
 # Ensure logs directory exists
 os.makedirs("logs", exist_ok=True)
@@ -881,6 +882,21 @@ def main():
         help="Test Personal Access Token configuration"
     )
 
+    # Stock check command
+    stock_check_parser = subparsers.add_parser(
+        "check_stock", help="Check stock status for products marked as Online"
+    )
+    stock_check_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Limit number of products to check (for testing)"
+    )
+    stock_check_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate stock check without updating the database"
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -1021,6 +1037,21 @@ def main():
             workspace_id=args.workspace_id,
             test_token=args.test_token
         )
+    elif args.command == "check_stock":
+        stats = run_stock_check(
+            limit=args.limit,
+            dry_run=args.dry_run
+        )
+        print(f"\n✅ Stock check completed!")
+        print(f"📊 Statistics:")
+        print(f"   Products checked: {stats['products_checked']}")
+        print(f"   Products updated: {stats['products_updated']}")
+        print(f"   Variants checked: {stats['variants_checked']}")
+        print(f"   Variants updated: {stats['variants_updated']}")
+        print(f"   Variants available: {stats['variants_available']}")
+        print(f"   Variants out of stock: {stats['variants_out_of_stock']}")
+        if stats['errors'] > 0:
+            print(f"\n⚠️  Errors encountered: {stats['errors']}")
     else:
         parser.print_help()
 
