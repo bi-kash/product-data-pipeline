@@ -54,7 +54,6 @@ cp .env.example .env
 ```
 
 5. **Set up AliExpress Dropship API access**:
-
    - Obtain AliExpress Dropship API credentials from the official AliExpress developer portal
    - Follow AliExpress documentation for OAuth 2.0 authorization flow
    - Get your authorization code for session creation
@@ -856,14 +855,12 @@ This systematic approach ensures optimal detection accuracy while minimizing man
 ### Detection Logic
 
 1. **pHash Stage**:
-
    - Compare perceptual hashes of all product image pairs
    - If distance ≤ `PHASH_DUPLICATE_THRESHOLD`: Mark as duplicate (skip CLIP)
    - If distance ≤ `PHASH_AMBIGUOUS_THRESHOLD`: Send to CLIP analysis
    - If distance > `PHASH_AMBIGUOUS_THRESHOLD`: Mark as unique
 
 2. **CLIP Stage** (for ambiguous cases):
-
    - Generate semantic embeddings for hero and variant images
    - Calculate cosine similarity between embeddings
    - If similarity ≥ `CLIP_DUPLICATE_THRESHOLD`: Mark as duplicate
@@ -871,7 +868,6 @@ This systematic approach ensures optimal detection accuracy while minimizing man
    - Otherwise: Mark as unique
 
 3. **Master Selection & Review Assignment**:
-
    - Group confirmed duplicates together
    - Select the product with the lowest `total_landed_cost` as master
    - Mark master as "MASTER", others as "DUPLICATE"
@@ -961,6 +957,42 @@ This command:
 - Syncs Product Mapping table with real AliExpress URLs and product IDs
 - Uses anonymous IDs consistently across all tables for data linking
 - Provides detailed sync statistics and error reporting
+
+**Check stock for Online products and sync to Airtable:**
+
+```bash
+python main.py check_stock
+```
+
+Options:
+
+- `--limit N`: Check only the first N online products
+- `--dry-run`: Simulate checks and show what would change without writing to the database or Airtable
+
+This command:
+
+- Only processes products with `status` set to `online` (case-insensitive). It first syncs product `status` from Airtable into the local DB, then checks stock for those products.
+- Calls the AliExpress product API for each online product to refresh product and variant data.
+- Updates product-level fields in the local database:
+  - `target_sale_price` and `target_sale_price_currency` — refreshed from the API
+  - `raw_json_detail` — full API response data
+  - `last_seen_at` — timestamp of the check
+- Updates variant-level fields in the local database:
+  - `sku_available_stock` — current stock quantity
+  - `stock_status` — availability status (`available`, `out_of_stock`, `unavailable`)
+  - `offer_sale_price` — variant price from the API
+- If the AliExpress API indicates the product is removed/delisted (API error code `604` — "All SKU Unsaleable"), the command will:
+  - Update the local product `status` to `delisted`.
+  - Mark all variants for that product with `stock_status='unavailable'` and `stock=0`.
+  - Include the product in the command summary as a delisted product.
+- After processing, the command syncs only the products that were actually checked back to Airtable (products and their variants), avoiding updates to offline products.
+
+Requirements / Notes:
+
+- Make sure your Airtable `Products` table contains a `status` field (single line text) that is used to mark products `online` / `offline` / `delisted`.
+- The command treats `status` values case-insensitively (e.g., `online` or `Online` are both accepted).
+- Delisted products are automatically set to `delisted` locally and synced to Airtable so downstream workflows remain consistent.
+- Use `--dry-run` to preview changes before committing.
 
 ### Configuration
 
@@ -1161,6 +1193,7 @@ The stock check system provides:
 **1. Initial Setup** (One-time):
 
 Run the database migration to add the new columns:
+
 ```bash
 python migrations/add_stock_check_columns.py
 ```
@@ -1168,6 +1201,7 @@ python migrations/add_stock_check_columns.py
 **2. Mark Products as Online**:
 
 Set product status to "Online" in your database:
+
 ```sql
 UPDATE filtered_products SET status = 'Online' WHERE product_id = 'YOUR_PRODUCT_ID';
 ```
@@ -1179,10 +1213,12 @@ python main.py check_stock
 ```
 
 Options:
+
 - `--limit N`: Check only the first N products (for testing)
 - `--dry-run`: Simulate without updating the database
 
 This command:
+
 - Queries all products with `status = "Online"`
 - For each product, calls the AliExpress API to fetch fresh variant data
 - Updates variant stock information in the local database
@@ -1190,6 +1226,7 @@ This command:
 - Automatically syncs updates to Airtable
 
 **Example output:**
+
 ```
 ✅ Stock check completed!
 📊 Statistics:
@@ -1204,14 +1241,17 @@ This command:
 ### Database Schema
 
 **Products Table** (`filtered_products`):
+
 - **`status`**: Listing status (e.g., "Online", "Todo", "Offline")
 
 **Variants Table** (`product_variants`):
+
 - **`stock_status`**: Stock check result ("available", "out_of_stock", "unknown")
 
 ### Airtable Integration
 
 The stock check automatically syncs to Airtable:
+
 - **Products table**: Includes `status` field
 - **Variants table**: Includes `stock` (quantity) and `stock_status` fields
 

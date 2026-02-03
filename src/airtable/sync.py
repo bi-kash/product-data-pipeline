@@ -99,6 +99,54 @@ class AirtableDataSync:
             logger.info(f"Products sync completed: {results}")
             return results
     
+    def sync_products_by_ids(self, product_ids: List[str]) -> Dict[str, Any]:
+        """
+        Sync specific products to Airtable Products table by their product IDs.
+        
+        Args:
+            product_ids: List of product IDs to sync
+            
+        Returns:
+            Dict with sync statistics and synced product IDs
+        """
+        logger.info(f"Starting products sync for {len(product_ids)} specific products (dry_run: {self.dry_run})")
+        
+        with get_db_session() as db:
+            # Query for specific products by ID
+            products = db.query(FilteredProduct).filter(
+                FilteredProduct.product_id.in_(product_ids)
+            ).all()
+            
+            logger.info(f"Found {len(products)} products to sync")
+            
+            if not products:
+                return {'created': 0, 'updated': 0, 'synced_product_ids': []}
+            
+            # Prepare records for sync
+            records_to_sync = []
+            synced_product_ids = []
+            for product in products:
+                record = self._prepare_product_record(db, product)
+                if record:
+                    records_to_sync.append(record)
+                    synced_product_ids.append(product.product_id)
+            
+            if self.dry_run:
+                logger.info(f"DRY RUN: Would sync {len(records_to_sync)} product records")
+                return {'created': 0, 'updated': 0, 'synced_product_ids': synced_product_ids}
+            
+            # Perform the sync using upsert by anon_product_id
+            results = self.client.upsert_products_by_anonymous_id(records_to_sync)
+            
+            # Update ProductMapping table with new records
+            self._update_product_mapping(db, results)
+            
+            # Add synced product IDs to results
+            results['synced_product_ids'] = synced_product_ids
+            
+            logger.info(f"Products sync completed: {results}")
+            return results
+    
     def sync_variants(self, limit: Optional[int] = None, synced_product_ids: Optional[List[str]] = None) -> Dict[str, int]:
         """
         Sync product variants to Airtable Variants table.
@@ -678,6 +726,102 @@ class AirtableDataSync:
             db.rollback()
 
 
+def sync_status_from_airtable(dry_run: bool = False) -> Dict[str, Any]:
+    """
+    Sync product status FROM Airtable TO database.
+    
+    This function:
+    1. Fetches all products from Airtable Products table
+    2. Updates filtered_products.status in the database based on Airtable status field
+    
+    Args:
+        dry_run: If True, simulate sync without actually updating database
+        
+    Returns:
+        Dict with sync statistics
+    """
+    logger.info(f"Starting status sync from Airtable to database (dry_run={dry_run})")
+    
+    stats = {
+        'products_checked': 0,
+        'products_updated': 0,
+        'errors': 0,
+        'status_changes': []
+    }
+    
+    try:
+        from .client import AirtableClient
+        client = AirtableClient()
+        
+        # Fetch all products from Airtable
+        airtable_products = client.get_all_products()
+        logger.info(f"Fetched {len(airtable_products)} products from Airtable")
+        
+        with get_db_session() as db:
+            for airtable_record in airtable_products:
+                try:
+                    fields = airtable_record.get('fields', {})
+                    anon_product_id = fields.get('anon_product_id')
+                    airtable_status = fields.get('status', '').strip()
+                    
+                    if not anon_product_id:
+                        logger.warning("Airtable record missing anon_product_id, skipping")
+                        continue
+                    
+                    # Find the real product ID from ProductMapping
+                    from ..common.database import ProductMapping
+                    mapping = db.query(ProductMapping).filter(
+                        ProductMapping.anon_product_id == anon_product_id
+                    ).first()
+                    
+                    if not mapping:
+                        logger.debug(f"No mapping found for anon_product_id: {anon_product_id}")
+                        continue
+                    
+                    # Get the product from database
+                    product = db.query(FilteredProduct).filter(
+                        FilteredProduct.product_id == mapping.product_id
+                    ).first()
+                    
+                    if not product:
+                        logger.warning(f"Product not found in database: {mapping.product_id}")
+                        continue
+                    
+                    stats['products_checked'] += 1
+                    
+                    # Update status if different
+                    old_status = product.status
+                    if product.status != airtable_status:
+                        if not dry_run:
+                            product.status = airtable_status
+                        stats['products_updated'] += 1
+                        stats['status_changes'].append({
+                            'product_id': mapping.product_id,
+                            'old_status': old_status,
+                            'new_status': airtable_status
+                        })
+                        logger.info(f"Updated product {mapping.product_id[:20]}... status: {old_status} -> {airtable_status}")
+                
+                except Exception as e:
+                    logger.error(f"Error processing Airtable record: {e}")
+                    stats['errors'] += 1
+                    continue
+            
+            # Commit changes if not dry run
+            if not dry_run:
+                db.commit()
+                logger.info("Database updated successfully")
+            else:
+                logger.info("Dry run mode - changes not committed")
+        
+        logger.info(f"Status sync completed: {stats['products_updated']} products updated out of {stats['products_checked']} checked")
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error in status sync from Airtable: {e}")
+        raise
+
+
 def sync_to_airtable(limit: Optional[int] = None, filter_status: Optional[str] = None, dry_run: bool = False) -> Dict[str, Any]:
     """
     Main function to sync data to Airtable Products + Variants tables.
@@ -700,7 +844,8 @@ def sync_to_airtable(limit: Optional[int] = None, filter_status: Optional[str] =
         synced_product_ids = products_result.get('synced_product_ids', [])
         
         # Sync variants only for products that were actually synced
-        variants_limit = limit * 10 if limit else None  # Allow more variants than products
+        # Do not artificially cap variants based on product limit; sync all variants for synced products
+        variants_limit = None
         variants_result = sync_engine.sync_variants(limit=variants_limit, synced_product_ids=synced_product_ids)
         
         # Return consolidated results

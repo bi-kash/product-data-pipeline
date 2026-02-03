@@ -40,7 +40,8 @@ class AirtableClient:
     
     def upsert_products_by_anonymous_id(self, records: List[Dict]) -> Dict[str, Any]:
         """
-        Upsert products using anonymous ID as the key.
+        Batch upsert products using anonymous ID as the key.
+        Uses Airtable's native batch_upsert for optimal performance.
         
         Args:
             records: List of records to upsert
@@ -51,48 +52,52 @@ class AirtableClient:
         if not records:
             return {'created': 0, 'updated': 0, 'records': []}
         
-        result = {'created': 0, 'updated': 0, 'records': []}
-        
-        for record in records:
-            try:
-                # Extract fields (sync.py sends records with 'fields' key)
+        try:
+            # Prepare records for batch upsert - extract fields and ensure proper format
+            batch_records = []
+            for record in records:
                 fields = record.get('fields', record)
-                anon_product_id = fields.get('anon_product_id')
-                
-                if not anon_product_id:
+                if not fields.get('anon_product_id'):
                     logger.warning("Record missing anon_product_id, skipping")
                     continue
-                
-                # Search for existing record by anon_product_id
-                existing = self.products_table.all(
-                    formula=f"{{anon_product_id}} = '{anon_product_id}'", 
-                    max_records=1
-                )
-                
-                if existing:
-                    # Update existing record
-                    updated_record = self.products_table.update(existing[0]['id'], fields)
-                    result['updated'] += 1
-                    result['records'].append(updated_record)
-                    logger.debug(f"Updated product record: {anon_product_id}")
-                else:
-                    # Create new record
-                    created_record = self.products_table.create(fields)
-                    result['created'] += 1
-                    result['records'].append(created_record)
-                    logger.debug(f"Created product record: {anon_product_id}")
-                    
-            except PyAirtableError as e:
-                logger.error(f"Airtable error upserting record {fields.get('anon_product_id', 'unknown')}: {e}")
-            except Exception as e:
-                logger.error(f"Unexpected error upserting record {fields.get('anon_product_id', 'unknown')}: {e}")
-                
-        logger.info(f"Products upsert completed: {result['created']} created, {result['updated']} updated")
-        return result
+                batch_records.append({'fields': fields})
+            
+            if not batch_records:
+                return {'created': 0, 'updated': 0, 'records': []}
+            
+            # Use batch_upsert with anon_product_id as the key field
+            # This handles up to 10 records per request automatically
+            upsert_result = self.products_table.batch_upsert(
+                records=batch_records,
+                key_fields=['anon_product_id'],
+                replace=False  # Merge fields rather than replace entire record
+            )
+            
+            # Extract statistics from result
+            created_records = upsert_result.get('createdRecords', [])
+            updated_records = upsert_result.get('updatedRecords', [])
+            all_records = upsert_result.get('records', [])
+            
+            result = {
+                'created': len(created_records),
+                'updated': len(updated_records),
+                'records': all_records
+            }
+            
+            logger.info(f"Products batch upsert completed: {result['created']} created, {result['updated']} updated")
+            return result
+            
+        except PyAirtableError as e:
+            logger.error(f"Airtable batch upsert error: {e}")
+            return {'created': 0, 'updated': 0, 'records': [], 'error': str(e)}
+        except Exception as e:
+            logger.error(f"Unexpected error in batch upsert: {e}")
+            return {'created': 0, 'updated': 0, 'records': [], 'error': str(e)}
     
     def upsert_variants_by_anonymous_sku_id(self, records: List[Dict]) -> Dict[str, Any]:
         """
-        Upsert variants using anonymous SKU ID as the key.
+        Batch upsert variants using anonymous SKU ID as the key.
+        Uses Airtable's native batch_upsert for optimal performance.
         
         Args:
             records: List of variant records to upsert
@@ -103,44 +108,47 @@ class AirtableClient:
         if not records:
             return {'created': 0, 'updated': 0, 'records': []}
         
-        result = {'created': 0, 'updated': 0, 'records': []}
-        
-        for record in records:
-            try:
-                # Extract fields 
+        try:
+            # Prepare records for batch upsert
+            batch_records = []
+            for record in records:
                 fields = record.get('fields', record)
-                anon_sku_id = fields.get('anon_sku_id')
-                
-                if not anon_sku_id:
+                if not fields.get('anon_sku_id'):
                     logger.warning("Variant record missing anon_sku_id, skipping")
                     continue
-                
-                # Search for existing record by anon_sku_id
-                existing = self.variants_table.all(
-                    formula=f"{{anon_sku_id}} = '{anon_sku_id}'", 
-                    max_records=1
-                )
-                
-                if existing:
-                    # Update existing record
-                    updated_record = self.variants_table.update(existing[0]['id'], fields)
-                    result['updated'] += 1
-                    result['records'].append(updated_record)
-                    logger.debug(f"Updated variant record: {anon_sku_id}")
-                else:
-                    # Create new record
-                    created_record = self.variants_table.create(fields)
-                    result['created'] += 1
-                    result['records'].append(created_record)
-                    logger.debug(f"Created variant record: {anon_sku_id}")
-                    
-            except PyAirtableError as e:
-                logger.error(f"Airtable error upserting variant record {fields.get('anon_sku_id', 'unknown')}: {e}")
-            except Exception as e:
-                logger.error(f"Unexpected error upserting variant record {fields.get('anon_sku_id', 'unknown')}: {e}")
-                
-        logger.info(f"Variants upsert completed: {result['created']} created, {result['updated']} updated")
-        return result
+                batch_records.append({'fields': fields})
+            
+            if not batch_records:
+                return {'created': 0, 'updated': 0, 'records': []}
+            
+            # Use batch_upsert with anon_sku_id as the key field
+            # This handles up to 10 records per request automatically
+            upsert_result = self.variants_table.batch_upsert(
+                records=batch_records,
+                key_fields=['anon_sku_id'],
+                replace=False  # Merge fields rather than replace entire record
+            )
+            
+            # Extract statistics from result
+            created_records = upsert_result.get('createdRecords', [])
+            updated_records = upsert_result.get('updatedRecords', [])
+            all_records = upsert_result.get('records', [])
+            
+            result = {
+                'created': len(created_records),
+                'updated': len(updated_records),
+                'records': all_records
+            }
+            
+            logger.info(f"Variants batch upsert completed: {result['created']} created, {result['updated']} updated")
+            return result
+            
+        except PyAirtableError as e:
+            logger.error(f"Airtable variants batch upsert error: {e}")
+            return {'created': 0, 'updated': 0, 'records': [], 'error': str(e)}
+        except Exception as e:
+            logger.error(f"Unexpected error in variants batch upsert: {e}")
+            return {'created': 0, 'updated': 0, 'records': [], 'error': str(e)}
     
     def generate_anonymous_id(self, product_id: str) -> str:
         """

@@ -1046,6 +1046,10 @@ def main():
         print(f"📊 Statistics:")
         print(f"   Products checked: {stats['products_checked']}")
         print(f"   Products updated: {stats['products_updated']}")
+        if stats.get('products_unavailable', 0) > 0:
+            print(f"   ⚠️  Products unavailable: {stats['products_unavailable']}")
+        if stats.get('products_delisted', 0) > 0:
+            print(f"   🚫 Products delisted: {stats['products_delisted']}")
         print(f"   Variants checked: {stats['variants_checked']}")
         print(f"   Variants updated: {stats['variants_updated']}")
         print(f"   Variants available: {stats['variants_available']}")
