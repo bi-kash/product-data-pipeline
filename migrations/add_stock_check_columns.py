@@ -55,11 +55,19 @@ def run_migration():
             
         except Exception as e:
             db.rollback()
-            print(f"❌ Migration failed: {e}")
-            # Check if the error is because columns already exist
-            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+            error_msg = str(e).lower()
+            # Check for various database-specific messages indicating column already exists
+            already_exists_indicators = [
+                "already exists",
+                "duplicate column",
+                "column of relation",  # PostgreSQL
+                "duplicate column name"  # MySQL
+            ]
+            
+            if any(indicator in error_msg for indicator in already_exists_indicators):
                 print("ℹ️  Columns may already exist. Migration may have been run previously.")
             else:
+                print(f"❌ Migration failed: {e}")
                 raise
 
 def rollback_migration():

@@ -243,9 +243,14 @@ class StockChecker:
         if sku_available_stock is None:
             return 'unknown'
         
+        if sku_available_stock < 0:
+            # Negative stock indicates a data error - log it but treat as out of stock
+            logger.warning(f"Negative stock value detected: {sku_available_stock}. Treating as out_of_stock.")
+            return 'out_of_stock'
+        
         if sku_available_stock > 0:
             return 'available'
-        else:
+        else:  # sku_available_stock == 0
             return 'out_of_stock'
     
     def _log_summary(self) -> None:
