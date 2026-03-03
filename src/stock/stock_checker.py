@@ -4,8 +4,10 @@ Stock Checker Module
 This module handles stock checking functionality for products and their variants.
 It processes only products marked as "Online" and updates stock status based on
 availability data from the AliExpress API.
-"""
+Also supports CSV-based availability checking for products from automatic.csv."""
 
+import csv
+import re
 import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
@@ -26,6 +28,9 @@ logger = logging.getLogger(__name__)
 class StockChecker:
     """Handles stock checking for online products and their variants."""
     
+    # Regex pattern to extract product ID from AliExpress URL
+    PRODUCT_ID_PATTERN = re.compile(r'/item/(\d+)\.html')
+    
     def __init__(self, dry_run: bool = False):
         """
         Initialize the stock checker.
@@ -38,7 +43,10 @@ class StockChecker:
         self.stats = {
             'products_checked': 0,
             'products_updated': 0,
-            'products_unavailable': 0,            'products_delisted': 0,            'variants_checked': 0,
+            'products_available': 0,
+            'products_unavailable': 0,
+            'products_delisted': 0,
+            'variants_checked': 0,
             'variants_updated': 0,
             'variants_available': 0,
             'variants_out_of_stock': 0,
@@ -46,6 +54,238 @@ class StockChecker:
         }
         self.unavailable_products = []  # Track products that became unavailable
         self.checked_product_ids = []  # Track product IDs that were checked
+        self.airtable_client = None  # Lazy init for Airtable
+    
+    def _extract_product_id(self, aliexpress_link: str) -> Optional[str]:
+        """Extract product ID from AliExpress URL."""
+        if not aliexpress_link:
+            return None
+        match = self.PRODUCT_ID_PATTERN.search(aliexpress_link)
+        return match.group(1) if match else None
+    
+    def _load_product_ids_from_csv(self, csv_path: str) -> List[str]:
+        """
+        Load product IDs from CSV file, filtering to only those in filtered_products.
+        
+        Args:
+            csv_path: Path to CSV file with aliexpress_link column
+            
+        Returns:
+            List of product IDs that exist in filtered_products table
+        """
+        csv_product_ids = set()
+        
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    aliexpress_link = row.get('aliexpress_link', '')
+                    product_id = self._extract_product_id(aliexpress_link)
+                    if product_id:
+                        csv_product_ids.add(product_id)
+            
+            logger.info(f"Found {len(csv_product_ids)} product IDs in CSV")
+            
+            # Filter to only products that exist in filtered_products
+            with get_db_session() as db:
+                existing_products = db.query(FilteredProduct.product_id).filter(
+                    FilteredProduct.product_id.in_(list(csv_product_ids))
+                ).all()
+                existing_ids = [p.product_id for p in existing_products]
+            
+            logger.info(f"Found {len(existing_ids)} products in filtered_products table")
+            return existing_ids
+            
+        except FileNotFoundError:
+            logger.error(f"CSV file not found: {csv_path}")
+            return []
+        except Exception as e:
+            logger.error(f"Error reading CSV file: {e}")
+            return []
+    
+    def _check_availability_only(self, product_id: str) -> str:
+        """
+        Check availability for a single product (product-level only, no variants).
+        
+        Args:
+            product_id: AliExpress product ID
+            
+        Returns:
+            Status string: 'available', 'unavailable', or 'delisted'
+        """
+        try:
+            product_data = self.api_client.get_product_details(product_id)
+            
+            if not product_data or 'aliexpress_ds_product_get_response' not in product_data:
+                return 'unavailable'
+            
+            response = product_data['aliexpress_ds_product_get_response']
+            result = response.get('result', {})
+            
+            if not result:
+                rsp_code = response.get('rsp_code')
+                rsp_msg = response.get('rsp_msg', '')
+                
+                if rsp_code:
+                    logger.debug(f"API Error for {product_id}: Code {rsp_code} - {rsp_msg}")
+                    if rsp_code == 604 or 'unsaleable' in rsp_msg.lower():
+                        return 'delisted'
+                return 'unavailable'
+            
+            return 'available'
+            
+        except Exception as e:
+            logger.error(f"Error checking availability for {product_id}: {e}")
+            return 'unavailable'
+    
+    def _batch_update_airtable_status(self, status_updates: List[Dict]) -> Dict:
+        """
+        Batch update product statuses in Airtable.
+        
+        Args:
+            status_updates: List of {'product_id': str, 'status': str}
+            
+        Returns:
+            Dict with update statistics
+        """
+        if self.dry_run or not status_updates:
+            return {'updated': 0}
+        
+        try:
+            from src.airtable.client import AirtableClient
+            if not self.airtable_client:
+                self.airtable_client = AirtableClient()
+            
+            # Generate anonymous IDs and prepare mapping
+            anon_to_status = {}
+            for update in status_updates:
+                anon_id = self.airtable_client.generate_anonymous_id(update['product_id'])
+                anon_to_status[anon_id] = update['status']
+            
+            # Get all existing records from Airtable
+            all_products = self.airtable_client.products_table.all()
+            
+            # Find records to update
+            records_to_update = []
+            for record in all_products:
+                anon_id = record['fields'].get('anon_product_id')
+                if anon_id in anon_to_status:
+                    records_to_update.append({
+                        'id': record['id'],
+                        'fields': {'status': anon_to_status[anon_id]}
+                    })
+            
+            if records_to_update:
+                self.airtable_client.products_table.batch_update(records_to_update)
+                logger.info(f"Batch updated {len(records_to_update)} products in Airtable")
+            
+            return {'updated': len(records_to_update)}
+            
+        except Exception as e:
+            logger.error(f"Error in batch Airtable update: {e}")
+            return {'updated': 0, 'error': str(e)}
+    
+    def check_availability_from_csv(self, csv_path: str, limit: Optional[int] = None) -> Dict[str, int]:
+        """
+        Check availability for products from CSV file (product-level only).
+        
+        Only checks products that exist in filtered_products table.
+        No variant-level checks or price updates.
+        
+        Args:
+            csv_path: Path to CSV file with aliexpress_link column
+            limit: Maximum number of products to check
+            
+        Returns:
+            Dictionary with statistics
+        """
+        logger.info(f"Starting CSV-based availability check from {csv_path} (dry_run={self.dry_run})")
+        
+        # Load product IDs that exist in filtered_products
+        product_ids = self._load_product_ids_from_csv(csv_path)
+        
+        if not product_ids:
+            logger.warning("No matching products found in filtered_products table")
+            return self.stats
+        
+        if limit:
+            product_ids = product_ids[:limit]
+        
+        total = len(product_ids)
+        logger.info(f"Checking availability for {total} products")
+        
+        status_updates = []
+        
+        with get_db_session() as db:
+            for idx, product_id in enumerate(product_ids, 1):
+                product = db.query(FilteredProduct).filter(
+                    FilteredProduct.product_id == product_id
+                ).first()
+                
+                if not product:
+                    continue
+                
+                title = (product.product_title or product_id)[:50]
+                logger.info(f"[{idx}/{total}] Checking {product_id}: {title}...")
+                
+                try:
+                    status = self._check_availability_only(product_id)
+                    self.stats['products_checked'] += 1
+                    self.checked_product_ids.append(product_id)
+                    
+                    # Update stats
+                    if status == 'available':
+                        self.stats['products_available'] += 1
+                    elif status == 'delisted':
+                        self.stats['products_delisted'] += 1
+                    else:
+                        self.stats['products_unavailable'] += 1
+                    
+                    # Update local database
+                    if not self.dry_run:
+                        old_status = product.status
+                        product.status = status
+                        product.updated_at = datetime.now(timezone.utc)
+                        if old_status != status:
+                            self.stats['products_updated'] += 1
+                            logger.info(f"  -> Status: {old_status} -> {status}")
+                        else:
+                            logger.info(f"  -> Status: {status} (unchanged)")
+                    else:
+                        logger.info(f"  -> Status: {status}")
+                    
+                    status_updates.append({'product_id': product_id, 'status': status})
+                    
+                except Exception as e:
+                    logger.error(f"Error processing product {product_id}: {e}")
+                    self.stats['errors'] += 1
+            
+            if not self.dry_run:
+                db.commit()
+                logger.info("Database updated successfully")
+        
+        # Batch update Airtable
+        if status_updates and not self.dry_run:
+            logger.info(f"Batch updating {len(status_updates)} products in Airtable...")
+            airtable_result = self._batch_update_airtable_status(status_updates)
+            logger.info(f"Airtable update: {airtable_result.get('updated', 0)} updated")
+        
+        self._log_csv_summary()
+        return self.stats
+    
+    def _log_csv_summary(self):
+        """Log summary for CSV-based availability check."""
+        logger.info("=" * 60)
+        logger.info("CSV Availability Check Summary")
+        logger.info("=" * 60)
+        logger.info(f"Products checked:   {self.stats['products_checked']}")
+        logger.info(f"  Available:        {self.stats['products_available']}")
+        logger.info(f"  Unavailable:      {self.stats['products_unavailable']}")
+        logger.info(f"  Delisted:         {self.stats['products_delisted']}")
+        logger.info(f"Products updated:   {self.stats['products_updated']}")
+        if self.stats['errors'] > 0:
+            logger.warning(f"Errors:             {self.stats['errors']}")
+        logger.info("=" * 60)
     
     def check_stock(self, limit: Optional[int] = None) -> Dict[str, int]:
         """
@@ -383,18 +623,27 @@ class StockChecker:
         logger.info("=" * 60)
 
 
-def run_stock_check(limit: Optional[int] = None, dry_run: bool = False) -> Dict[str, int]:
+def run_stock_check(limit: Optional[int] = None, dry_run: bool = False, csv_path: Optional[str] = None) -> Dict[str, int]:
     """
-    Run stock check for all Online products.
+    Run stock check for products.
     
     This is the main entry point for the stock check functionality.
     
     Args:
         limit: Maximum number of products to check (None for all)
         dry_run: If True, performs checks without updating the database
+        csv_path: If provided, check availability for products from CSV file
+                  (product-level only, no variant/price updates).
+                  If None, check stock for all Online products (full check).
     
     Returns:
         Dictionary with statistics about the operation
     """
     checker = StockChecker(dry_run=dry_run)
-    return checker.check_stock(limit=limit)
+    
+    if csv_path:
+        # CSV mode: availability check only (no variant/price updates)
+        return checker.check_availability_from_csv(csv_path=csv_path, limit=limit)
+    else:
+        # Normal mode: full stock check for Online products
+        return checker.check_stock(limit=limit)

@@ -884,7 +884,13 @@ def main():
 
     # Stock check command
     stock_check_parser = subparsers.add_parser(
-        "check_stock", help="Check stock status for products marked as Online"
+        "check_stock", help="Check stock status for products marked as Online, or check availability from CSV"
+    )
+    stock_check_parser.add_argument(
+        "--csv",
+        type=str,
+        default="automatic.csv",
+        help="Path to CSV file with aliexpress_link column (default: automatic.csv). When provided or by default, runs product-level availability checks only (no variant/price updates)."
     )
     stock_check_parser.add_argument(
         "--limit",
@@ -1038,24 +1044,40 @@ def main():
             test_token=args.test_token
         )
     elif args.command == "check_stock":
+        csv_path = getattr(args, 'csv', None)
         stats = run_stock_check(
             limit=args.limit,
-            dry_run=args.dry_run
+            dry_run=args.dry_run,
+            csv_path=csv_path
         )
-        print(f"\n✅ Stock check completed!")
-        print(f"📊 Statistics:")
-        print(f"   Products checked: {stats['products_checked']}")
-        print(f"   Products updated: {stats['products_updated']}")
-        if stats.get('products_unavailable', 0) > 0:
-            print(f"   ⚠️  Products unavailable: {stats['products_unavailable']}")
-        if stats.get('products_delisted', 0) > 0:
-            print(f"   🚫 Products delisted: {stats['products_delisted']}")
-        print(f"   Variants checked: {stats['variants_checked']}")
-        print(f"   Variants updated: {stats['variants_updated']}")
-        print(f"   Variants available: {stats['variants_available']}")
-        print(f"   Variants out of stock: {stats['variants_out_of_stock']}")
-        if stats['errors'] > 0:
-            print(f"\n⚠️  Errors encountered: {stats['errors']}")
+        
+        if csv_path:
+            # CSV mode: availability check output
+            print(f"\n✅ CSV availability check completed!")
+            print(f"📊 Statistics:")
+            print(f"   Products checked: {stats['products_checked']}")
+            print(f"   ✅ Available:     {stats.get('products_available', 0)}")
+            print(f"   ⚠️  Unavailable:  {stats.get('products_unavailable', 0)}")
+            print(f"   🚫 Delisted:      {stats.get('products_delisted', 0)}")
+            print(f"   Products updated: {stats['products_updated']}")
+            if stats['errors'] > 0:
+                print(f"   ❌ Errors:        {stats['errors']}")
+        else:
+            # Normal mode: full stock check output
+            print(f"\n✅ Stock check completed!")
+            print(f"📊 Statistics:")
+            print(f"   Products checked: {stats['products_checked']}")
+            print(f"   Products updated: {stats['products_updated']}")
+            if stats.get('products_unavailable', 0) > 0:
+                print(f"   ⚠️  Products unavailable: {stats['products_unavailable']}")
+            if stats.get('products_delisted', 0) > 0:
+                print(f"   🚫 Products delisted: {stats['products_delisted']}")
+            print(f"   Variants checked: {stats['variants_checked']}")
+            print(f"   Variants updated: {stats['variants_updated']}")
+            print(f"   Variants available: {stats['variants_available']}")
+            print(f"   Variants out of stock: {stats['variants_out_of_stock']}")
+            if stats['errors'] > 0:
+                print(f"\n⚠️  Errors encountered: {stats['errors']}")
     else:
         parser.print_help()
 
