@@ -63,13 +63,21 @@ class AirtableDataSync:
                 # Default: only sync MASTER and UNIQUE products
                 query = query.filter(ProductStatus.status.in_(['MASTER', 'UNIQUE']))
             
+            # Skip products that are already present in product_mapping
+            already_mapped_ids = [
+                row.product_id for row in db.query(ProductMapping.product_id).all()
+            ]
+            if already_mapped_ids:
+                logger.info(f"Skipping {len(already_mapped_ids)} products already in product_mapping")
+                query = query.filter(FilteredProduct.product_id.notin_(already_mapped_ids))
+            
             # Apply limit if specified
             if limit:
                 query = query.limit(limit)
             
             products = query.all()
             
-            logger.info(f"Found {len(products)} products to sync")
+            logger.info(f"Found {len(products)} new products to sync")
             
             if not products:
                 return {'created': 0, 'updated': 0, 'synced_product_ids': []}
@@ -176,14 +184,22 @@ class AirtableDataSync:
                     variants = variants[:limit]
                     
             else:
-                # Fallback: sync variants for all MASTER/UNIQUE products
-                logger.info("No synced product IDs provided, syncing all MASTER/UNIQUE variants")
+                # Fallback: sync variants for all MASTER/UNIQUE products not yet mapped
+                logger.info("No synced product IDs provided, syncing MASTER/UNIQUE variants for unmapped products")
                 query = db.query(ProductVariant).join(
                     FilteredProduct, ProductVariant.product_id == FilteredProduct.product_id
                 ).join(ProductStatus)
                 
                 # Only sync variants for MASTER and UNIQUE products
                 query = query.filter(ProductStatus.status.in_(['MASTER', 'UNIQUE']))
+                
+                # Skip variants for products already present in product_mapping
+                already_mapped_ids = [
+                    row.product_id for row in db.query(ProductMapping.product_id).all()
+                ]
+                if already_mapped_ids:
+                    logger.info(f"Skipping variants for {len(already_mapped_ids)} products already in product_mapping")
+                    query = query.filter(ProductVariant.product_id.notin_(already_mapped_ids))
                 
                 # Apply limit if specified
                 if limit:
