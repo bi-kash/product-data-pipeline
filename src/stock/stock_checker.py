@@ -241,7 +241,7 @@ class StockChecker:
                     else:
                         self.stats['products_unavailable'] += 1
                     
-                    # Update local database
+                    # Update local database; only queue Airtable updates when local changed
                     if not self.dry_run:
                         old_status = product.status
                         product.status = status
@@ -249,12 +249,12 @@ class StockChecker:
                         if old_status != status:
                             self.stats['products_updated'] += 1
                             logger.info(f"  -> Status: {old_status} -> {status}")
+                            # Only queue for Airtable when there was an actual change
+                            status_updates.append({'product_id': product_id, 'status': status})
                         else:
                             logger.info(f"  -> Status: {status} (unchanged)")
                     else:
                         logger.info(f"  -> Status: {status}")
-                    
-                    status_updates.append({'product_id': product_id, 'status': status})
                     
                 except Exception as e:
                     logger.error(f"Error processing product {product_id}: {e}")
@@ -640,10 +640,26 @@ def run_stock_check(limit: Optional[int] = None, dry_run: bool = False, csv_path
         Dictionary with statistics about the operation
     """
     checker = StockChecker(dry_run=dry_run)
-    
+
     if csv_path:
         # CSV mode: availability check only (no variant/price updates)
         return checker.check_availability_from_csv(csv_path=csv_path, limit=limit)
-    else:
-        # Normal mode: full stock check for Online products
-        return checker.check_stock(limit=limit)
+
+    # Default behavior: perform original full Airtable-based stock check first
+    stats_full = checker.check_stock(limit=limit)
+
+    # After full check, also check automatic.csv product-level availability (ignore missing products)
+    try:
+        stats_csv = checker.check_availability_from_csv(csv_path='automatic.csv', limit=limit)
+    except Exception:
+        stats_csv = {}
+
+    # Merge stats (sum numeric counters)
+    combined = dict(stats_full)
+    for k, v in (stats_csv or {}).items():
+        if isinstance(v, int):
+            combined[k] = combined.get(k, 0) + v
+        else:
+            combined[k] = v
+
+    return combined

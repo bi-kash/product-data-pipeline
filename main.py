@@ -889,8 +889,8 @@ def main():
     stock_check_parser.add_argument(
         "--csv",
         type=str,
-        default="automatic.csv",
-        help="Path to CSV file with aliexpress_link column (default: automatic.csv). When provided or by default, runs product-level availability checks only (no variant/price updates)."
+        default=None,
+        help="Optional path to CSV file with aliexpress_link column. When provided, runs product-level availability checks only (no variant/price updates). By default the command performs the full stock check against Airtable."
     )
     stock_check_parser.add_argument(
         "--limit",
