@@ -173,7 +173,9 @@ class OfficialAliExpressClient:
             return response.body
             
         except Exception as e:
-            if retry_count < self.max_retries and 'token' not in str(e).lower():
+            # Allow retry for any transient error (including token/session issues).
+            # Token refresh is handled by _get_valid_session_token() and session_manager circuit breaker.
+            if retry_count < self.max_retries:
                 logger.warning(f"API call failed, retrying... (attempt {retry_count + 1}/{self.max_retries}): {e}")
                 time.sleep(self.rate_limit_delay * (retry_count + 1))
                 return self._make_api_call(api_method, params, retry_count + 1)

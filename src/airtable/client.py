@@ -224,15 +224,21 @@ class AirtableClient:
             logger.error(f"Error reversing anonymous SKU ID {anon_sku_id}: {e}")
             return None
     
-    def get_all_products(self) -> List[Dict]:
+    def get_all_products(self, filter_formula: Optional[str] = None) -> List[Dict]:
         """
-        Get all products from Airtable.
+        Get products from Airtable, optionally filtered by a formula.
         
+        Args:
+            filter_formula: Airtable formula string, e.g. "{status} = 'Online'"
+            
         Returns:
             List of product records
         """
         try:
-            return self.products_table.all()
+            kwargs = {}
+            if filter_formula:
+                kwargs['formula'] = filter_formula
+            return self.products_table.all(**kwargs)
         except Exception as e:
             logger.error(f"Error fetching all products: {e}")
             return []

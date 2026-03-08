@@ -769,8 +769,8 @@ def sync_status_from_airtable(dry_run: bool = False) -> Dict[str, Any]:
         from .client import AirtableClient
         client = AirtableClient()
         
-        # Fetch all products from Airtable
-        airtable_products = client.get_all_products()
+        # Fetch only Online products from Airtable (avoids pulling all 3000+ records)
+        airtable_products = client.get_all_products(filter_formula="LOWER({status}) = 'online'")
         logger.info(f"Fetched {len(airtable_products)} products from Airtable")
         
         with get_db_session() as db:

@@ -374,7 +374,7 @@ class StockChecker:
                 self.stats['errors'] += 1
         
         self._log_summary()
-        return self.stats
+        return dict(self.stats)
     
     def _check_product_stock(self, db: Session, product: FilteredProduct) -> None:
         """
@@ -609,18 +609,6 @@ class StockChecker:
                 logger.warning(f"    Error: {prod['error_code']} - {prod['error_message']}")
         
         logger.info("=" * 60)
-        logger.info("Stock Check Summary")
-        logger.info("=" * 60)
-        logger.info(f"Products checked: {self.stats['products_checked']}")
-        logger.info(f"Products updated: {self.stats['products_updated']}")
-        logger.info(f"Products delisted: {self.stats['products_delisted']}")
-        logger.info(f"Variants checked: {self.stats['variants_checked']}")
-        logger.info(f"Variants updated: {self.stats['variants_updated']}")
-        logger.info(f"Variants available: {self.stats['variants_available']}")
-        logger.info(f"Variants out of stock: {self.stats['variants_out_of_stock']}")
-        if self.stats['errors'] > 0:
-            logger.warning(f"Errors encountered: {self.stats['errors']}")
-        logger.info("=" * 60)
 
 
 def run_stock_check(limit: Optional[int] = None, dry_run: bool = False, csv_path: Optional[str] = None) -> Dict[str, int]:
@@ -650,16 +638,8 @@ def run_stock_check(limit: Optional[int] = None, dry_run: bool = False, csv_path
 
     # After full check, also check automatic.csv product-level availability (ignore missing products)
     try:
-        stats_csv = checker.check_availability_from_csv(csv_path='automatic.csv', limit=limit)
+        checker.check_availability_from_csv(csv_path='automatic.csv', limit=limit)
     except Exception:
-        stats_csv = {}
+        pass
 
-    # Merge stats (sum numeric counters)
-    combined = dict(stats_full)
-    for k, v in (stats_csv or {}).items():
-        if isinstance(v, int):
-            combined[k] = combined.get(k, 0) + v
-        else:
-            combined[k] = v
-
-    return combined
+    return stats_full
