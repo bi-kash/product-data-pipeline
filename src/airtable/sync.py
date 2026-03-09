@@ -107,12 +107,13 @@ class AirtableDataSync:
             logger.info(f"Products sync completed: {results}")
             return results
     
-    def sync_products_by_ids(self, product_ids: List[str]) -> Dict[str, Any]:
+    def sync_products_by_ids(self, product_ids: List[str], stock_update_only: bool = False) -> Dict[str, Any]:
         """
         Sync specific products to Airtable Products table by their product IDs.
         
         Args:
             product_ids: List of product IDs to sync
+            stock_update_only: If True, only sync price/stock/status fields (used by check_stock)
             
         Returns:
             Dict with sync statistics and synced product IDs
@@ -130,11 +131,13 @@ class AirtableDataSync:
             if not products:
                 return {'created': 0, 'updated': 0, 'synced_product_ids': []}
             
+            prepare_fn = self._prepare_product_stock_record if stock_update_only else self._prepare_product_record
+            
             # Prepare records for sync
             records_to_sync = []
             synced_product_ids = []
             for product in products:
-                record = self._prepare_product_record(db, product)
+                record = prepare_fn(db, product)
                 if record:
                     records_to_sync.append(record)
                     synced_product_ids.append(product.product_id)
@@ -155,13 +158,14 @@ class AirtableDataSync:
             logger.info(f"Products sync completed: {results}")
             return results
     
-    def sync_variants(self, limit: Optional[int] = None, synced_product_ids: Optional[List[str]] = None) -> Dict[str, int]:
+    def sync_variants(self, limit: Optional[int] = None, synced_product_ids: Optional[List[str]] = None, stock_update_only: bool = False) -> Dict[str, int]:
         """
         Sync product variants to Airtable Variants table.
         
         Args:
             limit: Maximum number of variants to sync
             synced_product_ids: List of product IDs that were synced to Products table (if None, sync all MASTER/UNIQUE)
+            stock_update_only: If True, only sync price/stock fields (used by check_stock)
             
         Returns:
             Dict with sync statistics
@@ -242,7 +246,8 @@ class AirtableDataSync:
             records_to_sync = []
             for variant in variants:
                 is_recommended = variant.sku_id in recommended_variants
-                record = self._prepare_variant_record(db, variant, is_recommended)
+                prepare_fn = self._prepare_variant_stock_record if stock_update_only else self._prepare_variant_record
+                record = prepare_fn(db, variant, is_recommended)
                 if record:
                     records_to_sync.append(record)
             
@@ -261,7 +266,7 @@ class AirtableDataSync:
     
     def _prepare_product_record(self, db: Session, product: FilteredProduct) -> Optional[Dict]:
         """
-        Prepare a single product record for Airtable sync.
+        Prepare a full product record for Airtable sync (used by airtable:sync command).
         
         Args:
             db: Database session
@@ -312,21 +317,17 @@ class AirtableDataSync:
                     variant_images.append(img.s3_url)
             
             # Deduplicate images with priority: variant > gallery > other
-            # 1. Make variant_images unique
-            variant_images_unique = list(dict.fromkeys(variant_images))  # Preserves order
+            variant_images_unique = list(dict.fromkeys(variant_images))
             variant_images_set = set(variant_images_unique)
             
-            # 2. Remove gallery_images that are in variant_images
             gallery_images_filtered = [img for img in gallery_images if img not in variant_images_set and img != hero_image]
             gallery_images_unique = list(dict.fromkeys(gallery_images_filtered))
             gallery_images_set = set(gallery_images_unique)
             
-            # 3. Remove other_images that are in variant_images or gallery_images
-            other_images_filtered = [img for img in other_images 
-                                    if img not in variant_images_set and img not in gallery_images_set and img != hero_image]
+            other_images_filtered = [img for img in other_images
+                                     if img not in variant_images_set and img not in gallery_images_set and img != hero_image]
             other_images_unique = list(dict.fromkeys(other_images_filtered))
             
-            # Convert lists to comma-separated strings
             gallery_images_str = ', '.join(gallery_images_unique) if gallery_images_unique else ''
             other_images_str = ', '.join(other_images_unique) if other_images_unique else ''
             variant_images_str = ', '.join(variant_images_unique) if variant_images_unique else ''
@@ -336,19 +337,17 @@ class AirtableDataSync:
                 ProductVideo.product_id == product.product_id,
                 ProductVideo.s3_url.isnot(None)
             ).first()
-            
             video_url = video.s3_url if video else ''
             
             # Get pricing info from variants
             price_info = self._extract_pricing_from_variants(product)
             
-            # Find the best variant to use as selected_variant (lowest price or first available)
+            # Find the best variant to use as selected_variant
             best_variant = self._find_best_variant(db, product.product_id)
             selected_variant_anon_id = ''
             if best_variant:
                 selected_variant_anon_id = self.client.generate_anonymous_sku_id(best_variant.sku_id)
             
-            # Prepare the record fields (original structure + selected_variant)
             record_fields = {
                 'anon_product_id': product_id,
                 'title': product.product_title or '',
@@ -360,7 +359,7 @@ class AirtableDataSync:
                 'variant_images': variant_images_str,
                 'video': video_url,
                 'duplicate_status': status_info.status,
-                'status': product.status or '',  # Product listing status (Online, Todo, Offline)
+                'status': product.status or '',
                 'price_eur': price_info.get('min_price', float(product.target_sale_price or 0)),
                 'shipping_eur': float(product.min_shipping_price or 0),
                 'total_eur': price_info.get('min_price', float(product.target_sale_price or 0)) + float(product.min_shipping_price or 0),
@@ -372,28 +371,46 @@ class AirtableDataSync:
             # Filter to only include fields that exist in the base
             filtered_fields = self._filter_fields(record_fields, self.products_fields)
             
-            record = {'fields': filtered_fields}
-            
-            return record
+            return {'fields': filtered_fields}
             
         except Exception as e:
             logger.error(f"Error preparing product record for {product.product_id}: {e}")
             return None
+
+    def _prepare_product_stock_record(self, db: Session, product: FilteredProduct) -> Optional[Dict]:
+        """
+        Prepare a slim product record for stock-check updates only.
+        Only writes price_eur, shipping_eur, total_eur, delivery_time, status and
+        sync_timestamp — never touches select fields like duplicate_status.
+        """
+        try:
+            product_id = self.client.generate_anonymous_id(product.product_id)
+            price_info = self._extract_pricing_from_variants(product)
+            min_price = price_info.get('min_price', float(product.target_sale_price or 0))
+            shipping = float(product.min_shipping_price or 0)
+            
+            record_fields = {
+                'anon_product_id': product_id,
+                'price_eur': min_price,
+                'shipping_eur': shipping,
+                'total_eur': min_price + shipping,
+                'delivery_time': f"{product.min_delivery_days or 0}-{product.max_delivery_days or 0} days",
+                'status': product.status or '',
+                'sync_timestamp': datetime.now().isoformat()
+            }
+            
+            filtered_fields = self._filter_fields(record_fields, self.products_fields)
+            return {'fields': filtered_fields}
+            
+        except Exception as e:
+            logger.error(f"Error preparing product stock record for {product.product_id}: {e}")
+            return None
     
     def _prepare_variant_record(self, db: Session, variant: ProductVariant, is_recommended: bool = False) -> Optional[Dict]:
         """
-        Prepare a single variant record for Airtable Variants table.
-        
-        Args:
-            db: Database session
-            variant: ProductVariant to prepare
-            is_recommended: Whether this variant is the recommended one (lowest price) for the product
-            
-        Returns:
-            Dict with Airtable record data or None if preparation fails
+        Prepare a full variant record for Airtable sync (used by airtable:sync command).
         """
         try:
-            # Generate anonymous IDs
             anon_sku_id = self.client.generate_anonymous_sku_id(variant.sku_id)
             anon_product_id = self.client.generate_anonymous_id(variant.product_id)
             
@@ -403,22 +420,18 @@ class AirtableDataSync:
                 ProductImage.sku_id == variant.sku_id,
                 ProductImage.s3_url.isnot(None)
             ).first()
-            
             variant_image_url = variant_image.s3_url if variant_image else ''
             
             # Get hero image (product's main image)
             hero_image = db.query(ProductImage).filter(
                 ProductImage.product_id == variant.product_id,
-                ProductImage.sku_id.is_(None),  # Product-level image
+                ProductImage.sku_id.is_(None),
                 ProductImage.s3_url.isnot(None)
             ).order_by(ProductImage.created_at.asc()).first()
-            
             hero_image_url = hero_image.s3_url if hero_image else ''
             
-            # Calculate total price with shipping
             variant_price = float(variant.offer_sale_price or 0)
             
-            # Get the product for shipping info
             product = db.query(FilteredProduct).filter(
                 FilteredProduct.product_id == variant.product_id
             ).first()
@@ -426,7 +439,6 @@ class AirtableDataSync:
             shipping_price = float(product.min_shipping_price or 0) if product else 0
             total_price = variant_price + shipping_price
             
-            # Prepare the record fields for Variants table
             record_fields = {
                 'anon_sku_id': anon_sku_id,
                 'anon_product_id': anon_product_id,
@@ -435,7 +447,7 @@ class AirtableDataSync:
                 'shipping_eur': shipping_price,
                 'total_eur': total_price,
                 'stock': variant.sku_available_stock or 0,
-                'stock_status': variant.stock_status or '',  # Stock check result (available, out_of_stock)
+                'stock_status': variant.stock_status or '',
                 'variant_image': variant_image_url,
                 'hero_image': hero_image_url,
                 'delivery_time': f"{product.min_delivery_days or 0}-{product.max_delivery_days or 0} days" if product else "0-0 days",
@@ -443,15 +455,46 @@ class AirtableDataSync:
                 'sync_timestamp': datetime.now().isoformat()
             }
             
-            # Filter to only include fields that exist in the base
             filtered_fields = self._filter_fields(record_fields, self.variants_fields)
-            
-            record = {'fields': filtered_fields}
-            
-            return record
+            return {'fields': filtered_fields}
             
         except Exception as e:
             logger.error(f"Error preparing variant record for {variant.sku_id}: {e}")
+            return None
+
+    def _prepare_variant_stock_record(self, db: Session, variant: ProductVariant, is_recommended: bool = False) -> Optional[Dict]:
+        """
+        Prepare a slim variant record for stock-check updates only.
+        Only writes price_eur, shipping_eur, total_eur, delivery_time, stock, stock_status
+        and sync_timestamp — never touches attachment or select fields.
+        """
+        try:
+            anon_sku_id = self.client.generate_anonymous_sku_id(variant.sku_id)
+            variant_price = float(variant.offer_sale_price or 0)
+            
+            product = db.query(FilteredProduct).filter(
+                FilteredProduct.product_id == variant.product_id
+            ).first()
+            
+            shipping_price = float(product.min_shipping_price or 0) if product else 0
+            total_price = variant_price + shipping_price
+            
+            record_fields = {
+                'anon_sku_id': anon_sku_id,
+                'price_eur': variant_price,
+                'shipping_eur': shipping_price,
+                'total_eur': total_price,
+                'delivery_time': f"{product.min_delivery_days or 0}-{product.max_delivery_days or 0} days" if product else "0-0 days",
+                'stock': variant.sku_available_stock or 0,
+                'stock_status': variant.stock_status or '',
+                'sync_timestamp': datetime.now().isoformat()
+            }
+            
+            filtered_fields = self._filter_fields(record_fields, self.variants_fields)
+            return {'fields': filtered_fields}
+            
+        except Exception as e:
+            logger.error(f"Error preparing variant stock record for {variant.sku_id}: {e}")
             return None
     
     def _find_best_variant(self, db: Session, product_id: str) -> Optional[ProductVariant]:

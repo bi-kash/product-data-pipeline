@@ -361,12 +361,12 @@ class StockChecker:
                 from src.airtable.sync import AirtableDataSync
                 sync_engine = AirtableDataSync(dry_run=False)
                 
-                # Sync only the checked products
-                products_result = sync_engine.sync_products_by_ids(self.checked_product_ids)
+                # Sync only the checked products — price/stock/status fields only
+                products_result = sync_engine.sync_products_by_ids(self.checked_product_ids, stock_update_only=True)
                 
-                # Sync variants for those products
+                # Sync variants for those products — price/stock fields only
                 synced_product_ids = products_result.get('synced_product_ids', [])
-                variants_result = sync_engine.sync_variants(synced_product_ids=synced_product_ids)
+                variants_result = sync_engine.sync_variants(synced_product_ids=synced_product_ids, stock_update_only=True)
                 
                 logger.info(f"Airtable sync completed: {products_result['updated']} products, {variants_result['updated']} variants updated")
             except Exception as e:
