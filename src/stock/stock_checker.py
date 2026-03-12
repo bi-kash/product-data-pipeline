@@ -12,7 +12,6 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 
 from src.common.database import (
     get_db_session,
@@ -63,45 +62,28 @@ class StockChecker:
         match = self.PRODUCT_ID_PATTERN.search(aliexpress_link)
         return match.group(1) if match else None
     
-    def _load_product_ids_from_csv(self, csv_path: str) -> List[str]:
+    def _load_csv_rows(self, csv_path: str) -> Tuple[List[str], List[Dict]]:
         """
-        Load product IDs from CSV file, filtering to only those in filtered_products.
+        Load all rows from CSV file with their extracted product IDs.
         
         Args:
             csv_path: Path to CSV file with aliexpress_link column
             
         Returns:
-            List of product IDs that exist in filtered_products table
+            Tuple of (fieldnames, rows) where rows are list of dicts
         """
-        csv_product_ids = set()
-        
         try:
             with open(csv_path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
-                for row in reader:
-                    aliexpress_link = row.get('aliexpress_link', '')
-                    product_id = self._extract_product_id(aliexpress_link)
-                    if product_id:
-                        csv_product_ids.add(product_id)
-            
-            logger.info(f"Found {len(csv_product_ids)} product IDs in CSV")
-            
-            # Filter to only products that exist in filtered_products
-            with get_db_session() as db:
-                existing_products = db.query(FilteredProduct.product_id).filter(
-                    FilteredProduct.product_id.in_(list(csv_product_ids))
-                ).all()
-                existing_ids = [p.product_id for p in existing_products]
-            
-            logger.info(f"Found {len(existing_ids)} products in filtered_products table")
-            return existing_ids
-            
+                fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+                rows = list(reader)
+            return fieldnames, rows
         except FileNotFoundError:
             logger.error(f"CSV file not found: {csv_path}")
-            return []
+            return [], []
         except Exception as e:
             logger.error(f"Error reading CSV file: {e}")
-            return []
+            return [], []
     
     def _check_availability_only(self, product_id: str) -> str:
         """
@@ -187,10 +169,11 @@ class StockChecker:
     
     def check_availability_from_csv(self, csv_path: str, limit: Optional[int] = None) -> Dict[str, int]:
         """
-        Check availability for products from CSV file (product-level only).
+        Check availability for products from CSV file (standalone, CSV-only).
         
-        Only checks products that exist in filtered_products table.
-        No variant-level checks or price updates.
+        This method does NOT interact with the database or Airtable.
+        It reads the CSV, checks each product via the API, and writes
+        the status back to the CSV file as an 'available'/'not_available' column.
         
         Args:
             csv_path: Path to CSV file with aliexpress_link column
@@ -201,74 +184,77 @@ class StockChecker:
         """
         logger.info(f"Starting CSV-based availability check from {csv_path} (dry_run={self.dry_run})")
         
-        # Load product IDs that exist in filtered_products
-        product_ids = self._load_product_ids_from_csv(csv_path)
+        fieldnames, rows = self._load_csv_rows(csv_path)
         
-        if not product_ids:
-            logger.warning("No matching products found in filtered_products table")
+        if not rows:
+            logger.warning("No rows found in CSV file")
             return self.stats
         
-        if limit:
-            product_ids = product_ids[:limit]
+        # Ensure 'status' is in fieldnames for writing back
+        if 'status' not in fieldnames:
+            fieldnames.append('status')
         
-        total = len(product_ids)
+        # Build list of (index, product_id) for rows with valid links
+        check_list = []
+        for idx, row in enumerate(rows):
+            product_id = self._extract_product_id(row.get('aliexpress_link', ''))
+            if product_id:
+                check_list.append((idx, product_id))
+        
+        logger.info(f"Found {len(check_list)} products with valid links in CSV")
+        
+        if limit:
+            check_list = check_list[:limit]
+        
+        total = len(check_list)
         logger.info(f"Checking availability for {total} products")
         
-        status_updates = []
-        
-        with get_db_session() as db:
-            for idx, product_id in enumerate(product_ids, 1):
-                product = db.query(FilteredProduct).filter(
-                    FilteredProduct.product_id == product_id
-                ).first()
+        for i, (row_idx, product_id) in enumerate(check_list, 1):
+            title = (rows[row_idx].get('title', '') or product_id)[:50]
+            logger.info(f"[{i}/{total}] Checking {product_id}: {title}...")
+            
+            try:
+                api_status = self._check_availability_only(product_id)
+                self.stats['products_checked'] += 1
                 
-                if not product:
-                    continue
-                
-                title = (product.product_title or product_id)[:50]
-                logger.info(f"[{idx}/{total}] Checking {product_id}: {title}...")
-                
-                try:
-                    status = self._check_availability_only(product_id)
-                    self.stats['products_checked'] += 1
-                    self.checked_product_ids.append(product_id)
-                    
-                    # Update stats
-                    if status == 'available':
-                        self.stats['products_available'] += 1
-                    elif status == 'delisted':
+                # Map to CSV column values
+                if api_status == 'available':
+                    csv_status = 'available'
+                    self.stats['products_available'] += 1
+                else:
+                    csv_status = 'not_available'
+                    if api_status == 'delisted':
                         self.stats['products_delisted'] += 1
                     else:
                         self.stats['products_unavailable'] += 1
+                
+                old_status = rows[row_idx].get('status', '')
+                rows[row_idx]['status'] = csv_status
+                
+                if old_status and old_status != csv_status:
+                    self.stats['products_updated'] += 1
+                    logger.info(f"  -> Status: {old_status} -> {csv_status}")
+                elif not old_status:
+                    self.stats['products_updated'] += 1
+                    logger.info(f"  -> Status: {csv_status} (new)")
+                else:
+                    logger.info(f"  -> Status: {csv_status} (unchanged)")
                     
-                    # Update local database; only queue Airtable updates when local changed
-                    if not self.dry_run:
-                        old_status = product.status
-                        product.status = status
-                        product.updated_at = datetime.now(timezone.utc)
-                        if old_status != status:
-                            self.stats['products_updated'] += 1
-                            logger.info(f"  -> Status: {old_status} -> {status}")
-                            # Only queue for Airtable when there was an actual change
-                            status_updates.append({'product_id': product_id, 'status': status})
-                        else:
-                            logger.info(f"  -> Status: {status} (unchanged)")
-                    else:
-                        logger.info(f"  -> Status: {status}")
-                    
-                except Exception as e:
-                    logger.error(f"Error processing product {product_id}: {e}")
-                    self.stats['errors'] += 1
-            
-            if not self.dry_run:
-                db.commit()
-                logger.info("Database updated successfully")
+            except Exception as e:
+                logger.error(f"Error processing product {product_id}: {e}")
+                self.stats['errors'] += 1
         
-        # Batch update Airtable
-        if status_updates and not self.dry_run:
-            logger.info(f"Batch updating {len(status_updates)} products in Airtable...")
-            airtable_result = self._batch_update_airtable_status(status_updates)
-            logger.info(f"Airtable update: {airtable_result.get('updated', 0)} updated")
+        # Write updated rows back to CSV
+        if not self.dry_run:
+            try:
+                with open(csv_path, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                logger.info(f"CSV file updated: {csv_path}")
+            except Exception as e:
+                logger.error(f"Error writing CSV file: {e}")
+                self.stats['errors'] += 1
         
         self._log_csv_summary()
         return self.stats
@@ -467,20 +453,62 @@ class StockChecker:
             sku_list = sku_info.get('ae_item_sku_info_d_t_o', [])
             
             if not sku_list:
-                logger.warning(f"No SKU information found for product {product.product_id}")
+                logger.warning(f"No SKU information found for product {product.product_id}; marking existing variants unavailable")
+                # Mark all existing DB variants as unavailable
+                if not self.dry_run:
+                    variants = db.query(ProductVariant).filter(
+                        ProductVariant.product_id == product.product_id
+                    ).all()
+                    changed = 0
+                    for variant in variants:
+                        if variant.stock_status != 'unavailable':
+                            variant.stock_status = 'unavailable'
+                            variant.sku_available_stock = 0
+                            variant.updated_at = datetime.now(timezone.utc)
+                            changed += 1
+                            self.stats['variants_checked'] += 1
+                            self.stats['variants_updated'] += 1
+                            self.stats['variants_out_of_stock'] += 1
+                    if changed:
+                        logger.info(f"Marked {changed} variants as unavailable for product {product.product_id} (no SKU info)")
                 return
-            
+
             logger.debug(f"Found {len(sku_list)} variants for product {product.product_id}")
-            
-            # Process each variant
+
+            # Process each variant and collect API SKU IDs
+            api_sku_ids = set()
             variants_updated = 0
             for sku_data in sku_list:
+                sku_id = sku_data.get('sku_id')
+                if not sku_id:
+                    logger.debug(f"SKU entry without sku_id for product {product.product_id}: {sku_data}")
+                    continue
+                api_sku_ids.add(str(sku_id))
                 if self._update_variant_stock(db, product.product_id, sku_data):
                     variants_updated += 1
-            
+
+            # Mark stale DB variants (not returned by API) as unavailable
+            if not self.dry_run and api_sku_ids:
+                stale_variants = db.query(ProductVariant).filter(
+                    ProductVariant.product_id == product.product_id,
+                    ~ProductVariant.sku_id.in_(api_sku_ids)
+                ).all()
+                stale_count = 0
+                for sv in stale_variants:
+                    if sv.stock_status != 'unavailable':
+                        sv.stock_status = 'unavailable'
+                        sv.sku_available_stock = 0
+                        sv.updated_at = datetime.now(timezone.utc)
+                        stale_count += 1
+                        self.stats['variants_checked'] += 1
+                        self.stats['variants_updated'] += 1
+                        self.stats['variants_out_of_stock'] += 1
+                if stale_count:
+                    logger.info(f"Marked {stale_count} stale variants as unavailable for product {product.product_id} (SKUs changed)")
+
             if variants_updated > 0:
                 self.stats['products_updated'] += 1
-            
+
             logger.info(f"Updated {variants_updated} variants for product {product.product_id}")
             
         except Exception as e:
@@ -627,19 +655,26 @@ def run_stock_check(limit: Optional[int] = None, dry_run: bool = False, csv_path
     Returns:
         Dictionary with statistics about the operation
     """
-    checker = StockChecker(dry_run=dry_run)
+    import os
 
     if csv_path:
-        # CSV mode: availability check only (no variant/price updates)
+        # Explicit CSV mode: availability check only (no variant/price updates)
+        checker = StockChecker(dry_run=dry_run)
         return checker.check_availability_from_csv(csv_path=csv_path, limit=limit)
 
     # Default behavior: perform original full Airtable-based stock check first
+    checker = StockChecker(dry_run=dry_run)
     stats_full = checker.check_stock(limit=limit)
 
-    # After full check, also check automatic.csv product-level availability (ignore missing products)
-    try:
-        checker.check_availability_from_csv(csv_path='automatic.csv', limit=limit)
-    except Exception:
-        pass
+    # After full check, optionally run automatic CSV availability check
+    run_csv = os.getenv('RUN_AUTOMATIC_CSV', 'false').lower() == 'true'
+    if run_csv:
+        csv_file = os.getenv('AUTOMATIC_CSV_FILE', 'automatic.csv')
+        logger.info(f"Running automatic CSV availability check ({csv_file})...")
+        try:
+            csv_checker = StockChecker(dry_run=dry_run)
+            csv_checker.check_availability_from_csv(csv_path=csv_file, limit=limit)
+        except Exception as e:
+            logger.error(f"Error in automatic CSV check: {e}")
 
     return stats_full
